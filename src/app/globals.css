@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/*
+ * Palette read straight from the Stellar Cyber console's own design tokens
+ * (salesdemo.stellarcyber.cloud) plus the brand accent from stellarcyber.ai.
+ */
+:root {
+  --sc-bg: #080d23;
+  --sc-surface: #0c1230;
+  --sc-surface-raised: #0c173b;
+  --sc-surface-active: #161c32;
+  --sc-border: #10325e;
+  --sc-border-soft: #1b2547;
+  --sc-text: #f3f3f3;
+  --sc-text-secondary: #cfd0d0;
+  --sc-text-tertiary: #88898a;
+  --sc-link: #5f92dd;
+  --sc-primary: #4378c1;
+  --sc-accent: #f69220;
+  --sc-accent-deep: hsl(25 74% 48%);
+
+  --severity-critical: hsl(0 100% 70%);
+  --severity-high: hsl(24 100% 55%);
+  --severity-medium: hsl(47 100% 50%);
+  --severity-low: hsl(47 100% 70%);
+  --severity-success: hsl(120 100% 50%);
+
+  --sc-font: "Inter Variable", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+@theme inline {
+  --color-sc-bg: var(--sc-bg);
+  --color-sc-surface: var(--sc-surface);
+  --color-sc-raised: var(--sc-surface-raised);
+  --color-sc-active: var(--sc-surface-active);
+  --color-sc-border: var(--sc-border);
+  --color-sc-border-soft: var(--sc-border-soft);
+  --color-sc-text: var(--sc-text);
+  --color-sc-muted: var(--sc-text-secondary);
+  --color-sc-faint: var(--sc-text-tertiary);
+  --color-sc-link: var(--sc-link);
+  --color-sc-primary: var(--sc-primary);
+  --color-sc-accent: var(--sc-accent);
+  --color-critical: var(--severity-critical);
+  --color-high: var(--severity-high);
+  --color-medium: var(--severity-medium);
+  --color-low: var(--severity-low);
+  --font-sans: var(--sc-font);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--sc-bg);
+  color: var(--sc-text);
+  font-family: var(--sc-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A quiet starfield so the grid reads as a galaxy rather than a spreadsheet. */
+.galaxy-backdrop::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 255, 255, 0.35) 50%, transparent 51%),
+    radial-gradient(1px 1px at 68% 14%, rgba(255, 255, 255, 0.28) 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 82% 62%, rgba(255, 255, 255, 0.22) 50%, transparent 51%),
+    radial-gradient(1px 1px at 33% 78%, rgba(255, 255, 255, 0.24) 50%, transparent 51%),
+    radial-gradient(1px 1px at 52% 45%, rgba(255, 255, 255, 0.18) 50%, transparent 51%),
+    radial-gradient(900px 520px at 78% -8%, rgba(67, 120, 193, 0.18), transparent 65%),
+    radial-gradient(720px 460px at 6% 104%, rgba(246, 146, 32, 0.1), transparent 62%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tile-rise {
+    animation: tile-rise 0.32s ease-out both;
+  }
+}
+
+@keyframes tile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

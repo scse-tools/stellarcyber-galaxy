@@ -1,0 +1,20 @@
+import { NextResponse } from "next/server";
+import { getInstanceRow } from "@/lib/instance-repo";
+import { fetchSensorStatus } from "@/lib/rest/sensors";
+import { errorResponse } from "@/lib/api-error";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type Context = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, { params }: Context) {
+  try {
+    const { id } = await params;
+    const row = getInstanceRow(id);
+    if (!row) return NextResponse.json({ error: "Instance not found." }, { status: 404 });
+    return NextResponse.json({ sensors: await fetchSensorStatus(row) });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}

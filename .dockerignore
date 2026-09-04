@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.npm-cache
+coverage
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+.dockerignore
+# Never bake secrets or the local database into the image — they arrive at runtime.
+.env
+.env.local
+data
+*.md
+.DS_Store
+npm-debug.log*
