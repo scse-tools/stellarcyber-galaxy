@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GalaxyHeader } from "@/components/galaxy-header";
 import { InstanceTile } from "@/components/instance-tile";
-import { InstanceDetailModal } from "@/components/instance-detail-modal";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { Button } from "@/components/ui/button";
 import { useGalaxyStore } from "@/store/instances-store";
@@ -18,7 +17,6 @@ export function GalaxyGrid() {
   const removeInstance = useGalaxyStore((state) => state.removeInstance);
   const setRange = useGalaxyStore((state) => state.setRange);
 
-  const [selected, setSelected] = useState<InstanceSummary | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
 
@@ -43,11 +41,22 @@ export function GalaxyGrid() {
   const onlineCount = Object.values(stats).filter((stat) => stat.status === "ok").length;
   const anyRefreshing = Object.values(refreshing).some(Boolean);
 
+  const openAdd = useCallback(() => {
+    setEditing(null);
+    setFormOpen(true);
+  }, []);
+
+  const openConfigure = useCallback((instance: InstanceSummary) => {
+    setEditing(instance);
+    setFormOpen(true);
+  }, []);
+
   const handleDelete = useCallback(
     async (instance: InstanceSummary) => {
       if (!window.confirm(`Remove ${instance.name} from the galaxy?`)) return;
       await removeInstance(instance.id);
-      setSelected(null);
+      setFormOpen(false);
+      setEditing(null);
     },
     [removeInstance],
   );
@@ -62,10 +71,7 @@ export function GalaxyGrid() {
         range={range}
         onRangeChange={(next) => void setRange(next)}
         onRefresh={() => void refreshStats()}
-        onAdd={() => {
-          setEditing(null);
-          setFormOpen(true);
-        }}
+        onAdd={openAdd}
       />
 
       {error ? (
@@ -77,12 +83,7 @@ export function GalaxyGrid() {
       {loading ? (
         <p className="text-sm text-sc-faint">Loading constellation…</p>
       ) : instances.length === 0 ? (
-        <EmptyState
-          onAdd={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        />
+        <EmptyState onAdd={openAdd} />
       ) : (
         <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
           {instances.map((instance) => (
@@ -92,26 +93,11 @@ export function GalaxyGrid() {
               stats={stats[instance.id]}
               sensors={sensors[instance.id]}
               refreshing={refreshing[instance.id]}
-              onOpenSettings={setSelected}
+              onOpenSettings={openConfigure}
             />
           ))}
         </div>
       )}
-
-      <InstanceDetailModal
-        instance={selected}
-        stats={selected ? stats[selected.id] : undefined}
-        sensors={selected ? sensors[selected.id] : undefined}
-        refreshing={selected ? refreshing[selected.id] : false}
-        onClose={() => setSelected(null)}
-        onRefresh={(id) => void refreshStats(id)}
-        onEdit={(instance) => {
-          setEditing(instance);
-          setSelected(null);
-          setFormOpen(true);
-        }}
-        onDelete={(instance) => void handleDelete(instance)}
-      />
 
       <InstanceFormModal
         open={formOpen}
@@ -120,6 +106,7 @@ export function GalaxyGrid() {
           setFormOpen(false);
           setEditing(null);
         }}
+        onDelete={(instance) => void handleDelete(instance)}
       />
     </>
   );

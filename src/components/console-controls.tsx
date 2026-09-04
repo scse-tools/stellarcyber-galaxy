@@ -88,8 +88,8 @@ export function ConsoleControls({ instance }: { instance: InstanceSummary }) {
         </p>
       ) : (
         <p className="text-[11px] text-sc-faint">
-          Initialize logs in with the stored credentials (a brief sign-in tab opens). Then Open
-          console goes straight to the dashboard. Allow pop-ups for this app.
+          Initialize logs in with the saved credentials (a brief sign-in tab opens). Then Open
+          console goes straight to the dashboard. Save any credential edits first. Allow pop-ups.
         </p>
       )}
     </section>

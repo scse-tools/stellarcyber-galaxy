@@ -1,32 +1,5 @@
-import { SEVERITY_META, sharesOf } from "@/lib/severity";
+import { SEVERITY_META } from "@/lib/severity";
 import { SEVERITIES, type SeverityCounts } from "@/lib/types";
-
-/** Single stacked bar: the share each severity takes of the total. */
-export function SeverityBar({ counts, muted }: { counts: SeverityCounts; muted?: boolean }) {
-  const shares = sharesOf(counts);
-  const empty = SEVERITIES.every((severity) => counts[severity] === 0);
-
-  return (
-    <div
-      className="flex h-2 w-full overflow-hidden rounded-full bg-sc-active"
-      role="img"
-      aria-label={SEVERITIES.map((s) => `${SEVERITY_META[s].label} ${counts[s]}`).join(", ")}
-    >
-      {empty
-        ? null
-        : SEVERITIES.map((severity) => (
-            <div
-              key={severity}
-              style={{
-                width: `${shares[severity] * 100}%`,
-                backgroundColor: SEVERITY_META[severity].token,
-                opacity: muted ? 0.35 : 1,
-              }}
-            />
-          ))}
-    </div>
-  );
-}
 
 /**
  * One labelled row per severity, each with its own bar scaled to the largest bucket.

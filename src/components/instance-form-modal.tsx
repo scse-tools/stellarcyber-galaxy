@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { PlugZap } from "lucide-react";
+import { PlugZap, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { McpTestPanel } from "@/components/mcp-test-panel";
+import { ConsoleControls } from "@/components/console-controls";
 import { InstanceFormFields, type InstanceFormValues } from "@/components/instance-form-fields";
 import { useConnectionTest } from "@/hooks/use-connection-test";
 import { useGalaxyStore } from "@/store/instances-store";
@@ -29,9 +30,10 @@ interface FormModalProps {
   open: boolean;
   instance: InstanceSummary | null;
   onClose: () => void;
+  onDelete?: (instance: InstanceSummary) => void;
 }
 
-export function InstanceFormModal({ open, instance, onClose }: FormModalProps) {
+export function InstanceFormModal({ open, instance, onClose, onDelete }: FormModalProps) {
   const saveInstance = useGalaxyStore((state) => state.saveInstance);
   const range = useGalaxyStore((state) => state.range);
   const [form, setForm] = useState<InstanceFormValues>(BLANK);
@@ -101,11 +103,11 @@ export function InstanceFormModal({ open, instance, onClose }: FormModalProps) {
   return (
     <Modal
       open={open}
-      title={editing ? `Edit ${instance?.name}` : "Add instance"}
-      description="Credentials are encrypted with AES-256-GCM before they touch disk."
+      title={editing ? `Configure ${instance?.name}` : "Add instance"}
+      description="Server, MCP endpoint, and credentials — editable and re-testable. Secrets are encrypted with AES-256-GCM."
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <InstanceFormFields values={form} editing={editing} onChange={change} />
 
         {error ? (
@@ -114,23 +116,43 @@ export function InstanceFormModal({ open, instance, onClose }: FormModalProps) {
           </p>
         ) : null}
 
-        <McpTestPanel running={test.running} result={test.result} error={test.error} />
+        <div className="space-y-2">
+          <McpTestPanel running={test.running} result={test.result} error={test.error} />
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              onClick={() =>
+                void test.run({
+                  ...payload(),
+                  instanceId: instance?.id,
+                  ...resolveTimeRange(range),
+                })
+              }
+              disabled={test.running || !form.mcpUrl}
+            >
+              <PlugZap size={15} />
+              {test.running ? "Testing…" : "Test connection"}
+            </Button>
+            <p className="text-[11px] text-sc-faint">Tests the values above before saving.</p>
+          </div>
+        </div>
 
-        <div className="flex justify-between gap-2 pt-1">
-          <Button
-            type="button"
-            onClick={() =>
-              void test.run({
-                ...payload(),
-                instanceId: instance?.id,
-                ...resolveTimeRange(range),
-              })
-            }
-            disabled={test.running || !form.mcpUrl}
-          >
-            <PlugZap size={15} />
-            {test.running ? "Testing…" : "Test connection"}
-          </Button>
+        {editing && instance ? <ConsoleControls instance={instance} /> : null}
+
+        <div className="flex items-center justify-between gap-2 border-t border-sc-border-soft pt-4">
+          {editing && instance && onDelete ? (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => onDelete(instance)}
+              disabled={saving}
+            >
+              <Trash2 size={15} />
+              Remove
+            </Button>
+          ) : (
+            <span />
+          )}
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel

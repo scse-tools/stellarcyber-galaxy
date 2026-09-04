@@ -13,6 +13,8 @@ npm run dev                # http://localhost:3000
 ```
 
 Then click **Add instance** and fill in the console URL, the MCP endpoint, and the credentials.
+Afterwards, each tile's **gear icon** reopens that window to edit, re-test, initialize the console
+session, or remove the instance.
 
 ## Run with Docker
 
@@ -125,12 +127,14 @@ aggregations, numeric `severity_0..4` levels, and prose like `Critical: 4`.
 Tool names can be overridden per instance under **Advanced tool override**. If the token handshake
 fails, the cached token is dropped so the next poll retries cleanly.
 
-Tiles refresh every 60 seconds, and on demand from the header or the detail modal.
+Tiles refresh every 60 seconds, and on demand from the header Refresh button.
 
 ## Testing a connection
 
-Both the add/edit form and a tile's detail modal have a **Test** button. It runs the real sequence
-and reports each step separately, so a failure says which part broke:
+Each tile's **gear icon** opens an editable configuration window — server (console URL), MCP
+endpoint, credentials, tenant, build hash, and tool overrides are all editable in place. A **Test
+connection** button there runs the real sequence against the values on screen (before saving) and
+reports each step separately, so a failure says which part broke:
 
 ```
 OK      Connect to MCP endpoint   Connected over streamable-http.
@@ -146,7 +150,7 @@ remaining lifetime.
 
 ## Console auto-login
 
-Each instance's detail modal has a **Console session** panel:
+The same configuration window (gear icon) has a **Console session** panel:
 
 - **Initialize session** signs in with the stored credentials (no typing).
 - **Open console** then enters the authenticated dashboard directly, with no further login.
