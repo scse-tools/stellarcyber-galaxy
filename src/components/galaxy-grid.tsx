@@ -7,7 +7,13 @@ import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
 import { Button } from "@/components/ui/button";
 import { useGalaxyStore } from "@/store/instances-store";
-import { EMPTY_COUNTS, SEVERITIES, type InstanceSummary, type SeverityCounts } from "@/lib/types";
+import {
+  EMPTY_COUNTS,
+  SEVERITIES,
+  type InstanceStats,
+  type InstanceSummary,
+  type SeverityCounts,
+} from "@/lib/types";
 import type { SessionUser } from "@/lib/auth/types";
 
 const POLL_INTERVAL_MS = 60_000;
@@ -42,6 +48,19 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
     }
     return sum;
   }, [stats]);
+
+  // Tiles flow left-to-right, top-to-bottom, ranked by Critical, then High, then total open cases.
+  const sortedInstances = useMemo(() => {
+    const rank = (s?: InstanceStats) =>
+      s && s.status === "ok"
+        ? { c: s.counts.critical, h: s.counts.high, t: s.total }
+        : { c: -1, h: -1, t: -1 };
+    return [...instances].sort((a, b) => {
+      const ra = rank(stats[a.id]);
+      const rb = rank(stats[b.id]);
+      return rb.c - ra.c || rb.h - ra.h || rb.t - ra.t;
+    });
+  }, [instances, stats]);
 
   const onlineCount = Object.values(stats).filter((stat) => stat.status === "ok").length;
   const anyRefreshing = Object.values(refreshing).some(Boolean);
@@ -93,7 +112,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         <EmptyState onAdd={openAdd} />
       ) : (
         <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
-          {instances.map((instance) => (
+          {sortedInstances.map((instance) => (
             <InstanceTile
               key={instance.id}
               instance={instance}
