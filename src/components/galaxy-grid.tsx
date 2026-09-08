@@ -111,7 +111,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
       ) : instances.length === 0 ? (
         <EmptyState onAdd={openAdd} />
       ) : (
-        <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] items-start gap-3">
           {sortedInstances.map((instance) => (
             <InstanceTile
               key={instance.id}
