@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
+import { deriveMcpUrl } from "@/lib/utils";
 import type { InstanceRow, InstanceSummary } from "@/lib/types";
 
 interface DbRow {
@@ -78,7 +79,7 @@ export function createInstance(input: InstanceInput): InstanceRow {
     id,
     input.name,
     input.consoleUrl,
-    input.mcpUrl,
+    deriveMcpUrl(input.consoleUrl),
     input.toolName || null,
     input.toolArgs || null,
     input.tenantId || null,
@@ -88,6 +89,42 @@ export function createInstance(input: InstanceInput): InstanceRow {
     now,
   );
   return getInstanceRow(id)!;
+}
+
+/**
+ * Duplicates an instance, keeping its URLs and (encrypted) API key. The api_key ciphertext is
+ * copied verbatim — never decrypted — so the secret is never re-exposed. Name and tenant are the
+ * fields a caller typically overrides.
+ */
+export function cloneInstance(
+  id: string,
+  overrides: { name?: string; tenantId?: string | null } = {},
+): InstanceRow | null {
+  const source = getInstanceRow(id);
+  if (!source) return null;
+  const db = getDb();
+  const now = new Date().toISOString();
+  const newId = randomUUID();
+  const next = db.prepare("SELECT COALESCE(MAX(position), -1) + 1 AS next FROM instances").get() as
+    | unknown as { next: number };
+  db.prepare(
+    `INSERT INTO instances (id, name, console_url, mcp_url, auth_mode, tool_name, tool_args,
+       tenant_id, console_build_hash, position, username_enc, password_enc, api_key_enc, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'bearer', ?, ?, ?, NULL, ?, '', '', ?, ?, ?)`,
+  ).run(
+    newId,
+    overrides.name ?? `${source.name} (copy)`,
+    source.consoleUrl,
+    source.mcpUrl,
+    source.toolName,
+    source.toolArgs,
+    overrides.tenantId === undefined ? source.tenantId : overrides.tenantId,
+    next.next,
+    source.apiKeyEnc,
+    now,
+    now,
+  );
+  return getInstanceRow(newId)!;
 }
 
 export function updateInstance(id: string, patch: InstanceUpdate): InstanceRow | null {
@@ -101,7 +138,7 @@ export function updateInstance(id: string, patch: InstanceUpdate): InstanceRow |
     .run(
       patch.name ?? current.name,
       patch.consoleUrl ?? current.consoleUrl,
-      patch.mcpUrl ?? current.mcpUrl,
+      deriveMcpUrl(patch.consoleUrl ?? current.consoleUrl),
       patch.toolName === undefined ? current.toolName : patch.toolName || null,
       patch.toolArgs === undefined ? current.toolArgs : patch.toolArgs || null,
       patch.tenantId === undefined ? current.tenantId : patch.tenantId || null,

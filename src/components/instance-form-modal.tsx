@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { PlugZap, Trash2 } from "lucide-react";
+import { Copy, PlugZap, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { McpTestPanel } from "@/components/mcp-test-panel";
@@ -14,7 +14,6 @@ import type { InstanceSummary } from "@/lib/types";
 const BLANK: InstanceFormValues = {
   name: "",
   consoleUrl: "",
-  mcpUrl: "",
   apiKey: "",
   tenantId: "",
   toolName: "",
@@ -26,9 +25,16 @@ interface FormModalProps {
   instance: InstanceSummary | null;
   onClose: () => void;
   onDelete?: (instance: InstanceSummary) => void;
+  onDuplicate?: (instance: InstanceSummary) => void;
 }
 
-export function InstanceFormModal({ open, instance, onClose, onDelete }: FormModalProps) {
+export function InstanceFormModal({
+  open,
+  instance,
+  onClose,
+  onDelete,
+  onDuplicate,
+}: FormModalProps) {
   const saveInstance = useGalaxyStore((state) => state.saveInstance);
   const range = useGalaxyStore((state) => state.range);
   const [form, setForm] = useState<InstanceFormValues>(BLANK);
@@ -47,7 +53,6 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
             ...BLANK,
             name: instance.name,
             consoleUrl: instance.consoleUrl,
-            mcpUrl: instance.mcpUrl,
             tenantId: instance.tenantId ?? "",
             toolName: instance.toolName ?? "",
           }
@@ -65,7 +70,6 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
     const fields: Record<string, string> = {
       name: form.name,
       consoleUrl: form.consoleUrl,
-      mcpUrl: form.mcpUrl,
       tenantId: form.tenantId,
       toolName: form.toolName,
       toolArgs: form.toolArgs,
@@ -116,7 +120,7 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
                   ...resolveTimeRange(range),
                 })
               }
-              disabled={test.running || !form.mcpUrl}
+              disabled={test.running || !form.consoleUrl}
             >
               <PlugZap size={15} />
               {test.running ? "Testing…" : "Test connection"}
@@ -126,16 +130,26 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-sc-border-soft pt-4">
-          {editing && instance && onDelete ? (
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => onDelete(instance)}
-              disabled={saving}
-            >
-              <Trash2 size={15} />
-              Remove
-            </Button>
+          {editing && instance ? (
+            <div className="flex gap-2">
+              {onDuplicate ? (
+                <Button type="button" onClick={() => onDuplicate(instance)} disabled={saving}>
+                  <Copy size={15} />
+                  Duplicate
+                </Button>
+              ) : null}
+              {onDelete ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => onDelete(instance)}
+                  disabled={saving}
+                >
+                  <Trash2 size={15} />
+                  Remove
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <span />
           )}

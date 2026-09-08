@@ -24,6 +24,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const loadInstances = useGalaxyStore((state) => state.loadInstances);
   const refreshStats = useGalaxyStore((state) => state.refreshStats);
   const removeInstance = useGalaxyStore((state) => state.removeInstance);
+  const cloneInstance = useGalaxyStore((state) => state.cloneInstance);
   const setRange = useGalaxyStore((state) => state.setRange);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -74,6 +75,15 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
     setEditing(instance);
     setFormOpen(true);
   }, []);
+
+  const handleDuplicate = useCallback(
+    async (instance: InstanceSummary) => {
+      // Clone server-side, then reopen the config on the copy to edit its name/tenant.
+      const clone = await cloneInstance(instance.id);
+      setEditing(clone);
+    },
+    [cloneInstance],
+  );
 
   const handleDelete = useCallback(
     async (instance: InstanceSummary) => {
@@ -134,6 +144,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
           setEditing(null);
         }}
         onDelete={(instance) => void handleDelete(instance)}
+        onDuplicate={(instance) => void handleDuplicate(instance)}
       />
 
       {isAdmin ? (

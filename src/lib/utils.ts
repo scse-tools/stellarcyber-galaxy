@@ -24,6 +24,15 @@ export function consoleLink(consoleUrl: string, path: string): string {
   }
 }
 
+/** Derives the MCP endpoint from the console URL: `<origin>/mcp`. */
+export function deriveMcpUrl(consoleUrl: string): string {
+  try {
+    return new URL("/mcp", new URL(consoleUrl).origin).toString();
+  } catch {
+    return consoleUrl.replace(/\/+$/, "") + "/mcp";
+  }
+}
+
 /** Best-effort host label for a console URL, e.g. `salesdemo.stellarcyber.cloud`. */
 export function hostOf(url: string): string {
   try {
