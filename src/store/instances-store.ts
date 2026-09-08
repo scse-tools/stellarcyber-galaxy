@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { InstanceStats, InstanceSummary, SensorStatus } from "@/lib/types";
+import type { ConnectorStatus, InstanceStats, InstanceSummary, SensorStatus } from "@/lib/types";
 import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
 import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 
@@ -48,6 +48,7 @@ interface GalaxyState {
   instances: InstanceSummary[];
   stats: Record<string, InstanceStats>;
   sensors: Record<string, SensorStatus>;
+  connectors: Record<string, ConnectorStatus>;
   refreshing: Record<string, boolean>;
   loading: boolean;
   error: string | null;
@@ -63,6 +64,7 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   instances: [],
   stats: {},
   sensors: {},
+  connectors: {},
   refreshing: {},
   loading: true,
   error: null,
@@ -94,11 +96,12 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       targets.map(async (target) => {
         try {
           const { from, to } = resolveTimeRange(get().range);
-          const [{ stats }, sensorResult] = await Promise.all([
+          const [{ stats }, sensorResult, connectorResult] = await Promise.all([
             request<{ stats: InstanceStats }>(
               `/api/instances/${target}/stats?from=${from}&to=${to}`,
             ),
-            request<{ sensors: SensorStatus }>(`/api/instances/${target}/sensors`).catch(
+            request<{ sensors: SensorStatus }>(`/api/instances/${target}/sensors`).catch(() => null),
+            request<{ connectors: ConnectorStatus }>(`/api/instances/${target}/connectors`).catch(
               () => null,
             ),
           ]);
@@ -107,6 +110,9 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
             sensors: sensorResult
               ? { ...state.sensors, [target]: sensorResult.sensors }
               : state.sensors,
+            connectors: connectorResult
+              ? { ...state.connectors, [target]: connectorResult.connectors }
+              : state.connectors,
           }));
         } catch (error) {
           set((state) => ({
@@ -116,6 +122,8 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
                 instanceId: target,
                 status: "error",
                 counts: { critical: 0, high: 0, medium: 0, low: 0 },
+                statuses: [],
+                statusCounts: { critical: {}, high: {}, medium: {}, low: {} },
                 total: 0,
                 toolUsed: null,
                 latencyMs: 0,
@@ -146,9 +154,11 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     set((state) => {
       const stats = { ...state.stats };
       const sensors = { ...state.sensors };
+      const connectors = { ...state.connectors };
       delete stats[id];
       delete sensors[id];
-      return { instances: state.instances.filter((i) => i.id !== id), stats, sensors };
+      delete connectors[id];
+      return { instances: state.instances.filter((i) => i.id !== id), stats, sensors, connectors };
     });
   },
 }));

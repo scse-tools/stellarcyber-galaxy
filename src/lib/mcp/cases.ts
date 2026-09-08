@@ -48,6 +48,8 @@ export interface CaseQuery {
 export interface CaseQueryResult {
   toolName: string;
   counts: SeverityCounts;
+  statuses: string[];
+  statusCounts: Record<Severity, Record<string, number>>;
   total: number;
   strategy: "filtered-counts" | "page-tally";
   calls: number;
@@ -106,17 +108,26 @@ async function countByFilter(
           `${tool.name} returned no case total for ${SEVERITY_LABELS[severity]}/${status}: ${describe(result)}`,
         );
       }
-      return { severity, total };
+      return { severity, status, total };
     }),
   );
 
   const counts = { ...EMPTY_COUNTS };
-  for (const { severity, total } of await Promise.all(requests)) {
+  const statusCounts: Record<Severity, Record<string, number>> = {
+    critical: {},
+    high: {},
+    medium: {},
+    low: {},
+  };
+  for (const { severity, status, total } of await Promise.all(requests)) {
     counts[severity] += total;
+    statusCounts[severity][status] = total;
   }
   return {
     toolName: tool.name,
     counts,
+    statuses: OPEN_STATUSES,
+    statusCounts,
     total: totalOf(counts),
     strategy: "filtered-counts",
     calls: requests.length,
@@ -146,5 +157,13 @@ async function tallyOnePage(
   if (!counts) {
     throw new Error(`Could not read severity counts from ${tool.name}: ${describe(result)}`);
   }
-  return { toolName: tool.name, counts, total: totalOf(counts), strategy: "page-tally", calls: 1 };
+  return {
+    toolName: tool.name,
+    counts,
+    statuses: [],
+    statusCounts: { critical: {}, high: {}, medium: {}, low: {} },
+    total: totalOf(counts),
+    strategy: "page-tally",
+    calls: 1,
+  };
 }

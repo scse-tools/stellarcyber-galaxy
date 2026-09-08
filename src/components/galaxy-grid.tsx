@@ -13,7 +13,8 @@ import type { SessionUser } from "@/lib/auth/types";
 const POLL_INTERVAL_MS = 60_000;
 
 export function GalaxyGrid({ user }: { user: SessionUser }) {
-  const { instances, stats, sensors, refreshing, loading, error, range } = useGalaxyStore();
+  const { instances, stats, sensors, connectors, refreshing, loading, error, range } =
+    useGalaxyStore();
   const loadInstances = useGalaxyStore((state) => state.loadInstances);
   const refreshStats = useGalaxyStore((state) => state.refreshStats);
   const removeInstance = useGalaxyStore((state) => state.removeInstance);
@@ -98,6 +99,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               instance={instance}
               stats={stats[instance.id]}
               sensors={sensors[instance.id]}
+              connectors={connectors[instance.id]}
               refreshing={refreshing[instance.id]}
               onOpenSettings={isAdmin ? openConfigure : undefined}
             />

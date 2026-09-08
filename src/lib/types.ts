@@ -37,12 +37,36 @@ export interface InstanceStats {
   instanceId: string;
   status: InstanceStatus;
   counts: SeverityCounts;
+  /** Open statuses counted, in display order (e.g. ["New", "In Progress"]). */
+  statuses: string[];
+  /** Per-severity split across those statuses; empty when the fallback path is used. */
+  statusCounts: Record<Severity, Record<string, number>>;
   total: number;
   toolUsed: string | null;
   latencyMs: number;
   fetchedAt: string;
   error?: string;
 }
+
+export interface ConnectorStatus {
+  instanceId: string;
+  status: InstanceStatus;
+  /** Collecting connectors only (is_collect === true). */
+  total: number;
+  categories: number;
+  active: number;
+  healthy: number;
+  issues: number;
+  fetchedAt: string;
+  error?: string;
+}
+
+export const EMPTY_STATUS_COUNTS = (): Record<Severity, Record<string, number>> => ({
+  critical: {},
+  high: {},
+  medium: {},
+  low: {},
+});
 
 export type TestStepStatus = "ok" | "fail" | "skipped";
 

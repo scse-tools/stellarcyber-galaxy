@@ -61,28 +61,29 @@ Every Stellar Cyber MCP server requires a two-step handshake, and each poll foll
 4. It calls **`listCases`** once per (severity, open status) pair with `limit: 1`, and reads
    `data.total` from each reply. Four severities x two open statuses = 8 small queries, issued
    concurrently on the same connection.
-5. The eight totals are summed into the four severity buckets.
+5. The eight totals populate the four severity buckets, keeping the New vs In Progress split so
+   each tile's severity bar is segmented by status.
 
-## Sensor status
+## Sensor & connector status
 
-Below the case counts, each tile carries a **Sensor status** block driven by the instance's REST API
-(`GET /connect/api/v1/data_sensors`), categorized three ways with green = healthy, red = trouble:
+Below the case counts each tile shows two REST-driven health blocks (green = healthy, red = trouble):
 
-| Category | Green when | Red when |
-| --- | --- | --- |
-| **Connection** | every sensor `connection_status` is `connected` | any sensor disconnected |
-| **Upgrade** | no sensor has `need_upgrade` | any sensor needs an upgrade |
-| **Feature** | informational — a breakdown by `feature` (WDS / DS / Modular / …), never red |
+**Sensor status** (`GET /connect/api/v1/data_sensors`) — Connected vs Disconnected counts up top, and
+the sensor **feature** mix (WDS / DS / Modular) below; a "need upgrade" chip appears when any sensor
+is behind.
 
-The REST API authenticates like the MCP server: the app trades the instance's API key for an access
-token at `POST /connect/api/v1/access_token` (`Authorization: Bearer <api key>` →
-`{access_token, exp}`), caches it until just before expiry, and uses it as the bearer on
-`data_sensors` ([access-token.ts](src/lib/rest/access-token.ts),
-[sensors.ts](src/lib/rest/sensors.ts)). A 401 forces one fresh-token retry. Sensor status reflects
-current state, so it ignores the time-frame picker and refreshes on the same 60-second cycle as the
-case counts.
+**Connector status** (`GET /connect/api/v1/connectors`, `is_collect: true` only) — the number of
+collecting connectors, how many distinct **categories** they span, how many are **active**, and how
+many are **healthy** (`status.code === 0`) versus **issues** (non-zero). Verified against a live
+instance: 19 collecting connectors across 10 categories, 14 active, 2 healthy / 17 issues.
 
-## Time frame
+Both authenticate like the MCP server: the app trades the instance's API key for an access token at
+`POST /connect/api/v1/access_token`, caches it until just before expiry, and uses it as the bearer
+([access-token.ts](src/lib/rest/access-token.ts), [sensors.ts](src/lib/rest/sensors.ts),
+[connectors.ts](src/lib/rest/connectors.ts)). Both reflect current state, so they ignore the
+time-frame picker and refresh on the same 60-second cycle as the case counts.
+
+## Time frame## Time frame
 
 A picker in the header sets the window every tile is counted over, and it maps directly onto the
 `from_created_at` / `to_created_at` arguments of `listCases`:

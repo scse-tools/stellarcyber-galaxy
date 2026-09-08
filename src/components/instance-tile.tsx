@@ -3,13 +3,21 @@
 import { AlertTriangle, ArrowUpRight, Loader2, Settings } from "lucide-react";
 import { SeverityRows } from "@/components/severity-bar";
 import { SensorStatusBlock } from "@/components/sensor-status";
+import { ConnectorStatusBlock } from "@/components/connector-status";
 import { cn, consoleLink, formatRelativeTime, hostOf } from "@/lib/utils";
-import { EMPTY_COUNTS, type InstanceStats, type InstanceSummary, type SensorStatus } from "@/lib/types";
+import {
+  EMPTY_COUNTS,
+  type ConnectorStatus,
+  type InstanceStats,
+  type InstanceSummary,
+  type SensorStatus,
+} from "@/lib/types";
 
 interface InstanceTileProps {
   instance: InstanceSummary;
   stats?: InstanceStats;
   sensors?: SensorStatus;
+  connectors?: ConnectorStatus;
   refreshing?: boolean;
   onOpenSettings?: (instance: InstanceSummary) => void;
 }
@@ -18,6 +26,7 @@ export function InstanceTile({
   instance,
   stats,
   sensors,
+  connectors,
   refreshing,
   onOpenSettings,
 }: InstanceTileProps) {
@@ -29,7 +38,7 @@ export function InstanceTile({
   return (
     <article
       className={cn(
-        "tile-rise group flex h-full min-h-[420px] w-full flex-col gap-4 rounded-xl border p-5",
+        "tile-rise group flex h-full min-h-[520px] w-full flex-col gap-4 rounded-xl border p-5",
         "border-sc-border bg-sc-surface/85 backdrop-blur transition-colors duration-200",
         "hover:border-sc-border-soft",
         failed && "border-critical/40",
@@ -77,7 +86,12 @@ export function InstanceTile({
         </p>
       </div>
 
-      <SeverityRows counts={counts} muted={muted} />
+      <SeverityRows
+        counts={counts}
+        statuses={stats?.statuses}
+        statusCounts={stats?.statusCounts}
+        muted={muted}
+      />
 
       <p className="truncate text-[10px] text-sc-faint">
         {failed ? (
@@ -91,7 +105,7 @@ export function InstanceTile({
         )}
       </p>
 
-      <div className="mt-auto">
+      <div className="mt-auto space-y-0">
         <SensorStatusBlock
           sensors={sensors}
           loading={refreshing}
@@ -99,6 +113,16 @@ export function InstanceTile({
             <TileLink
               href={consoleLink(instance.consoleUrl, "/system/collect/sensors")}
               label="Sensors"
+            />
+          }
+        />
+        <ConnectorStatusBlock
+          connectors={connectors}
+          loading={refreshing}
+          action={
+            <TileLink
+              href={consoleLink(instance.consoleUrl, "/connectors")}
+              label="Connectors"
             />
           }
         />
