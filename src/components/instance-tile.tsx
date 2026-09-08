@@ -40,7 +40,7 @@ export function InstanceTile({
   return (
     <article
       className={cn(
-        "tile-rise group flex h-full w-full flex-col gap-2.5 rounded-lg border p-3",
+        "tile-rise group flex w-full flex-col gap-2.5 rounded-lg border p-3",
         "border-sc-border bg-sc-surface/85 backdrop-blur transition-colors duration-200",
         "hover:border-sc-border-soft",
         failed && "border-critical/40",

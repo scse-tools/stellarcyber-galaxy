@@ -69,7 +69,7 @@ function Metric({
   tone?: Tone;
 }) {
   return (
-    <div className="flex-1 rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
+    <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
       <div className="flex items-center gap-1.5">
         <span aria-hidden className={cn("size-2 rounded-full", TONE[tone].dot)} />
         <span className={cn("font-mono text-base tabular-nums", TONE[tone].value)}>
@@ -77,7 +77,7 @@ function Metric({
         </span>
         {sub ? <span className="text-[10px] text-sc-faint">{sub}</span> : null}
       </div>
-      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-sc-faint">{label}</p>
+      <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-sc-faint">{label}</p>
     </div>
   );
 }
