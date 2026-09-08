@@ -4,13 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GalaxyHeader } from "@/components/galaxy-header";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
+import { GlobalSettingsModal } from "@/components/global-settings-modal";
 import { Button } from "@/components/ui/button";
 import { useGalaxyStore } from "@/store/instances-store";
 import { EMPTY_COUNTS, SEVERITIES, type InstanceSummary, type SeverityCounts } from "@/lib/types";
+import type { SessionUser } from "@/lib/auth/types";
 
 const POLL_INTERVAL_MS = 60_000;
 
-export function GalaxyGrid() {
+export function GalaxyGrid({ user }: { user: SessionUser }) {
   const { instances, stats, sensors, refreshing, loading, error, range } = useGalaxyStore();
   const loadInstances = useGalaxyStore((state) => state.loadInstances);
   const refreshStats = useGalaxyStore((state) => state.refreshStats);
@@ -19,6 +21,8 @@ export function GalaxyGrid() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const isAdmin = user.role === "admin";
 
   useEffect(() => {
     void loadInstances().then(() => refreshStats());
@@ -72,6 +76,8 @@ export function GalaxyGrid() {
         onRangeChange={(next) => void setRange(next)}
         onRefresh={() => void refreshStats()}
         onAdd={openAdd}
+        onOpenSettings={() => setSettingsOpen(true)}
+        user={user}
       />
 
       {error ? (
@@ -93,7 +99,7 @@ export function GalaxyGrid() {
               stats={stats[instance.id]}
               sensors={sensors[instance.id]}
               refreshing={refreshing[instance.id]}
-              onOpenSettings={openConfigure}
+              onOpenSettings={isAdmin ? openConfigure : undefined}
             />
           ))}
         </div>
@@ -108,6 +114,14 @@ export function GalaxyGrid() {
         }}
         onDelete={(instance) => void handleDelete(instance)}
       />
+
+      {isAdmin ? (
+        <GlobalSettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          currentUserId={user.id}
+        />
+      ) : null}
     </>
   );
 }

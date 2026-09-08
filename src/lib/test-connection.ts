@@ -3,9 +3,6 @@ import type { McpTestResult } from "@/lib/types";
 export interface TestConnectionPayload {
   instanceId?: string;
   mcpUrl?: string;
-  authMode?: "bearer" | "basic";
-  username?: string;
-  password?: string;
   apiKey?: string;
   tenantId?: string;
   toolName?: string;

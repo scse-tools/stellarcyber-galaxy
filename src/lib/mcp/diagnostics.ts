@@ -54,7 +54,7 @@ export async function runDiagnostics(config: DiagnosticsConfig): Promise<McpTest
     if (!tools) return skipRest(result, ["get_access_token", "listCases"]);
 
     const exchange = await step("get_access_token", () =>
-      exchangeBearerForAccessToken(connection.client, tools, config),
+      exchangeBearerForAccessToken(connection.client, tools, { apiKey: config.apiKey }),
     );
     if (!exchange) return skipRest(result, ["listCases"]);
 

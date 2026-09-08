@@ -4,12 +4,6 @@ import { create } from "zustand";
 import type { InstanceStats, InstanceSummary, SensorStatus } from "@/lib/types";
 import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
 import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
-import {
-  initConsole,
-  keepaliveConsoles,
-  openConsole,
-  type ConsoleSession,
-} from "@/store/console-slice";
 
 const RANGE_STORAGE_KEY = "galaxy.timeRange";
 
@@ -55,32 +49,14 @@ interface GalaxyState {
   stats: Record<string, InstanceStats>;
   sensors: Record<string, SensorStatus>;
   refreshing: Record<string, boolean>;
-  console: Record<string, ConsoleSession>;
   loading: boolean;
   error: string | null;
   range: TimeRangeSelection;
   setRange: (range: TimeRangeSelection) => Promise<void>;
   loadInstances: () => Promise<void>;
-  initConsole: (id: string) => Promise<void>;
-  openConsole: (id: string) => Promise<boolean>;
-  keepaliveConsoles: () => Promise<void>;
   refreshStats: (id?: string) => Promise<void>;
   saveInstance: (input: InstanceInput | InstanceUpdate, id?: string) => Promise<void>;
   removeInstance: (id: string) => Promise<void>;
-}
-
-type Get = () => GalaxyState;
-type Set = (partial: Partial<GalaxyState> | ((state: GalaxyState) => Partial<GalaxyState>)) => void;
-
-/** Adapts the store's get/set to the console slice's minimal context. */
-function consoleCtx(get: Get, set: Set) {
-  return {
-    request,
-    instances: () => get().instances,
-    sessions: () => get().console,
-    patch: (id: string, session: ConsoleSession) =>
-      set((state) => ({ console: { ...state.console, [id]: session } })),
-  };
 }
 
 export const useGalaxyStore = create<GalaxyState>((set, get) => ({
@@ -88,7 +64,6 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   stats: {},
   sensors: {},
   refreshing: {},
-  console: {},
   loading: true,
   error: null,
   range: storedRange(),
@@ -98,19 +73,6 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     set({ range });
     // Every tile's numbers depend on the window, so re-poll them all.
     await get().refreshStats();
-  },
-
-  async initConsole(id) {
-    const ctx = consoleCtx(get, set);
-    await initConsole(ctx, id);
-  },
-
-  async openConsole(id) {
-    return openConsole(consoleCtx(get, set), id);
-  },
-
-  async keepaliveConsoles() {
-    await keepaliveConsoles(consoleCtx(get, set));
   },
 
   async loadInstances() {
@@ -125,7 +87,6 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   async refreshStats(id) {
     const targets = id ? [id] : get().instances.map((instance) => instance.id);
     if (targets.length === 0) return;
-    void get().keepaliveConsoles();
     set((state) => ({
       refreshing: { ...state.refreshing, ...Object.fromEntries(targets.map((t) => [t, true])) },
     }));
@@ -185,11 +146,9 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     set((state) => {
       const stats = { ...state.stats };
       const sensors = { ...state.sensors };
-      const console = { ...state.console };
       delete stats[id];
       delete sensors[id];
-      delete console[id];
-      return { instances: state.instances.filter((i) => i.id !== id), stats, sensors, console };
+      return { instances: state.instances.filter((i) => i.id !== id), stats, sensors };
     });
   },
 }));

@@ -1,4 +1,6 @@
 # Stellar Cyber Galaxy — run anywhere with: docker compose up -d --build
+# Serves HTTPS on :3000 with a self-signed certificate generated on first run
+# (browsers will warn about the self-signed cert until you install your own in Global settings).
 services:
   galaxy:
     build: .
@@ -11,22 +13,21 @@ services:
     env_file:
       - .env
     environment:
-      # Absolute DB path inside the container, on the mounted volume below.
       GALAXY_DB_PATH: /app/data/galaxy.db
+      GALAXY_TLS_DIR: /app/data/tls
       # Uncomment only if this host reaches the internet through an HTTP proxy:
       # NODE_USE_ENV_PROXY: "1"
       # HTTPS_PROXY: http://proxy.internal:3128
     volumes:
-      # Persists the encrypted SQLite database (and your configured instances)
-      # on the host. Your existing ./data is reused as-is.
+      # Persists the encrypted database, TLS certificate, and configured instances on the host.
       - ./data:/app/data
     healthcheck:
       test:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        - "process.env.NODE_TLS_REJECT_UNAUTHORIZED='0';fetch('https://127.0.0.1:3000/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 25s

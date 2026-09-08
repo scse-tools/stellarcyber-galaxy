@@ -76,7 +76,7 @@ export interface TokenExchange {
 export async function exchangeBearerForAccessToken(
   client: Client,
   tools: McpToolLike[],
-  credentials: { apiKey: string; username: string; password: string },
+  credentials: { apiKey: string },
 ): Promise<TokenExchange> {
   const tool = selectAccessTokenTool(tools);
   if (!tool) {
@@ -87,11 +87,7 @@ export async function exchangeBearerForAccessToken(
     );
   }
 
-  const args = buildToolArgs(tool, {
-    bearerToken: credentials.apiKey,
-    username: credentials.username,
-    password: credentials.password,
-  });
+  const args = buildToolArgs(tool, { bearerToken: credentials.apiKey });
   const result = await client.callTool({ name: tool.name, arguments: args }, undefined, {
     timeout: MCP_TIMEOUT_MS,
   });

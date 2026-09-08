@@ -67,8 +67,6 @@ const FROM_KEYS = ["from_created_at", "fromCreatedAt", "from_modified_at", "from
 const TO_KEYS = ["to_created_at", "toCreatedAt", "to_modified_at", "to", "end_time"];
 const TOKEN_KEYS = ["access_token", "accessToken", "token", "auth_token", "authToken", "jwt"];
 const BEARER_KEYS = ["bearer_token", "bearerToken", "api_key", "apiKey", "api_token", "refresh_token"];
-const USER_KEYS = ["username", "user", "user_id", "email"];
-const PASSWORD_KEYS = ["password", "passwd", "secret"];
 const LIMIT_KEYS = ["limit", "size", "page_size", "pageSize", "count"];
 
 const pick = (properties: Record<string, unknown>, keys: string[]): string | undefined =>
@@ -78,8 +76,6 @@ export interface ToolArgContext {
   tenantId?: string | null;
   accessToken?: string | null;
   bearerToken?: string | null;
-  username?: string | null;
-  password?: string | null;
   pageLimit?: number;
   /** Exact filter values, spelled the way the instance expects (e.g. "New", "Critical"). */
   status?: string;
@@ -108,8 +104,6 @@ export function buildToolArgs(tool: McpToolLike, context: ToolArgContext = {}) {
   if (!context.accessToken && !pick(properties, BEARER_KEYS)) {
     set(TOKEN_KEYS, context.bearerToken);
   }
-  set(USER_KEYS, context.username);
-  set(PASSWORD_KEYS, context.password);
   set(TENANT_KEYS, context.tenantId);
   set(STATUS_KEYS, context.status);
   set(SEVERITY_KEYS, context.severity);

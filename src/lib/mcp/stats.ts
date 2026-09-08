@@ -39,7 +39,7 @@ export async function fetchCaseStats(
   const credentials = readCredentials(row);
   let client;
   try {
-    ({ client } = await connect({ ...row, ...credentials }));
+    ({ client } = await connect({ mcpUrl: row.mcpUrl, apiKey: credentials.apiKey }));
     const { tools } = await client.listTools(undefined, { timeout: MCP_TIMEOUT_MS });
 
     let token = cachedToken(row.id);

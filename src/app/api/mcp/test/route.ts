@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { errorResponse } from "@/lib/api-error";
+import { requireAdmin, isGuardFailure } from "@/lib/auth/session";
 import { getInstanceRow, readCredentials } from "@/lib/instance-repo";
 import { runDiagnostics } from "@/lib/mcp/diagnostics";
 import { forgetToken } from "@/lib/mcp/stats";
@@ -12,9 +13,6 @@ export const dynamic = "force-dynamic";
 const testSchema = z.object({
   instanceId: z.string().optional(),
   mcpUrl: z.string().optional(),
-  authMode: z.enum(["bearer", "basic"]).optional(),
-  username: z.string().optional(),
-  password: z.string().optional(),
   apiKey: z.string().optional(),
   tenantId: z.string().optional(),
   toolName: z.string().optional(),
@@ -29,6 +27,8 @@ const testSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
+    const guard = await requireAdmin(request);
+    if (isGuardFailure(guard)) return guard;
     const parsed = testSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid test request." }, { status: 400 });
@@ -43,9 +43,6 @@ export async function POST(request: Request) {
 
     const config = {
       mcpUrl: input.mcpUrl || stored?.mcpUrl || "",
-      authMode: input.authMode ?? stored?.authMode ?? "bearer",
-      username: input.username || storedCredentials?.username || "",
-      password: input.password || storedCredentials?.password || "",
       apiKey: input.apiKey || storedCredentials?.apiKey || "",
       tenantId: input.tenantId ?? stored?.tenantId ?? null,
       toolName: input.toolName ?? stored?.toolName ?? null,
@@ -56,15 +53,9 @@ export async function POST(request: Request) {
     if (!URL.canParse(config.mcpUrl)) {
       return NextResponse.json({ error: "A valid MCP endpoint URL is required." }, { status: 400 });
     }
-    const missingCredential = config.authMode === "basic" ? !config.password : !config.apiKey;
-    if (missingCredential) {
+    if (!config.apiKey) {
       return NextResponse.json(
-        {
-          error:
-            config.authMode === "basic"
-              ? "A password is required to test Basic auth."
-              : "A bearer token (API key) is required to test.",
-        },
+        { error: "An API key (bearer token) is required to test." },
         { status: 400 },
       );
     }

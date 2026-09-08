@@ -11,7 +11,7 @@ interface InstanceTileProps {
   stats?: InstanceStats;
   sensors?: SensorStatus;
   refreshing?: boolean;
-  onOpenSettings: (instance: InstanceSummary) => void;
+  onOpenSettings?: (instance: InstanceSummary) => void;
 }
 
 export function InstanceTile({
@@ -42,19 +42,21 @@ export function InstanceTile({
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           <StatusDot failed={failed} pending={Boolean(pending)} />
-          <button
-            type="button"
-            onClick={() => onOpenSettings(instance)}
-            aria-label={`${instance.name} settings`}
-            title="Instance settings"
-            className={cn(
-              "rounded-md p-1 text-sc-faint transition-colors",
-              "hover:bg-sc-active hover:text-sc-text",
-              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
-            )}
-          >
-            <Settings size={16} />
-          </button>
+          {onOpenSettings ? (
+            <button
+              type="button"
+              onClick={() => onOpenSettings(instance)}
+              aria-label={`${instance.name} settings`}
+              title="Instance settings"
+              className={cn(
+                "rounded-md p-1 text-sc-faint transition-colors",
+                "hover:bg-sc-active hover:text-sc-text",
+                "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
+              )}
+            >
+              <Settings size={16} />
+            </button>
+          ) : null}
         </div>
       </header>
 

@@ -4,22 +4,16 @@ export type Severity = (typeof SEVERITIES)[number];
 
 export type SeverityCounts = Record<Severity, number>;
 
-export type AuthMode = "bearer" | "basic";
-
 /** A Stellar Cyber instance as stored on disk. Secret fields hold GCM envelopes. */
 export interface InstanceRow {
   id: string;
   name: string;
   consoleUrl: string;
   mcpUrl: string;
-  authMode: AuthMode;
   toolName: string | null;
   toolArgs: string | null;
   tenantId: string | null;
-  consoleBuildHash: string | null;
   position: number;
-  usernameEnc: string;
-  passwordEnc: string;
   apiKeyEnc: string;
   createdAt: string;
   updatedAt: string;
@@ -31,14 +25,10 @@ export interface InstanceSummary {
   name: string;
   consoleUrl: string;
   mcpUrl: string;
-  authMode: AuthMode;
   toolName: string | null;
   tenantId: string | null;
-  consoleBuildHash: string | null;
   position: number;
-  username: string;
   hasApiKey: boolean;
-  hasPassword: boolean;
 }
 
 export type InstanceStatus = "ok" | "error";

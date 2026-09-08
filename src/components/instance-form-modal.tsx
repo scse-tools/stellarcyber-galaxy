@@ -5,23 +5,18 @@ import { PlugZap, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { McpTestPanel } from "@/components/mcp-test-panel";
-import { ConsoleControls } from "@/components/console-controls";
 import { InstanceFormFields, type InstanceFormValues } from "@/components/instance-form-fields";
 import { useConnectionTest } from "@/hooks/use-connection-test";
 import { useGalaxyStore } from "@/store/instances-store";
 import { resolveTimeRange } from "@/lib/time-range";
-import type { AuthMode, InstanceSummary } from "@/lib/types";
+import type { InstanceSummary } from "@/lib/types";
 
 const BLANK: InstanceFormValues = {
   name: "",
   consoleUrl: "",
   mcpUrl: "",
-  authMode: "bearer" as AuthMode,
-  username: "",
-  password: "",
   apiKey: "",
   tenantId: "",
-  consoleBuildHash: "",
   toolName: "",
   toolArgs: "",
 };
@@ -53,10 +48,7 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
             name: instance.name,
             consoleUrl: instance.consoleUrl,
             mcpUrl: instance.mcpUrl,
-            authMode: instance.authMode,
-            username: instance.username,
             tenantId: instance.tenantId ?? "",
-            consoleBuildHash: instance.consoleBuildHash ?? "",
             toolName: instance.toolName ?? "",
           }
         : BLANK,
@@ -74,14 +66,10 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
       name: form.name,
       consoleUrl: form.consoleUrl,
       mcpUrl: form.mcpUrl,
-      authMode: form.authMode,
-      username: form.username,
       tenantId: form.tenantId,
-      consoleBuildHash: form.consoleBuildHash,
       toolName: form.toolName,
       toolArgs: form.toolArgs,
     };
-    if (form.password || !editing) fields.password = form.password;
     if (form.apiKey || !editing) fields.apiKey = form.apiKey;
     return fields;
   }
@@ -136,8 +124,6 @@ export function InstanceFormModal({ open, instance, onClose, onDelete }: FormMod
             <p className="text-[11px] text-sc-faint">Tests the values above before saving.</p>
           </div>
         </div>
-
-        {editing && instance ? <ConsoleControls instance={instance} /> : null}
 
         <div className="flex items-center justify-between gap-2 border-t border-sc-border-soft pt-4">
           {editing && instance && onDelete ? (

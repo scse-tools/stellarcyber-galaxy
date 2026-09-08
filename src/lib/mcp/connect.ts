@@ -16,18 +16,11 @@ export interface McpConnection {
 
 export interface ConnectConfig {
   mcpUrl: string;
-  authMode: "bearer" | "basic";
-  username: string;
-  password: string;
   apiKey: string;
 }
 
-/** The configured credential presented as an HTTP header on every MCP request. */
+/** The API key presented as a bearer token on every MCP request. */
 export function authHeaders(config: ConnectConfig): Record<string, string> {
-  if (config.authMode === "basic") {
-    const encoded = Buffer.from(`${config.username}:${config.password}`).toString("base64");
-    return { Authorization: `Basic ${encoded}` };
-  }
   return { Authorization: `Bearer ${config.apiKey}` };
 }
 

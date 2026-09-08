@@ -1,4 +1,4 @@
-import { proxiedFetch } from "@/lib/console/fetch";
+import { proxiedFetch } from "@/lib/http";
 import { readCredentials } from "@/lib/instance-repo";
 import type { InstanceRow } from "@/lib/types";
 

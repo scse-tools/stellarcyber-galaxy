@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
-import type { AuthMode, InstanceRow, InstanceSummary } from "@/lib/types";
+import type { InstanceRow, InstanceSummary } from "@/lib/types";
 
 interface DbRow {
   id: string;
@@ -27,14 +27,10 @@ const toRow = (row: DbRow): InstanceRow => ({
   name: row.name,
   consoleUrl: row.console_url,
   mcpUrl: row.mcp_url,
-  authMode: (row.auth_mode === "basic" ? "basic" : "bearer") as AuthMode,
   toolName: row.tool_name,
   toolArgs: row.tool_args,
   tenantId: row.tenant_id,
-  consoleBuildHash: row.console_build_hash,
   position: row.position,
-  usernameEnc: row.username_enc,
-  passwordEnc: row.password_enc,
   apiKeyEnc: row.api_key_enc,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -47,13 +43,9 @@ export function toSummary(row: InstanceRow): InstanceSummary {
     name: row.name,
     consoleUrl: row.consoleUrl,
     mcpUrl: row.mcpUrl,
-    authMode: row.authMode,
     toolName: row.toolName,
     tenantId: row.tenantId,
-    consoleBuildHash: row.consoleBuildHash,
     position: row.position,
-    username: decryptSecret(row.usernameEnc),
-    hasPassword: row.passwordEnc.length > 0,
     hasApiKey: row.apiKeyEnc.length > 0,
   };
 }
@@ -81,20 +73,16 @@ export function createInstance(input: InstanceInput): InstanceRow {
   db.prepare(
     `INSERT INTO instances (id, name, console_url, mcp_url, auth_mode, tool_name, tool_args,
        tenant_id, console_build_hash, position, username_enc, password_enc, api_key_enc, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, 'bearer', ?, ?, ?, NULL, ?, '', '', ?, ?, ?)`,
   ).run(
     id,
     input.name,
     input.consoleUrl,
     input.mcpUrl,
-    input.authMode,
     input.toolName || null,
     input.toolArgs || null,
     input.tenantId || null,
-    input.consoleBuildHash || null,
     next.next,
-    encryptSecret(input.username),
-    encryptSecret(input.password),
     encryptSecret(input.apiKey),
     now,
     now,
@@ -107,23 +95,16 @@ export function updateInstance(id: string, patch: InstanceUpdate): InstanceRow |
   if (!current) return null;
   getDb()
     .prepare(
-      `UPDATE instances SET name = ?, console_url = ?, mcp_url = ?, auth_mode = ?, tool_name = ?,
-         tool_args = ?, tenant_id = ?, console_build_hash = ?, username_enc = ?, password_enc = ?,
-         api_key_enc = ?, updated_at = ? WHERE id = ?`,
+      `UPDATE instances SET name = ?, console_url = ?, mcp_url = ?, tool_name = ?,
+         tool_args = ?, tenant_id = ?, api_key_enc = ?, updated_at = ? WHERE id = ?`,
     )
     .run(
       patch.name ?? current.name,
       patch.consoleUrl ?? current.consoleUrl,
       patch.mcpUrl ?? current.mcpUrl,
-      patch.authMode ?? current.authMode,
       patch.toolName === undefined ? current.toolName : patch.toolName || null,
       patch.toolArgs === undefined ? current.toolArgs : patch.toolArgs || null,
       patch.tenantId === undefined ? current.tenantId : patch.tenantId || null,
-      patch.consoleBuildHash === undefined
-        ? current.consoleBuildHash
-        : patch.consoleBuildHash || null,
-      patch.username ? encryptSecret(patch.username) : current.usernameEnc,
-      patch.password ? encryptSecret(patch.password) : current.passwordEnc,
       patch.apiKey ? encryptSecret(patch.apiKey) : current.apiKeyEnc,
       new Date().toISOString(),
       id,
@@ -135,11 +116,7 @@ export function deleteInstance(id: string): boolean {
   return getDb().prepare("DELETE FROM instances WHERE id = ?").run(id).changes > 0;
 }
 
-/** Server-only: decrypts the stored credentials for an outbound MCP call. */
+/** Server-only: decrypts the stored API key for an outbound MCP/REST call. */
 export function readCredentials(row: InstanceRow) {
-  return {
-    username: decryptSecret(row.usernameEnc),
-    password: decryptSecret(row.passwordEnc),
-    apiKey: decryptSecret(row.apiKeyEnc),
-  };
+  return { apiKey: decryptSecret(row.apiKeyEnc) };
 }

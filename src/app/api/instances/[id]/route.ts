@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { deleteInstance, toSummary, updateInstance } from "@/lib/instance-repo";
 import { instanceUpdateSchema } from "@/lib/schemas";
 import { errorResponse } from "@/lib/api-error";
-import { forgetConsoleSession } from "@/lib/console/session";
+import { requireAdmin, isGuardFailure } from "@/lib/auth/session";
 import { forgetRestAccessToken } from "@/lib/rest/access-token";
 
 export const runtime = "nodejs";
@@ -12,6 +12,8 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Context) {
   try {
+    const guard = await requireAdmin(request);
+    if (isGuardFailure(guard)) return guard;
     const { id } = await params;
     const parsed = instanceUpdateSchema.safeParse(await request.json());
     if (!parsed.success) {
@@ -28,13 +30,14 @@ export async function PATCH(request: Request, { params }: Context) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Context) {
+export async function DELETE(request: Request, { params }: Context) {
   try {
+    const guard = await requireAdmin(request);
+    if (isGuardFailure(guard)) return guard;
     const { id } = await params;
     if (!deleteInstance(id)) {
       return NextResponse.json({ error: "Instance not found." }, { status: 404 });
     }
-    forgetConsoleSession(id);
     forgetRestAccessToken(id);
     return new NextResponse(null, { status: 204 });
   } catch (error) {

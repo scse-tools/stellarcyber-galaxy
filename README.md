@@ -1,25 +1,30 @@
 # Stellar Cyber Galaxy
 
-One tile per Stellar Cyber instance. Each tile talks to that instance's **MCP server**, and shows
-the current count of **open cases** split into **Critical / High / Medium / Low**. Click a tile to
-open a modal with the full breakdown and a link straight into that instance's console.
+One tile per Stellar Cyber instance. Each tile talks to that instance's **MCP server** for the
+current count of **open cases** by **Critical / High / Medium / Low**, and its **REST API** for
+**sensor status**. The app is served over **HTTPS** and requires a **login**; access is split into
+administrator and read-only roles.
 
 ## Quick start
 
 ```bash
 npm install
 npm run keygen >> .env     # writes GALAXY_ENCRYPTION_KEY=<32 random bytes, base64>
-npm run dev                # http://localhost:3000
+npm run dev                # https://localhost:3000  (self-signed cert on first run)
 ```
 
-Then click **Add instance** and fill in the console URL, the MCP endpoint, and the credentials.
-Afterwards, each tile's **gear icon** reopens that window to edit, re-test, initialize the console
-session, or remove the instance.
+On first visit you'll be asked to **create the administrator account**, then to sign in. As an
+admin, click **Add instance** to configure the console URL, MCP endpoint, and API key; each tile's
+**gear icon** reopens that window to edit, re-test, or remove the instance. The header gear (right of
+Add instance) opens **Global settings** — user accounts and the TLS certificate.
+
+The browser will warn about the self-signed certificate until you install your own (Global settings →
+TLS certificate).
 
 ## Run with Docker
 
-The app ships as a small standalone image (Next.js standalone + Node 24, which provides
-`node:sqlite` natively — no native builds, no Prisma engine downloads).
+The app runs as a custom HTTPS Node server on Node 24 (which provides `node:sqlite` natively — no
+native builds, no Prisma engine downloads).
 
 ```bash
 # 1. Provide the encryption key (once). Reuse your existing .env, or generate one:
@@ -27,15 +32,16 @@ echo "GALAXY_ENCRYPTION_KEY=$(openssl rand -base64 32)" > .env
 
 # 2. Build and start.
 docker compose up -d --build
-# → http://localhost:3000
+# → https://localhost:3000  (create the admin account on first visit)
 ```
 
-- **Persistence.** `docker-compose.yml` bind-mounts `./data` into the container, so the encrypted
-  SQLite database — and every instance you configure — lives on the host and survives rebuilds. Your
-  existing `./data/galaxy.db` is reused as-is (keep the matching `GALAXY_ENCRYPTION_KEY` in `.env`).
+- **Persistence.** `docker-compose.yml` bind-mounts `./data`, so the encrypted database, the TLS
+  certificate (`data/tls/`), user accounts, and configured instances live on the host and survive
+  rebuilds. An existing `./data/galaxy.db` is reused as-is (keep the matching key in `.env`).
 - **The key never enters the image.** `.dockerignore` excludes `.env` and `data`; the key is passed
-  at runtime via `env_file`, and the database is a mounted volume.
-- **Logs / status:** `docker compose logs -f` · `docker compose ps` (a healthcheck hits `/`).
+  at runtime via `env_file`, and the database and cert are on the mounted volume.
+- **Logs / status:** `docker compose logs -f` · `docker compose ps` (a healthcheck hits the HTTPS
+  endpoint, ignoring the self-signed cert).
 - **Update:** `git pull && docker compose up -d --build`. **Stop:** `docker compose down`.
 - **Behind a corporate proxy?** Uncomment `NODE_USE_ENV_PROXY` / `HTTPS_PROXY` in the compose file
   so the server can reach your Stellar Cyber instances.
@@ -131,7 +137,7 @@ Tiles refresh every 60 seconds, and on demand from the header Refresh button.
 
 ## Testing a connection
 
-Each tile's **gear icon** opens an editable configuration window — server (console URL), MCP
+Each tile's **gear icon** (admins only) opens an editable configuration window — server (console URL), MCP
 endpoint, credentials, tenant, build hash, and tool overrides are all editable in place. A **Test
 connection** button there runs the real sequence against the values on screen (before saving) and
 reports each step separately, so a failure says which part broke:
@@ -148,61 +154,43 @@ to the credentials already stored for that instance. A test always performs a fr
 than trusting a cached access token, and no token material is ever echoed back — only its length and
 remaining lifetime.
 
-## Console auto-login
+## Security & access
 
-The same configuration window (gear icon) has a **Console session** panel:
+- **HTTPS everywhere.** A custom Node server ([server.mjs](server.mjs)) serves the app over TLS. On
+  first run it generates a self-signed certificate into `data/tls/` (SANs for `localhost` and
+  `127.0.0.1`). Admins can regenerate it or install a CA-issued cert+key in **Global settings → TLS
+  certificate**; a valid cert is applied to new connections immediately (`setSecureContext`), no
+  restart — reload the page to reconnect. Uploaded certs are validated (PEM parses, and the key
+  matches the cert) before they are accepted.
+- **Login required.** Every page and API route requires a session. The first visit runs a one-time
+  **create administrator** flow ([/setup](src/app/setup/page.tsx)); afterwards everyone signs in at
+  [/login](src/app/login/page.tsx). Sessions are opaque random tokens stored **hashed** in the
+  database and carried in an HttpOnly, Secure, SameSite=Lax cookie; the default lifetime is 12 hours.
+- **Two roles.** *Administrator* has full rights (add/edit/remove instances, manage users, TLS).
+  *User* is **read-only** — tiles, case counts, sensor status, and the console links, but no gear, no
+  Add instance, no settings. Roles are enforced on the server (read routes require any user; every
+  write and all settings require admin), not just hidden in the UI.
+- **Password storage.** User passwords are stored only as salted **scrypt** hashes
+  ([password.ts](src/lib/auth/password.ts)) — never in plaintext or reversibly. The last
+  administrator cannot be demoted or deleted.
+- **Console links.** A tile's **Cases** and **Sensors** links open the instance's console directly;
+  you authenticate to the console yourself there. The app no longer stores console passwords or
+  maintains a console session.
 
-- **Initialize session** signs in with the stored credentials (no typing).
-- **Open console** then enters the authenticated dashboard directly, with no further login.
-
-### How it works, and why it is two steps
-
-The console authenticates with a cookie session, and its login page encrypts the password
-client-side before posting it. The app reproduces that exactly:
-
-1. The server reads the console's own JS bundle once and extracts its **login build hash** — the
-   AES passphrase the login page uses ([build-hash.ts](src/lib/console/build-hash.ts)). Cached per
-   origin; override it per instance under Advanced if discovery ever fails.
-2. The server encrypts the password with that passphrase in the console's exact `CryptoJS.AES`
-   format ([crypto-js-aes.ts](src/lib/console/crypto-js-aes.ts)) and POSTs
-   `{name, email, password, buildHash}` to `/local/login/callback`, capturing the session cookie
-   and verifying it with `GET /auth/is_authenticated`.
-3. **Initialize** then plants that cookie in the *browser* by top-level POSTing the same login form
-   into a small sign-in window. **Open console** afterwards navigates to the dashboard, which the
-   console's own SPA loads already authenticated.
-
-It is two steps because of how the console is defended, all confirmed against a live instance:
-
-- Its session cookies are **`SameSite=Strict`**, so they can only be planted by a *top-level*
-  navigation — an iframe or a background fetch would have the cookie dropped.
-- Its login endpoint answers with **JSON, not a redirect**, and sends
-  **`Cross-Origin-Opener-Policy: same-origin`**, which severs this app's handle to the sign-in
-  window the moment it lands. So the app cannot silently redirect that window to the dashboard; a
-  browser simply is not allowed to. The sign-in window therefore shows the raw login JSON — you can
-  close it — and **Open console** reaches the dashboard through a fresh navigation instead.
-
-On every refresh cycle the app also sends a **keepalive** (`/auth/is_authenticated`) to each
-initialized console, and the panel shows **Active / Check session / Not initialized**.
-
-The encoded password handed to the browser is precisely what the console's own login page posts —
-reversible only with the public build hash — so nothing is exposed beyond typing the password into
-that page yourself. Allow pop-ups for the app so the sign-in and console windows can open.
-
-> A fully seamless, single-window auto-login (no sign-in tab) is not possible from a different
-> origin against this console — its COOP + SameSite-Strict + JSON-login design forbids it. That
-> would require a real-browser automation backend (e.g. Playwright) driving an actual Chromium.
-
-## Credential storage## Credential storage
+## Credential storage
 
 - SQLite at `data/galaxy.db` (override with `GALAXY_DB_PATH`) — persistent across restarts.
-- Username, password, and API key are each sealed with **AES-256-GCM** before they are written. The
-  envelope is `v1.<iv>.<tag>.<ciphertext>`, with authenticated additional data, so a tampered row
-  fails to decrypt rather than decrypting to garbage.
+- Each instance stores only its **API key**, sealed with **AES-256-GCM** before it is written. The
+  envelope is `v1.<iv>.<tag>.<ciphertext>` with authenticated additional data, so a tampered row
+  fails to decrypt rather than decrypting to garbage. (Per-instance usernames/passwords were removed
+  along with the console-session feature.)
 - The master key lives only in `GALAXY_ENCRYPTION_KEY` (`.env`, gitignored). Lose it and the stored
-  credentials are unrecoverable; rotate it by re-entering credentials.
-- **No secret is ever sent to the browser.** `/api/instances` returns `hasPassword` / `hasApiKey`
-  booleans; decryption happens only on the server, immediately before an outbound MCP request.
-- Leaving the password/API key fields blank when editing keeps the values already on disk.
+  API keys are unrecoverable; rotate it by re-entering the keys.
+- **No secret is ever sent to the browser.** `/api/instances` returns a `hasApiKey` boolean;
+  decryption happens only on the server, immediately before an outbound MCP/REST request.
+- Leaving the API-key field blank when editing keeps the value already on disk.
+- **User passwords** are stored separately as salted scrypt hashes (never encrypted/reversible), and
+  session tokens are stored hashed — see **Security & access** above.
 
 ## Scripts
 
@@ -223,6 +211,9 @@ that page yourself. Allow pop-ups for the app so the sign-in and console windows
 | `GALAXY_DB_PATH` | `./data/galaxy.db` | SQLite file location |
 | `GALAXY_MCP_TIMEOUT_MS` | `15000` | Per-request MCP timeout |
 | `GALAXY_REST_TIMEOUT_MS` | `15000` | Per-request REST (sensor) timeout |
+| `GALAXY_TLS_DIR` | `./data/tls` | Where the TLS cert/key are stored |
+| `GALAXY_SESSION_TTL_MS` | `43200000` | Login session lifetime (default 12h) |
+| `PORT` / `HOSTNAME` | `3000` / `0.0.0.0` | HTTPS listen address |
 | `GALAXY_OPEN_STATUSES` | `New,In Progress` | Case statuses counted as open (case-sensitive) |
 | `GALAXY_CASE_HISTORY_FROM` | `0` | Epoch ms lower bound for `from_created_at` |
 | `GALAXY_CASE_PAGE_LIMIT` | `1000` | Page size for the fallback tally path only |
@@ -239,5 +230,7 @@ stellarcyber.ai. They live in `src/app/globals.css`.
 
 - Persistence uses Node's built-in `node:sqlite` (Node ≥ 22.5) rather than Prisma, so the app has no
   native build step and no engine download.
-- This app trusts whoever can reach it — it has no login of its own. Run it on localhost, or put an
-  authenticating proxy in front of it before exposing it.
+- The app is served by a custom HTTPS server ([server.mjs](server.mjs)); `npm run dev` and
+  `npm start` both run it (dev has hot reload). There is no plain-HTTP listener.
+- The app has its own login and role-based access, and serves HTTPS directly, so it can be exposed
+  without a separate auth proxy. Still limit network exposure to trusted operators.

@@ -8,7 +8,7 @@ coverage
 Dockerfile
 docker-compose.yml
 .dockerignore
-# Never bake secrets or the local database into the image — they arrive at runtime.
+# Never bake secrets or the local database/cert into the image — they arrive at runtime.
 .env
 .env.local
 data

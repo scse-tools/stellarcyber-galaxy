@@ -1,11 +1,13 @@
 "use client";
 
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/time-range-picker";
+import { UserMenu } from "@/components/user-menu";
 import { SEVERITY_META } from "@/lib/severity";
 import { describeRange, type TimeRangeSelection } from "@/lib/time-range";
 import { SEVERITIES, type SeverityCounts } from "@/lib/types";
+import type { SessionUser } from "@/lib/auth/types";
 
 interface GalaxyHeaderProps {
   totals: SeverityCounts;
@@ -13,9 +15,11 @@ interface GalaxyHeaderProps {
   onlineCount: number;
   refreshing: boolean;
   range: TimeRangeSelection;
+  user: SessionUser;
   onRangeChange: (range: TimeRangeSelection) => void;
   onRefresh: () => void;
   onAdd: () => void;
+  onOpenSettings: () => void;
 }
 
 export function GalaxyHeader({
@@ -24,11 +28,14 @@ export function GalaxyHeader({
   onlineCount,
   refreshing,
   range,
+  user,
   onRangeChange,
   onRefresh,
   onAdd,
+  onOpenSettings,
 }: GalaxyHeaderProps) {
   const total = SEVERITIES.reduce((sum, severity) => sum + totals[severity], 0);
+  const isAdmin = user.role === "admin";
 
   return (
     <header className="mb-8 space-y-5">
@@ -42,24 +49,32 @@ export function GalaxyHeader({
             {total.toLocaleString()} open case{total === 1 ? "" : "s"} in window
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button onClick={onRefresh} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? "animate-spin" : undefined} />
             Refresh
           </Button>
-          <Button variant="primary" onClick={onAdd}>
-            <Plus size={15} />
-            Add instance
-          </Button>
+          {isAdmin ? (
+            <>
+              <Button variant="primary" onClick={onAdd}>
+                <Plus size={15} />
+                Add instance
+              </Button>
+              <Button onClick={onOpenSettings} aria-label="Global settings" title="Global settings">
+                <Settings2 size={15} />
+              </Button>
+            </>
+          ) : null}
+          <div className="ml-1 border-l border-sc-border-soft pl-3">
+            <UserMenu user={user} />
+          </div>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-3">
         <div className="space-y-1.5">
           <TimeRangePicker value={range} disabled={refreshing} onChange={onRangeChange} />
-          <p className="pl-1 text-[11px] text-sc-faint">
-            Cases created · {describeRange(range)}
-          </p>
+          <p className="pl-1 text-[11px] text-sc-faint">Cases created · {describeRange(range)}</p>
         </div>
 
         <dl className="flex items-center gap-5">

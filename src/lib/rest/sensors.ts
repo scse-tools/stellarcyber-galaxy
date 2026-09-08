@@ -1,4 +1,4 @@
-import { proxiedFetch } from "@/lib/console/fetch";
+import { proxiedFetch } from "@/lib/http";
 import { forgetRestAccessToken, getRestAccessToken } from "@/lib/rest/access-token";
 import type { InstanceRow, SensorStatus } from "@/lib/types";
 
