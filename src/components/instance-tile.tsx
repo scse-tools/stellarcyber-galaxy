@@ -90,7 +90,6 @@ export function InstanceTile({
         statusCounts={stats?.statusCounts}
         muted={muted}
         compact
-        showLegend={expanded}
       />
 
       {failed ? (
