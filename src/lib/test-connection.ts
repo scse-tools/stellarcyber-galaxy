@@ -2,7 +2,7 @@ import type { McpTestResult } from "@/lib/types";
 
 export interface TestConnectionPayload {
   instanceId?: string;
-  mcpUrl?: string;
+  consoleUrl?: string;
   apiKey?: string;
   tenantId?: string;
   toolName?: string;

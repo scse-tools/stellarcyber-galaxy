@@ -16,7 +16,6 @@ const jsonObject = z
 export const instanceInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required.").max(80),
   consoleUrl: z.url("Console URL must be a valid URL."),
-  mcpUrl: z.url("MCP URL must be a valid URL."),
   toolName: z.string().trim().max(120).optional(),
   toolArgs: jsonObject.optional(),
   tenantId: z.string().trim().max(120).optional(),

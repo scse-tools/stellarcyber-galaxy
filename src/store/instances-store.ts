@@ -57,6 +57,7 @@ interface GalaxyState {
   loadInstances: () => Promise<void>;
   refreshStats: (id?: string) => Promise<void>;
   saveInstance: (input: InstanceInput | InstanceUpdate, id?: string) => Promise<void>;
+  cloneInstance: (id: string) => Promise<InstanceSummary>;
   removeInstance: (id: string) => Promise<void>;
 }
 
@@ -147,6 +148,16 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     }
     await get().loadInstances();
     await get().refreshStats(id);
+  },
+
+  async cloneInstance(id) {
+    const { instance } = await request<{ instance: InstanceSummary }>(
+      `/api/instances/${id}/clone`,
+      { method: "POST", body: "{}" },
+    );
+    await get().loadInstances();
+    await get().refreshStats(instance.id);
+    return instance;
   },
 
   async removeInstance(id) {

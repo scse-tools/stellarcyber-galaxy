@@ -6,12 +6,14 @@ import { getInstanceRow, readCredentials } from "@/lib/instance-repo";
 import { runDiagnostics } from "@/lib/mcp/diagnostics";
 import { forgetToken } from "@/lib/mcp/stats";
 import { rangeFromBody } from "@/lib/mcp/range-params";
+import { deriveMcpUrl } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const testSchema = z.object({
   instanceId: z.string().optional(),
+  consoleUrl: z.string().optional(),
   mcpUrl: z.string().optional(),
   apiKey: z.string().optional(),
   tenantId: z.string().optional(),
@@ -42,7 +44,11 @@ export async function POST(request: Request) {
     const storedCredentials = stored ? readCredentials(stored) : null;
 
     const config = {
-      mcpUrl: input.mcpUrl || stored?.mcpUrl || "",
+      mcpUrl:
+        input.mcpUrl ||
+        (input.consoleUrl ? deriveMcpUrl(input.consoleUrl) : "") ||
+        stored?.mcpUrl ||
+        "",
       apiKey: input.apiKey || storedCredentials?.apiKey || "",
       tenantId: input.tenantId ?? stored?.tenantId ?? null,
       toolName: input.toolName ?? stored?.toolName ?? null,

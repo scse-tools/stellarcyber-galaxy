@@ -5,7 +5,6 @@ import { Field, Input } from "@/components/ui/field";
 export interface InstanceFormValues {
   name: string;
   consoleUrl: string;
-  mcpUrl: string;
   apiKey: string;
   tenantId: string;
   toolName: string;
@@ -29,11 +28,11 @@ export function InstanceFormFields({ values, editing, onChange }: InstanceFormFi
       <Field label="Display name">
         <Input {...bind("name")} required />
       </Field>
-      <Field label="Console URL (server)" hint="The Stellar Cyber console the tile links to.">
+      <Field
+        label="Server URL"
+        hint="Base console URL. The MCP endpoint is derived automatically as <server>/mcp."
+      >
         <Input type="url" placeholder="https://coe.stellarcyber.cloud" {...bind("consoleUrl")} required />
-      </Field>
-      <Field label="MCP server URL" hint="Streamable HTTP or SSE endpoint of this instance's MCP server.">
-        <Input type="url" placeholder="https://coe.stellarcyber.cloud/mcp" {...bind("mcpUrl")} required />
       </Field>
       <Field
         label="API key (bearer token)"
