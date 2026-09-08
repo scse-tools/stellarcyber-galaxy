@@ -1,4 +1,4 @@
-import { proxiedFetch } from "@/lib/http";
+import { proxiedFetch, restUrl } from "@/lib/http";
 import { forgetRestAccessToken, getRestAccessToken } from "@/lib/rest/access-token";
 import type { ConnectorStatus, InstanceRow } from "@/lib/types";
 
@@ -47,7 +47,7 @@ export async function fetchConnectorStatus(row: InstanceRow): Promise<ConnectorS
   try {
     const request = async () => {
       const token = await getRestAccessToken(row);
-      return proxiedFetch(`${origin}${CONNECTORS_PATH}`, {
+      return proxiedFetch(restUrl(origin, CONNECTORS_PATH, row.tenantId), {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });

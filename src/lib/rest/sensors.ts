@@ -1,4 +1,4 @@
-import { proxiedFetch } from "@/lib/http";
+import { proxiedFetch, restUrl } from "@/lib/http";
 import { forgetRestAccessToken, getRestAccessToken } from "@/lib/rest/access-token";
 import type { InstanceRow, SensorStatus } from "@/lib/types";
 
@@ -57,7 +57,7 @@ export async function fetchSensorStatus(row: InstanceRow): Promise<SensorStatus>
     const request = async () => {
       const token = await getRestAccessToken(row);
       const controller = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-      return proxiedFetch(`${origin}${DATA_SENSORS_PATH}`, {
+      return proxiedFetch(restUrl(origin, DATA_SENSORS_PATH, row.tenantId), {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         signal: controller,
       });
