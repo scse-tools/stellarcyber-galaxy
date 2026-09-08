@@ -53,7 +53,6 @@ export interface ConnectorStatus {
   status: InstanceStatus;
   /** Collecting connectors only (is_collect === true). */
   total: number;
-  categories: number;
   active: number;
   healthy: number;
   issues: number;
