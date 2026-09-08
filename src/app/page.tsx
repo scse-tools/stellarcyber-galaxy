@@ -12,7 +12,7 @@ export default async function HomePage() {
   if (!user) redirect("/login");
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+    <main className="w-full px-4 py-5">
       <GalaxyGrid user={user} />
     </main>
   );

@@ -1,4 +1,5 @@
 import { SEVERITY_META } from "@/lib/severity";
+import { cn } from "@/lib/utils";
 import { SEVERITIES, type Severity, type SeverityCounts } from "@/lib/types";
 
 // Each open status is drawn as a progressively lighter shade of the severity colour.
@@ -9,29 +10,44 @@ interface SeverityRowsProps {
   statuses?: string[];
   statusCounts?: Record<Severity, Record<string, number>>;
   muted?: boolean;
+  compact?: boolean;
+  showLegend?: boolean;
 }
 
 /**
  * One labelled bar per severity, scaled to the largest bucket so small counts stay visible.
  * When status data is present, each bar is segmented by status (e.g. New vs In Progress).
  */
-export function SeverityRows({ counts, statuses, statusCounts, muted }: SeverityRowsProps) {
+export function SeverityRows({
+  counts,
+  statuses,
+  statusCounts,
+  muted,
+  compact,
+  showLegend = true,
+}: SeverityRowsProps) {
   const max = Math.max(...SEVERITIES.map((severity) => counts[severity]), 1);
   const hasSplit = Boolean(statuses && statuses.length > 0 && statusCounts);
 
   return (
-    <div className="space-y-2.5">
-      <dl className="space-y-2">
+    <div className={compact ? "space-y-1.5" : "space-y-2.5"}>
+      <dl className={compact ? "space-y-1" : "space-y-2"}>
         {SEVERITIES.map((severity) => {
           const total = counts[severity];
           const token = SEVERITY_META[severity].token;
           const perStatus = statusCounts?.[severity] ?? {};
           return (
             <div key={severity} className="flex items-center gap-2.5">
-              <dt className="flex w-[68px] shrink-0 items-center gap-1.5 text-xs text-sc-muted">
+              <dt
+                className={
+                  compact
+                    ? "flex w-[52px] shrink-0 items-center gap-1 text-[10px] text-sc-muted"
+                    : "flex w-[68px] shrink-0 items-center gap-1.5 text-xs text-sc-muted"
+                }
+              >
                 <span
                   aria-hidden
-                  className="size-2 shrink-0 rounded-full"
+                  className={cn(compact ? "size-1.5" : "size-2", "shrink-0 rounded-full")}
                   style={{ backgroundColor: token, opacity: muted ? 0.35 : 1 }}
                 />
                 {SEVERITY_META[severity].label}
@@ -61,7 +77,12 @@ export function SeverityRows({ counts, statuses, statusCounts, muted }: Severity
                   />
                 )}
               </div>
-              <dd className="w-[72px] shrink-0 text-right font-mono text-sm tabular-nums text-sc-text">
+              <dd
+                className={cn(
+                  "shrink-0 text-right font-mono tabular-nums text-sc-text",
+                  compact ? "w-[52px] text-[11px]" : "w-[72px] text-sm",
+                )}
+              >
                 {muted ? "–" : total.toLocaleString()}
               </dd>
             </div>
@@ -69,8 +90,8 @@ export function SeverityRows({ counts, statuses, statusCounts, muted }: Severity
         })}
       </dl>
 
-      {hasSplit && !muted ? (
-        <div className="flex items-center gap-3 pl-[78px] text-[10px] text-sc-faint">
+      {hasSplit && !muted && showLegend ? (
+        <div className="flex items-center gap-3 pl-[58px] text-[10px] text-sc-faint">
           {statuses!.map((status, index) => (
             <span key={status} className="inline-flex items-center gap-1">
               <span
