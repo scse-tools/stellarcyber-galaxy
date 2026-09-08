@@ -121,7 +121,7 @@ export function InstanceTile({
           loading={refreshing}
           action={
             <TileLink
-              href={consoleLink(instance.consoleUrl, "/connectors")}
+              href={consoleLink(instance.consoleUrl, "/system/integrations/connectors")}
               label="Connectors"
             />
           }

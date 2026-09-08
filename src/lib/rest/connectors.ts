@@ -8,7 +8,6 @@ const REQUEST_TIMEOUT_MS = Number(process.env.GALAXY_REST_TIMEOUT_MS ?? 15_000);
 interface ConnectorRow {
   is_collect?: unknown;
   active?: unknown;
-  category?: unknown;
   status?: { code?: unknown } | null;
 }
 
@@ -29,21 +28,13 @@ function readConnectors(payload: unknown): ConnectorRow[] {
 function aggregate(connectors: ConnectorRow[]): Omit<ConnectorStatus, "instanceId" | "status" | "fetchedAt"> {
   // Only connectors that collect data count toward the tile's connector health.
   const collecting = connectors.filter((c) => c.is_collect === true);
-  const categories = new Set<string>();
   let active = 0;
   let healthy = 0;
   for (const connector of collecting) {
-    if (typeof connector.category === "string" && connector.category) categories.add(connector.category);
     if (connector.active === true) active += 1;
     if (isRecord(connector.status) && Number(connector.status.code) === 0) healthy += 1;
   }
-  return {
-    total: collecting.length,
-    categories: categories.size,
-    active,
-    healthy,
-    issues: collecting.length - healthy,
-  };
+  return { total: collecting.length, active, healthy, issues: collecting.length - healthy };
 }
 
 /** Fetches collecting connectors over the REST API and summarizes their health for the tile. */
@@ -74,7 +65,6 @@ export async function fetchConnectorStatus(row: InstanceRow): Promise<ConnectorS
       ...base,
       status: "error",
       total: 0,
-      categories: 0,
       active: 0,
       healthy: 0,
       issues: 0,

@@ -2,9 +2,10 @@
 
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import type { ConnectorStatus } from "@/lib/types";
 
-/** Collecting-connector health: totals, categories, active, and healthy vs issue counts. */
+/** Collecting-connector health on a single line: active, healthy, and issues. */
 export function ConnectorStatusBlock({
   connectors,
   loading,
@@ -39,8 +40,7 @@ export function ConnectorStatusBlock({
       ) : connectors.total === 0 ? (
         <p className="text-[11px] text-sc-faint">No collecting connectors.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <Metric label="Categories" value={connectors.categories} />
+        <div className="flex items-stretch gap-2">
           <Metric label="Active" value={connectors.active} sub={`of ${connectors.total}`} />
           <Metric label="Healthy" value={connectors.healthy} tone="good" />
           <Metric label="Issues" value={connectors.issues} tone={connectors.issues > 0 ? "bad" : "good"} />
@@ -51,10 +51,10 @@ export function ConnectorStatusBlock({
 }
 
 type Tone = "neutral" | "good" | "bad";
-const VALUE_TONE: Record<Tone, string> = {
-  neutral: "text-sc-text",
-  good: "text-[var(--severity-success)]",
-  bad: "text-critical",
+const TONE: Record<Tone, { dot: string; value: string }> = {
+  neutral: { dot: "bg-sc-faint", value: "text-sc-text" },
+  good: { dot: "bg-[var(--severity-success)]", value: "text-sc-text" },
+  bad: { dot: "bg-critical", value: "text-critical" },
 };
 
 function Metric({
@@ -69,12 +69,15 @@ function Metric({
   tone?: Tone;
 }) {
   return (
-    <div className="flex items-baseline justify-between rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
-      <span className="text-[10px] uppercase tracking-wide text-sc-faint">{label}</span>
-      <span className={`font-mono text-sm tabular-nums ${VALUE_TONE[tone]}`}>
-        {value.toLocaleString()}
-        {sub ? <span className="ml-1 text-[10px] text-sc-faint">{sub}</span> : null}
-      </span>
+    <div className="flex-1 rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
+      <div className="flex items-center gap-1.5">
+        <span aria-hidden className={cn("size-2 rounded-full", TONE[tone].dot)} />
+        <span className={cn("font-mono text-base tabular-nums", TONE[tone].value)}>
+          {value.toLocaleString()}
+        </span>
+        {sub ? <span className="text-[10px] text-sc-faint">{sub}</span> : null}
+      </div>
+      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-sc-faint">{label}</p>
     </div>
   );
 }
