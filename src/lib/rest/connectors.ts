@@ -31,10 +31,12 @@ function aggregate(connectors: ConnectorRow[]): Omit<ConnectorStatus, "instanceI
   let active = 0;
   let healthy = 0;
   for (const connector of collecting) {
-    if (connector.active === true) active += 1;
+    // Health only applies to active connectors; inactive ones are not "in trouble".
+    if (connector.active !== true) continue;
+    active += 1;
     if (isRecord(connector.status) && Number(connector.status.code) === 0) healthy += 1;
   }
-  return { total: collecting.length, active, healthy, issues: collecting.length - healthy };
+  return { total: collecting.length, active, healthy, issues: active - healthy };
 }
 
 /** Fetches collecting connectors over the REST API and summarizes their health for the tile. */
