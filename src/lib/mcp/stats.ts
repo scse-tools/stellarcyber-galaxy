@@ -2,7 +2,7 @@ import { readCredentials } from "@/lib/instance-repo";
 import { exchangeBearerForAccessToken, type AccessToken } from "@/lib/mcp/access-token";
 import { fetchCaseCounts } from "@/lib/mcp/cases";
 import { connect, MCP_TIMEOUT_MS } from "@/lib/mcp/connect";
-import { EMPTY_COUNTS, type InstanceRow, type InstanceStats } from "@/lib/types";
+import { EMPTY_COUNTS, EMPTY_STATUS_COUNTS, type InstanceRow, type InstanceStats } from "@/lib/types";
 
 // Access tokens are short-lived; reuse one across polls until it is nearly expired.
 const globalForTokens = globalThis as typeof globalThis & { galaxyTokens?: Map<string, AccessToken> };
@@ -31,6 +31,8 @@ export async function fetchCaseStats(
   const base = {
     instanceId: row.id,
     counts: { ...EMPTY_COUNTS },
+    statuses: [] as string[],
+    statusCounts: EMPTY_STATUS_COUNTS(),
     total: 0,
     toolUsed: null as string | null,
     fetchedAt: new Date().toISOString(),
@@ -61,6 +63,8 @@ export async function fetchCaseStats(
       ...base,
       status: "ok",
       counts: cases.counts,
+      statuses: cases.statuses,
+      statusCounts: cases.statusCounts,
       total: cases.total,
       toolUsed: cases.toolName,
       latencyMs: Date.now() - startedAt,
