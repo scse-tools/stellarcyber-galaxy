@@ -9,7 +9,7 @@ import { InstanceFormFields, type InstanceFormValues } from "@/components/instan
 import { useConnectionTest } from "@/hooks/use-connection-test";
 import { useGalaxyStore } from "@/store/instances-store";
 import { resolveTimeRange } from "@/lib/time-range";
-import type { InstanceSummary } from "@/lib/types";
+import type { InstanceSummary, Tenant } from "@/lib/types";
 
 const BLANK: InstanceFormValues = {
   name: "",
@@ -41,6 +41,11 @@ export function InstanceFormModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const test = useConnectionTest();
+  const storedTenants = useGalaxyStore((state) =>
+    instance ? state.tenants[instance.id] : undefined,
+  );
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
   const editing = Boolean(instance);
 
   useEffect(() => {
@@ -58,9 +63,32 @@ export function InstanceFormModal({
           }
         : BLANK,
     );
+    setTenants(instance ? (storedTenants ?? []) : []);
     // `test.reset` is stable; re-seeding on every render would wipe the user's typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, instance]);
+
+  /** Populate the "Lock to tenant" list from the entered key (or the stored instance). */
+  async function loadTenants() {
+    setTenantsLoading(true);
+    try {
+      const response = await fetch("/api/tenants/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instanceId: instance?.id,
+          consoleUrl: form.consoleUrl,
+          apiKey: form.apiKey || undefined,
+        }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { tenants?: Tenant[] };
+      if (response.ok && body.tenants) setTenants(body.tenants);
+    } catch {
+      /* leave the current list in place */
+    } finally {
+      setTenantsLoading(false);
+    }
+  }
 
   const change = (key: keyof InstanceFormValues, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -100,7 +128,13 @@ export function InstanceFormModal({
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <InstanceFormFields values={form} editing={editing} onChange={change} />
+        <InstanceFormFields
+          values={form}
+          editing={editing}
+          tenants={tenants}
+          tenantsLoading={tenantsLoading}
+          onChange={change}
+        />
 
         {error ? (
           <p className="rounded-md border border-critical/40 bg-critical/10 px-3 py-2 text-xs text-critical">
@@ -114,11 +148,9 @@ export function InstanceFormModal({
             <Button
               type="button"
               onClick={() =>
-                void test.run({
-                  ...payload(),
-                  instanceId: instance?.id,
-                  ...resolveTimeRange(range),
-                })
+                void test
+                  .run({ ...payload(), instanceId: instance?.id, ...resolveTimeRange(range) })
+                  .then(() => loadTenants())
               }
               disabled={test.running || !form.consoleUrl}
             >

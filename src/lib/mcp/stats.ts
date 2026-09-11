@@ -55,7 +55,7 @@ export async function fetchCaseStats(
 
     const cases = await fetchCaseCounts(client, tools, {
       accessToken: token.token,
-      tenantId: tenantOverride !== undefined ? tenantOverride : row.tenantId,
+      tenantId: row.tenantId ?? tenantOverride ?? null,
       toolName: row.toolName,
       toolArgs: row.toolArgs,
       from: range.from,

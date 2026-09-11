@@ -1,5 +1,10 @@
 import { proxiedFetch } from "@/lib/http";
-import { forgetRestAccessToken, getRestAccessToken } from "@/lib/rest/access-token";
+import {
+  forgetRestAccessToken,
+  getRestAccessTokenWith,
+  type RestAuthConfig,
+} from "@/lib/rest/access-token";
+import { readCredentials } from "@/lib/instance-repo";
 import type { InstanceRow, Tenant } from "@/lib/types";
 
 const TENANTS_PATH = "/connect/api/v1/tenants";
@@ -46,12 +51,12 @@ function normalize(rows: Record<string, unknown>[]): Tenant[] {
  * Lists the tenants/customers visible to an instance's API key. Not every instance is an MSSP
  * parent, so a 404 or empty response is treated as "no tenants" rather than an error.
  */
-export async function fetchTenants(row: InstanceRow): Promise<Tenant[]> {
-  const origin = new URL(row.consoleUrl).origin;
+export async function fetchTenantsWith(config: RestAuthConfig): Promise<Tenant[]> {
+  const origin = new URL(config.consoleUrl).origin;
 
   try {
     const request = async () => {
-      const token = await getRestAccessToken(row);
+      const token = await getRestAccessTokenWith(config);
       return proxiedFetch(`${origin}${TENANTS_PATH}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -60,7 +65,7 @@ export async function fetchTenants(row: InstanceRow): Promise<Tenant[]> {
 
     let response = await request();
     if (response.status === 401) {
-      forgetRestAccessToken(row.id);
+      forgetRestAccessToken(config.id);
       response = await request();
     }
     if (!response.ok) return [];
@@ -69,4 +74,12 @@ export async function fetchTenants(row: InstanceRow): Promise<Tenant[]> {
   } catch {
     return [];
   }
+}
+
+export async function fetchTenants(row: InstanceRow): Promise<Tenant[]> {
+  return fetchTenantsWith({
+    id: row.id,
+    consoleUrl: row.consoleUrl,
+    apiKey: readCredentials(row).apiKey,
+  });
 }

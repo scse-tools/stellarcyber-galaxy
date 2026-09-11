@@ -105,7 +105,20 @@ export function InstanceTile({
         </div>
       </header>
 
-      {tenants && tenants.length > 0 ? (
+      {instance.tenantId ? (
+        <select
+          disabled
+          value={instance.tenantId}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`${instance.name} tenant (locked)`}
+          title="Locked to this tenant — change in settings"
+          className="w-full cursor-not-allowed rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[10px] font-medium text-sc-muted opacity-80"
+        >
+          <option value={instance.tenantId}>
+            🔒 {tenants?.find((t) => t.id === instance.tenantId)?.name ?? instance.tenantId}
+          </option>
+        </select>
+      ) : tenants && tenants.length > 0 ? (
         <select
           value={selectedTenant ?? ""}
           onClick={(event) => event.stopPropagation()}
@@ -117,7 +130,7 @@ export function InstanceTile({
           title="Scope this tile to a tenant"
           className="w-full rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
         >
-          <option value="">Default tenant</option>
+          <option value="">All tenants</option>
           {tenants.map((tenant) => (
             <option key={tenant.id} value={tenant.id}>
               {tenant.name}

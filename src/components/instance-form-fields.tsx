@@ -1,6 +1,7 @@
 "use client";
 
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
+import type { Tenant } from "@/lib/types";
 
 export interface InstanceFormValues {
   name: string;
@@ -14,10 +15,18 @@ export interface InstanceFormValues {
 interface InstanceFormFieldsProps {
   values: InstanceFormValues;
   editing: boolean;
+  tenants: Tenant[];
+  tenantsLoading?: boolean;
   onChange: (key: keyof InstanceFormValues, value: string) => void;
 }
 
-export function InstanceFormFields({ values, editing, onChange }: InstanceFormFieldsProps) {
+export function InstanceFormFields({
+  values,
+  editing,
+  tenants,
+  tenantsLoading,
+  onChange,
+}: InstanceFormFieldsProps) {
   const bind = (key: keyof InstanceFormValues) => ({
     value: values[key],
     onChange: (event: { target: { value: string } }) => onChange(key, event.target.value),
@@ -44,8 +53,28 @@ export function InstanceFormFields({ values, editing, onChange }: InstanceFormFi
       >
         <Input type="password" autoComplete="off" {...bind("apiKey")} required={!editing} />
       </Field>
-      <Field label="Tenant ID (cust_id)" hint="Optional — scopes case/sensor queries to one tenant.">
-        <Input {...bind("tenantId")} />
+      <Field
+        label="Lock to tenant"
+        hint={
+          tenantsLoading
+            ? "Loading tenants…"
+            : tenants.length > 0
+              ? "All tenants = no tenant filter; the tile picker stays enabled. Lock to scope this tile to one tenant."
+              : "Enter an API key and run Test connection to list tenants."
+        }
+      >
+        <Select {...bind("tenantId")} disabled={tenants.length === 0}>
+          <option value="">All tenants</option>
+          {/* Keep a locked value visible even before the list loads. */}
+          {values.tenantId && !tenants.some((t) => t.id === values.tenantId) ? (
+            <option value={values.tenantId}>{values.tenantId}</option>
+          ) : null}
+          {tenants.map((tenant) => (
+            <option key={tenant.id} value={tenant.id}>
+              {tenant.name}
+            </option>
+          ))}
+        </Select>
       </Field>
       <details className="rounded-md border border-sc-border-soft px-3 py-2">
         <summary className="cursor-pointer text-xs text-sc-muted">Advanced tool override</summary>
