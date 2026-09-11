@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "1.1.2";
+export const APP_VERSION = "1.1.3";
 
 export interface ChangelogEntry {
   version: string;
