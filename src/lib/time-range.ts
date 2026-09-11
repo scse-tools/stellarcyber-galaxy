@@ -1,8 +1,8 @@
-export type PresetId = "today" | "1h" | "12h" | "24h" | "7d" | "14d" | "1m" | "custom";
+export type PresetId = "today" | "1h" | "12h" | "24h" | "7d" | "14d" | "1m" | "custom" | "since";
 
 export interface TimeRangeSelection {
   preset: PresetId;
-  /** `datetime-local` values (local time, no zone), only used when preset is "custom". */
+  /** `datetime-local` values (local time, no zone); "custom" uses both, "since" uses only `from`. */
   from?: string;
   to?: string;
 }
@@ -56,6 +56,12 @@ export function resolveTimeRange(
     return { from: now - DAY, to: now };
   }
 
+  if (selection.preset === "since") {
+    const from = parseLocalDateTime(selection.from);
+    if (from !== null && from < now) return { from, to: now };
+    return { from: now - DAY, to: now };
+  }
+
   switch (selection.preset) {
     case "today": {
       const midnight = new Date(now);
@@ -87,6 +93,12 @@ export function isCustomRangeValid(selection: TimeRangeSelection): boolean {
   return from !== null && to !== null && from < to;
 }
 
+/** A "since" selection needs only a start that is in the past; the end is a dynamic "now". */
+export function isSinceValid(selection: TimeRangeSelection, now: number = Date.now()): boolean {
+  const from = parseLocalDateTime(selection.from);
+  return from !== null && from < now;
+}
+
 const STAMP = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 /** Human summary of the active window, shown next to the picker. */
@@ -94,5 +106,6 @@ export function describeRange(selection: TimeRangeSelection, now: number = Date.
   const { from, to } = resolveTimeRange(selection, now);
   const preset = TIME_PRESETS.find((entry) => entry.id === selection.preset);
   if (selection.preset === "custom") return `${STAMP.format(from)} → ${STAMP.format(to)}`;
+  if (selection.preset === "since") return `Since ${STAMP.format(from)}`;
   return `${preset?.title ?? "Window"} · from ${STAMP.format(from)}`;
 }
