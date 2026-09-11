@@ -1,6 +1,7 @@
 import {
   describeRange,
   isCustomRangeValid,
+  isSinceValid,
   resolveTimeRange,
   toLocalDateTimeValue,
 } from "@/lib/time-range";
@@ -64,6 +65,31 @@ describe("toLocalDateTimeValue", () => {
     const value = toLocalDateTimeValue(NOW);
     expect(value).toBe("2026-09-04T15:30");
     expect(new Date(value).getTime()).toBe(NOW);
+  });
+});
+
+describe("since", () => {
+  it("runs from the chosen start to now", () => {
+    const from = "2026-09-01T08:00";
+    const range = resolveTimeRange({ preset: "since", from }, NOW);
+    expect(range.from).toBe(new Date(2026, 8, 1, 8, 0).getTime());
+    expect(range.to).toBe(NOW);
+  });
+
+  it("falls back to 24h when the start is missing or in the future", () => {
+    expect(resolveTimeRange({ preset: "since" }, NOW)).toEqual({ from: NOW - DAY, to: NOW });
+    const future = { preset: "since" as const, from: "2099-01-01T00:00" };
+    expect(resolveTimeRange(future, NOW)).toEqual({ from: NOW - DAY, to: NOW });
+  });
+
+  it("validates a past start", () => {
+    expect(isSinceValid({ preset: "since", from: "2026-09-01T08:00" }, NOW)).toBe(true);
+    expect(isSinceValid({ preset: "since", from: "2099-01-01T00:00" }, NOW)).toBe(false);
+    expect(isSinceValid({ preset: "since" }, NOW)).toBe(false);
+  });
+
+  it("describes a since window", () => {
+    expect(describeRange({ preset: "since", from: "2026-09-01T08:00" }, NOW)).toContain("Since");
   });
 });
 
