@@ -13,6 +13,9 @@ interface NotificationsPanelProps {
 export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
   const notifications = useGalaxyStore((state) => state.notifications);
   const clearNotifications = useGalaxyStore((state) => state.clearNotifications);
+  const highlightInstance = useGalaxyStore((state) => state.highlightInstance);
+  const toastSeconds = useGalaxyStore((state) => state.toastSeconds);
+  const setToastSeconds = useGalaxyStore((state) => state.setToastSeconds);
 
   return (
     <aside
@@ -62,27 +65,54 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
         ) : (
           <ul className="divide-y divide-sc-border-soft">
             {notifications.map((n) => (
-              <li key={n.id} className="px-4 py-3">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: SEVERITY_META[n.severity].token }}
-                  />
-                  <p className="truncate text-xs font-medium text-sc-text">{n.instanceName}</p>
-                </div>
-                <p className="mt-1 text-[11px] text-sc-muted">
-                  {n.delta} new {SEVERITY_META[n.severity].label.toLowerCase()} case
-                  {n.delta === 1 ? "" : "s"} · {n.total.toLocaleString()} total
-                </p>
-                <p className="mt-0.5 text-[10px] text-sc-faint">
-                  {formatRelativeTime(n.createdAt)}
-                </p>
+              <li key={n.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    highlightInstance(n.instanceId);
+                    onClose();
+                  }}
+                  title={`Show ${n.instanceName}`}
+                  className="block w-full px-4 py-3 text-left transition-colors hover:bg-sc-active"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: SEVERITY_META[n.severity].token }}
+                    />
+                    <p className="truncate text-xs font-medium text-sc-text">{n.instanceName}</p>
+                  </div>
+                  <p className="mt-1 text-[11px] text-sc-muted">
+                    {n.delta} new {SEVERITY_META[n.severity].label.toLowerCase()} case
+                    {n.delta === 1 ? "" : "s"} · {n.total.toLocaleString()} total
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-sc-faint">
+                    {formatRelativeTime(n.createdAt)}
+                  </p>
+                </button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <footer className="border-t border-sc-border-soft px-4 py-3">
+        <label className="flex items-center justify-between gap-2 text-[11px] text-sc-muted">
+          <span>Auto-dismiss pop-ups after</span>
+          <span className="flex items-center gap-1">
+            <input
+              type="number"
+              min={1}
+              max={300}
+              value={toastSeconds}
+              onChange={(event) => setToastSeconds(Number(event.target.value))}
+              className="w-14 rounded-md border border-sc-border bg-sc-bg px-2 py-1 text-right text-xs text-sc-text focus:border-sc-link focus:outline-none"
+            />
+            <span className="text-sc-faint">s</span>
+          </span>
+        </label>
+      </footer>
     </aside>
   );
 }
