@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInstanceRow } from "@/lib/instance-repo";
-import { fetchConnectorStatus } from "@/lib/rest/connectors";
+import { fetchTenants } from "@/lib/rest/tenants";
 import { errorResponse } from "@/lib/api-error";
 import { requireUser, isGuardFailure } from "@/lib/auth/session";
 
@@ -16,11 +16,7 @@ export async function GET(request: Request, { params }: Context) {
     const { id } = await params;
     const row = getInstanceRow(id);
     if (!row) return NextResponse.json({ error: "Instance not found." }, { status: 404 });
-    const searchParams = new URL(request.url).searchParams;
-    const tenantOverride = searchParams.has("tenantId")
-      ? searchParams.get("tenantId") || null
-      : undefined;
-    return NextResponse.json({ connectors: await fetchConnectorStatus(row, tenantOverride) });
+    return NextResponse.json({ tenants: await fetchTenants(row) });
   } catch (error) {
     return errorResponse(error);
   }

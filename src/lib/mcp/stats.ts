@@ -22,10 +22,13 @@ export function forgetToken(instanceId: string): void {
 /**
  * One tile's numbers: connect, exchange the configured bearer token for an access token,
  * then list open cases and bucket them by severity.
+ * `tenantOverride` (undefined = use the instance's configured tenant) lets a tile's dropdown
+ * scope this one request to a different tenant without changing the instance's saved setting.
  */
 export async function fetchCaseStats(
   row: InstanceRow,
   range: { from: number; to: number },
+  tenantOverride?: string | null,
 ): Promise<InstanceStats> {
   const startedAt = Date.now();
   const base = {
@@ -52,7 +55,7 @@ export async function fetchCaseStats(
 
     const cases = await fetchCaseCounts(client, tools, {
       accessToken: token.token,
-      tenantId: row.tenantId,
+      tenantId: tenantOverride !== undefined ? tenantOverride : row.tenantId,
       toolName: row.toolName,
       toolArgs: row.toolArgs,
       from: range.from,

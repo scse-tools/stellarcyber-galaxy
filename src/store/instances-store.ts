@@ -1,11 +1,21 @@
 "use client";
 
 import { create } from "zustand";
-import type { ConnectorStatus, InstanceStats, InstanceSummary, SensorStatus } from "@/lib/types";
+import type {
+  AlertNotification,
+  ConnectorStatus,
+  InstanceStats,
+  InstanceSummary,
+  SensorStatus,
+  Tenant,
+} from "@/lib/types";
 import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
 import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 
 const RANGE_STORAGE_KEY = "galaxy.timeRange";
+/** Notifications are session-only; cap the backlog so a long-running tab doesn't grow it forever. */
+const MAX_NOTIFICATIONS = 200;
+const ALERTED_SEVERITIES = ["critical", "high"] as const;
 
 /** The picked window survives a reload; a corrupt or absent value falls back to 24h. */
 function storedRange(): TimeRangeSelection {
@@ -53,9 +63,22 @@ interface GalaxyState {
   loading: boolean;
   error: string | null;
   range: TimeRangeSelection;
+  /** Tenants available to each instance's API key, populated during initialization. */
+  tenants: Record<string, Tenant[]>;
+  /**
+   * Session-only view override, keyed by instance id: a tenant id scopes that tile's queries to
+   * it; `null` means "use the instance's configured default"; an absent key behaves the same as
+   * `null`. Never persisted to the instance's saved settings.
+   */
+  selectedTenant: Record<string, string | null>;
+  /** New critical/high cases found since the previous poll, newest first. Session-only. */
+  notifications: AlertNotification[];
   setRange: (range: TimeRangeSelection) => Promise<void>;
   loadInstances: () => Promise<void>;
   refreshStats: (id?: string) => Promise<void>;
+  fetchTenants: (id?: string) => Promise<void>;
+  setSelectedTenant: (instanceId: string, tenantId: string | null) => void;
+  clearNotifications: () => void;
   saveInstance: (input: InstanceInput | InstanceUpdate, id?: string) => Promise<void>;
   cloneInstance: (id: string) => Promise<InstanceSummary>;
   removeInstance: (id: string) => Promise<void>;
@@ -70,6 +93,9 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   loading: true,
   error: null,
   range: storedRange(),
+  tenants: {},
+  selectedTenant: {},
+  notifications: [],
 
   async setRange(range) {
     persistRange(range);
@@ -97,15 +123,49 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       targets.map(async (target) => {
         try {
           const { from, to } = resolveTimeRange(get().range);
+          // `null`/absent means "use the instance's configured tenant" — no query param sent.
+          const tenant = get().selectedTenant[target];
+          const tenantParams = new URLSearchParams();
+          if (tenant) tenantParams.set("tenantId", tenant);
+          const withTenant = (params: URLSearchParams) => {
+            for (const [key, value] of tenantParams) params.set(key, value);
+            return params.toString();
+          };
+          const statsParams = new URLSearchParams({ from: String(from), to: String(to) });
           const [{ stats }, sensorResult, connectorResult] = await Promise.all([
             request<{ stats: InstanceStats }>(
-              `/api/instances/${target}/stats?from=${from}&to=${to}`,
+              `/api/instances/${target}/stats?${withTenant(statsParams)}`,
             ),
-            request<{ sensors: SensorStatus }>(`/api/instances/${target}/sensors`).catch(() => null),
-            request<{ connectors: ConnectorStatus }>(`/api/instances/${target}/connectors`).catch(
-              () => null,
-            ),
+            request<{ sensors: SensorStatus }>(
+              `/api/instances/${target}/sensors?${withTenant(new URLSearchParams())}`,
+            ).catch(() => null),
+            request<{ connectors: ConnectorStatus }>(
+              `/api/instances/${target}/connectors?${withTenant(new URLSearchParams())}`,
+            ).catch(() => null),
           ]);
+
+          // A new critical/high alert fires only once a baseline poll exists for this instance,
+          // so a freshly loaded or freshly reachable tile doesn't dump its whole backlog at once.
+          const previous = get().stats[target];
+          const alerts: AlertNotification[] = [];
+          if (previous?.status === "ok" && stats.status === "ok") {
+            const instanceName = get().instances.find((i) => i.id === target)?.name ?? target;
+            for (const severity of ALERTED_SEVERITIES) {
+              const delta = stats.counts[severity] - previous.counts[severity];
+              if (delta > 0) {
+                alerts.push({
+                  id: `${target}-${severity}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                  instanceId: target,
+                  instanceName,
+                  severity,
+                  delta,
+                  total: stats.counts[severity],
+                  createdAt: new Date().toISOString(),
+                });
+              }
+            }
+          }
+
           set((state) => ({
             stats: { ...state.stats, [target]: stats },
             sensors: sensorResult
@@ -114,6 +174,10 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
             connectors: connectorResult
               ? { ...state.connectors, [target]: connectorResult.connectors }
               : state.connectors,
+            notifications:
+              alerts.length > 0
+                ? [...alerts, ...state.notifications].slice(0, MAX_NOTIFICATIONS)
+                : state.notifications,
           }));
         } catch (error) {
           set((state) => ({
@@ -140,6 +204,31 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     );
   },
 
+  async fetchTenants(id) {
+    const targets = id ? [id] : get().instances.map((instance) => instance.id);
+    if (targets.length === 0) return;
+    await Promise.all(
+      targets.map(async (target) => {
+        const result = await request<{ tenants: Tenant[] }>(
+          `/api/instances/${target}/tenants`,
+        ).catch(() => null);
+        if (!result) return;
+        set((state) => ({ tenants: { ...state.tenants, [target]: result.tenants } }));
+      }),
+    );
+  },
+
+  setSelectedTenant(instanceId, tenantId) {
+    set((state) => ({
+      selectedTenant: { ...state.selectedTenant, [instanceId]: tenantId },
+    }));
+    void get().refreshStats(instanceId);
+  },
+
+  clearNotifications() {
+    set({ notifications: [] });
+  },
+
   async saveInstance(input, id) {
     if (id) {
       await request(`/api/instances/${id}`, { method: "PATCH", body: JSON.stringify(input) });
@@ -147,7 +236,7 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       await request("/api/instances", { method: "POST", body: JSON.stringify(input) });
     }
     await get().loadInstances();
-    await get().refreshStats(id);
+    await Promise.all([get().refreshStats(id), get().fetchTenants(id)]);
   },
 
   async cloneInstance(id) {
@@ -156,7 +245,7 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       { method: "POST", body: "{}" },
     );
     await get().loadInstances();
-    await get().refreshStats(instance.id);
+    await Promise.all([get().refreshStats(instance.id), get().fetchTenants(instance.id)]);
     return instance;
   },
 
@@ -166,10 +255,22 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       const stats = { ...state.stats };
       const sensors = { ...state.sensors };
       const connectors = { ...state.connectors };
+      const tenants = { ...state.tenants };
+      const selectedTenant = { ...state.selectedTenant };
       delete stats[id];
       delete sensors[id];
       delete connectors[id];
-      return { instances: state.instances.filter((i) => i.id !== id), stats, sensors, connectors };
+      delete tenants[id];
+      delete selectedTenant[id];
+      return {
+        instances: state.instances.filter((i) => i.id !== id),
+        stats,
+        sensors,
+        connectors,
+        tenants,
+        selectedTenant,
+        notifications: state.notifications.filter((n) => n.instanceId !== id),
+      };
     });
   },
 }));

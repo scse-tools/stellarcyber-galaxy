@@ -1,10 +1,11 @@
 "use client";
 
-import { Plus, RefreshCw, Settings2 } from "lucide-react";
+import { Bell, Plus, RefreshCw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { UserMenu } from "@/components/user-menu";
 import { SEVERITY_META } from "@/lib/severity";
+import { cn } from "@/lib/utils";
 import { describeRange, type TimeRangeSelection } from "@/lib/time-range";
 import { SEVERITIES, type SeverityCounts } from "@/lib/types";
 import type { SessionUser } from "@/lib/auth/types";
@@ -16,6 +17,9 @@ interface GalaxyHeaderProps {
   refreshing: boolean;
   range: TimeRangeSelection;
   user: SessionUser;
+  notificationCount: number;
+  notificationsOpen: boolean;
+  onToggleNotifications: () => void;
   onRangeChange: (range: TimeRangeSelection) => void;
   onRefresh: () => void;
   onAdd: () => void;
@@ -29,6 +33,9 @@ export function GalaxyHeader({
   refreshing,
   range,
   user,
+  notificationCount,
+  notificationsOpen,
+  onToggleNotifications,
   onRangeChange,
   onRefresh,
   onAdd,
@@ -53,6 +60,23 @@ export function GalaxyHeader({
           <Button onClick={onRefresh} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? "animate-spin" : undefined} />
             Refresh
+          </Button>
+          <Button
+            onClick={onToggleNotifications}
+            aria-label="Toggle notifications"
+            aria-pressed={notificationsOpen}
+            title="Notifications"
+            className={cn("relative", notificationsOpen && "border-sc-link text-sc-text")}
+          >
+            <Bell size={15} />
+            {notificationCount > 0 ? (
+              <span
+                aria-hidden
+                className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-critical px-1 text-[9px] font-semibold leading-none text-white"
+              >
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
+            ) : null}
           </Button>
           {isAdmin ? (
             <>

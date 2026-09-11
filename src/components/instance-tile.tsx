@@ -12,6 +12,7 @@ import {
   type InstanceStats,
   type InstanceSummary,
   type SensorStatus,
+  type Tenant,
 } from "@/lib/types";
 
 interface InstanceTileProps {
@@ -21,6 +22,11 @@ interface InstanceTileProps {
   connectors?: ConnectorStatus;
   refreshing?: boolean;
   onOpenSettings?: (instance: InstanceSummary) => void;
+  /** Tenants visible to this instance's API key. Omitted or empty hides the tenant picker. */
+  tenants?: Tenant[];
+  /** The session-only tenant override in effect; `null` means "use the instance's default". */
+  selectedTenant?: string | null;
+  onSelectTenant?: (tenantId: string | null) => void;
 }
 
 export function InstanceTile({
@@ -30,6 +36,9 @@ export function InstanceTile({
   connectors,
   refreshing,
   onOpenSettings,
+  tenants,
+  selectedTenant,
+  onSelectTenant,
 }: InstanceTileProps) {
   const [expanded, setExpanded] = useState(false);
   const failed = stats?.status === "error";
@@ -37,12 +46,28 @@ export function InstanceTile({
   const counts = stats?.counts ?? EMPTY_COUNTS;
   const muted = failed || !stats;
 
+  const openConsole = () => {
+    window.open(instance.consoleUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <article
+      onClick={openConsole}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openConsole();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${instance.name} console`}
+      title={`Open ${instance.name} in a new tab`}
       className={cn(
-        "tile-rise group flex w-full flex-col gap-2.5 rounded-lg border p-3",
+        "tile-rise group flex w-full cursor-pointer flex-col gap-2.5 rounded-lg border p-3",
         "border-sc-border bg-sc-surface/85 backdrop-blur transition-colors duration-200",
         "hover:border-sc-border-soft",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sc-link",
         failed && "border-critical/40",
       )}
     >
@@ -56,7 +81,10 @@ export function InstanceTile({
           {onOpenSettings ? (
             <button
               type="button"
-              onClick={() => onOpenSettings(instance)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenSettings(instance);
+              }}
               aria-label={`${instance.name} settings`}
               title="Instance settings"
               className="rounded p-0.5 text-sc-faint transition-colors hover:bg-sc-active hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
@@ -66,6 +94,27 @@ export function InstanceTile({
           ) : null}
         </div>
       </header>
+
+      {tenants && tenants.length > 0 ? (
+        <select
+          value={selectedTenant ?? ""}
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            event.stopPropagation();
+            onSelectTenant?.(event.target.value || null);
+          }}
+          aria-label={`${instance.name} tenant`}
+          title="Scope this tile to a tenant"
+          className="w-full rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
+        >
+          <option value="">Default tenant</option>
+          {tenants.map((tenant) => (
+            <option key={tenant.id} value={tenant.id}>
+              {tenant.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
 
       <div className="flex items-end justify-between gap-2">
         <div>
@@ -98,7 +147,10 @@ export function InstanceTile({
 
       <button
         type="button"
-        onClick={() => setExpanded((value) => !value)}
+        onClick={(event) => {
+          event.stopPropagation();
+          setExpanded((value) => !value);
+        }}
         aria-expanded={expanded}
         className="mt-auto flex items-center justify-between rounded-md border border-sc-border-soft px-2 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text"
       >

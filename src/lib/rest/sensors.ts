@@ -48,16 +48,24 @@ function aggregate(sensors: SensorRow[]): Omit<SensorStatus, "instanceId" | "sta
   return { total: sensors.length, byFeature, connection, upgrade };
 }
 
-/** Fetches the instance's sensors over the REST API and categorizes them for the tile. */
-export async function fetchSensorStatus(row: InstanceRow): Promise<SensorStatus> {
+/**
+ * Fetches the instance's sensors over the REST API and categorizes them for the tile.
+ * `tenantOverride` (undefined = use the instance's configured tenant) lets a tile's dropdown
+ * scope this one request to a different tenant without changing the instance's saved setting.
+ */
+export async function fetchSensorStatus(
+  row: InstanceRow,
+  tenantOverride?: string | null,
+): Promise<SensorStatus> {
   const base = { instanceId: row.id, fetchedAt: new Date().toISOString() };
   const origin = new URL(row.consoleUrl).origin;
+  const tenantId = tenantOverride !== undefined ? tenantOverride : row.tenantId;
 
   try {
     const request = async () => {
       const token = await getRestAccessToken(row);
       const controller = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-      return proxiedFetch(restUrl(origin, DATA_SENSORS_PATH, row.tenantId), {
+      return proxiedFetch(restUrl(origin, DATA_SENSORS_PATH, tenantId), {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         signal: controller,
       });
