@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarClock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarClock, CalendarDays } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -111,17 +111,15 @@ export function TimeRangePicker({ value, disabled, onChange }: TimeRangePickerPr
         {tab === "range" ? (
           <div className="space-y-3">
             <Field label="From">
-              <Input
-                type="datetime-local"
+              <DateTimeInput
                 value={range.from}
-                onChange={(event) => setRange({ ...range, from: event.target.value })}
+                onChange={(next) => setRange({ ...range, from: next })}
               />
             </Field>
             <Field label="To">
-              <Input
-                type="datetime-local"
+              <DateTimeInput
                 value={range.to}
-                onChange={(event) => setRange({ ...range, to: event.target.value })}
+                onChange={(next) => setRange({ ...range, to: next })}
               />
             </Field>
             {!rangeValid ? (
@@ -133,11 +131,7 @@ export function TimeRangePicker({ value, disabled, onChange }: TimeRangePickerPr
         ) : (
           <div className="space-y-3">
             <Field label="Since" hint="The window runs from this start to a dynamic “now.”">
-              <Input
-                type="datetime-local"
-                value={since}
-                onChange={(event) => setSince(event.target.value)}
-              />
+              <DateTimeInput value={since} onChange={setSince} />
             </Field>
             {!sinceValid ? (
               <p className="text-[11px] text-critical">Pick a start time in the past.</p>
@@ -160,5 +154,47 @@ export function TimeRangePicker({ value, disabled, onChange }: TimeRangePickerPr
         </div>
       </Modal>
     </>
+  );
+}
+
+/**
+ * A datetime-local field with a calendar button that opens the native date/time picker.
+ * The button drives `showPicker()`, and the browser's own indicator is hidden so there is
+ * a single, obvious affordance.
+ */
+function DateTimeInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const openPicker = () => {
+    const input = ref.current?.querySelector("input") as
+      | (HTMLInputElement & { showPicker?: () => void })
+      | null;
+    if (input?.showPicker) input.showPicker();
+    else input?.focus();
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <Input
+        type="datetime-local"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="pr-9 [&::-webkit-calendar-picker-indicator]:opacity-0"
+      />
+      <button
+        type="button"
+        aria-label="Open date and time picker"
+        onClick={openPicker}
+        className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2.5 text-sc-faint transition-colors hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
+      >
+        <CalendarDays size={15} />
+      </button>
+    </div>
   );
 }
