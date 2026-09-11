@@ -1,4 +1,4 @@
-export type PresetId = "today" | "1h" | "12h" | "24h" | "7d" | "14d" | "1m" | "custom" | "since";
+export type PresetId = "today" | "1h" | "5h" | "12h" | "24h" | "7d" | "14d" | "1m" | "custom" | "since";
 
 export interface TimeRangeSelection {
   preset: PresetId;
@@ -15,6 +15,7 @@ export interface ResolvedRange {
 export const TIME_PRESETS: Array<{ id: PresetId; label: string; title: string }> = [
   { id: "today", label: "Today", title: "Since local midnight" },
   { id: "1h", label: "1HR", title: "Last hour" },
+  { id: "5h", label: "5HR", title: "Last 5 hours" },
   { id: "12h", label: "12HR", title: "Last 12 hours" },
   { id: "24h", label: "24HR", title: "Last 24 hours" },
   { id: "7d", label: "7D", title: "Last 7 days" },
@@ -70,6 +71,8 @@ export function resolveTimeRange(
     }
     case "1h":
       return { from: now - HOUR, to: now };
+    case "5h":
+      return { from: now - 5 * HOUR, to: now };
     case "12h":
       return { from: now - 12 * HOUR, to: now };
     case "7d":
