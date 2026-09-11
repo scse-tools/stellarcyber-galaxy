@@ -1,0 +1,26 @@
+#!/bin/sh
+# Auto-increment the patch (third) digit of APP_VERSION on each commit.
+# Skips when src/lib/version.ts is already part of the commit, so hand edits
+# (e.g. a documented release + changelog) are respected instead of double-bumped.
+# Pure POSIX sh + sed so it runs without node on PATH.
+
+f="src/lib/version.ts"
+[ -f "$f" ] || exit 0
+
+case "$(git diff --cached --name-only)" in
+  *"$f"*) exit 0 ;;
+esac
+
+cur=$(sed -n 's/.*APP_VERSION = "\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)".*/\1/p' "$f")
+[ -n "$cur" ] || exit 0
+
+major=${cur%%.*}
+rest=${cur#*.}
+minor=${rest%%.*}
+patch=${rest##*.}
+patch=$((patch + 1))
+new="$major.$minor.$patch"
+
+sed "s/APP_VERSION = \"$cur\"/APP_VERSION = \"$new\"/" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+git add "$f"
+echo "[version] bumped $cur -> $new"

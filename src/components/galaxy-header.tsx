@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Bell, Plus, RefreshCw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { UserMenu } from "@/components/user-menu";
+import { ChangelogModal } from "@/components/changelog-modal";
+import { APP_VERSION } from "@/lib/version";
 import { SEVERITY_META } from "@/lib/severity";
 import { cn } from "@/lib/utils";
 import { describeRange, type TimeRangeSelection } from "@/lib/time-range";
@@ -41,6 +44,7 @@ export function GalaxyHeader({
   onAdd,
   onOpenSettings,
 }: GalaxyHeaderProps) {
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const total = SEVERITIES.reduce((sum, severity) => sum + totals[severity], 0);
   const isAdmin = user.role === "admin";
 
@@ -48,9 +52,19 @@ export function GalaxyHeader({
     <header className="mb-8 space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-sc-text">
-            Stellar Cyber <span className="text-sc-accent">Galaxy</span>
-          </h1>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-sc-text">
+              Stellar Cyber <span className="text-sc-accent">Galaxy</span>
+            </h1>
+            <button
+              type="button"
+              onClick={() => setChangelogOpen(true)}
+              title="Release notes"
+              className="rounded font-mono text-[11px] text-sc-faint transition-colors hover:text-sc-link focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
+            >
+              v{APP_VERSION}
+            </button>
+          </div>
           <p className="mt-1.5 text-xs text-sc-faint">
             {instanceCount} instance{instanceCount === 1 ? "" : "s"} · {onlineCount} reachable ·{" "}
             {total.toLocaleString()} open case{total === 1 ? "" : "s"} in window
@@ -119,6 +133,8 @@ export function GalaxyHeader({
           ))}
         </dl>
       </div>
+
+      <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </header>
   );
 }
