@@ -13,6 +13,9 @@ import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
 import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 
 const RANGE_STORAGE_KEY = "galaxy.timeRange";
+const TOAST_SECONDS_KEY = "galaxy.toastSeconds";
+const DEFAULT_TOAST_SECONDS = 15;
+const HIGHLIGHT_MS = 2600;
 /** Notifications are session-only; cap the backlog so a long-running tab doesn't grow it forever. */
 const MAX_NOTIFICATIONS = 200;
 const ALERTED_SEVERITIES = ["critical", "high"] as const;
@@ -38,6 +41,20 @@ function persistRange(range: TimeRangeSelection): void {
     /* private browsing - the picker still works for this session */
   }
 }
+
+/** Toast auto-dismiss seconds survive a reload; clamp to a sane range. */
+function storedToastSeconds(): number {
+  if (typeof window === "undefined") return DEFAULT_TOAST_SECONDS;
+  try {
+    const raw = Number(window.localStorage.getItem(TOAST_SECONDS_KEY));
+    return Number.isFinite(raw) && raw >= 1 && raw <= 300 ? raw : DEFAULT_TOAST_SECONDS;
+  } catch {
+    return DEFAULT_TOAST_SECONDS;
+  }
+}
+
+// A single timer clears the tile highlight; module-scoped so a new highlight resets it.
+let highlightTimer: ReturnType<typeof setTimeout> | undefined;
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -73,12 +90,18 @@ interface GalaxyState {
   selectedTenant: Record<string, string | null>;
   /** New critical/high cases found since the previous poll, newest first. Session-only. */
   notifications: AlertNotification[];
+  /** Seconds a toast stays on screen before auto-dismissing (configurable, default 15). */
+  toastSeconds: number;
+  /** The instance whose tile is momentarily highlighted after a toast/notification click. */
+  highlightedInstanceId: string | null;
   setRange: (range: TimeRangeSelection) => Promise<void>;
   loadInstances: () => Promise<void>;
   refreshStats: (id?: string) => Promise<void>;
   fetchTenants: (id?: string) => Promise<void>;
   setSelectedTenant: (instanceId: string, tenantId: string | null) => void;
   clearNotifications: () => void;
+  setToastSeconds: (seconds: number) => void;
+  highlightInstance: (instanceId: string) => void;
   saveInstance: (input: InstanceInput | InstanceUpdate, id?: string) => Promise<void>;
   cloneInstance: (id: string) => Promise<InstanceSummary>;
   removeInstance: (id: string) => Promise<void>;
@@ -96,6 +119,8 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   tenants: {},
   selectedTenant: {},
   notifications: [],
+  toastSeconds: storedToastSeconds(),
+  highlightedInstanceId: null,
 
   async setRange(range) {
     persistRange(range);
@@ -227,6 +252,24 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
 
   clearNotifications() {
     set({ notifications: [] });
+  },
+
+  setToastSeconds(seconds) {
+    const clamped = Math.min(300, Math.max(1, Math.round(seconds)));
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(TOAST_SECONDS_KEY, String(clamped));
+      } catch {
+        /* private browsing - still applies for this session */
+      }
+    }
+    set({ toastSeconds: clamped });
+  },
+
+  highlightInstance(instanceId) {
+    if (highlightTimer) clearTimeout(highlightTimer);
+    set({ highlightedInstanceId: instanceId });
+    highlightTimer = setTimeout(() => set({ highlightedInstanceId: null }), HIGHLIGHT_MS);
   },
 
   async saveInstance(input, id) {

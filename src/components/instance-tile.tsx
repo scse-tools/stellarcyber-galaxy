@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Settings } from "lucide-react";
 import { SeverityRows } from "@/components/severity-bar";
 import { SensorStatusBlock } from "@/components/sensor-status";
@@ -21,6 +21,7 @@ interface InstanceTileProps {
   sensors?: SensorStatus;
   connectors?: ConnectorStatus;
   refreshing?: boolean;
+  highlighted?: boolean;
   onOpenSettings?: (instance: InstanceSummary) => void;
   /** Tenants visible to this instance's API key. Omitted or empty hides the tenant picker. */
   tenants?: Tenant[];
@@ -35,6 +36,7 @@ export function InstanceTile({
   sensors,
   connectors,
   refreshing,
+  highlighted,
   onOpenSettings,
   tenants,
   selectedTenant,
@@ -45,6 +47,12 @@ export function InstanceTile({
   const pending = !stats || refreshing;
   const counts = stats?.counts ?? EMPTY_COUNTS;
   const muted = failed || !stats;
+  const ref = useRef<HTMLElement>(null);
+
+  // Scroll the tile into view when a toast/notification points at it.
+  useEffect(() => {
+    if (highlighted) ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlighted]);
 
   const openConsole = () => {
     window.open(instance.consoleUrl, "_blank", "noopener,noreferrer");
@@ -52,6 +60,7 @@ export function InstanceTile({
 
   return (
     <article
+      ref={ref}
       onClick={openConsole}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -65,10 +74,11 @@ export function InstanceTile({
       title={`Open ${instance.name} in a new tab`}
       className={cn(
         "tile-rise group flex w-full cursor-pointer flex-col gap-2.5 rounded-lg border p-3",
-        "border-sc-border bg-sc-surface/85 backdrop-blur transition-colors duration-200",
+        "border-sc-border bg-sc-surface/85 backdrop-blur transition-all duration-300",
         "hover:border-sc-border-soft",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sc-link",
         failed && "border-critical/40",
+        highlighted && "border-sc-accent ring-2 ring-sc-accent ring-offset-2 ring-offset-sc-bg",
       )}
     >
       <header className="flex items-start justify-between gap-2">

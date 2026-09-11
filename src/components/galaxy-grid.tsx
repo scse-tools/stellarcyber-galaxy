@@ -40,6 +40,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const setSelectedTenant = useGalaxyStore((state) => state.setSelectedTenant);
   const removeInstance = useGalaxyStore((state) => state.removeInstance);
   const cloneInstance = useGalaxyStore((state) => state.cloneInstance);
+  const highlightedInstanceId = useGalaxyStore((state) => state.highlightedInstanceId);
   const setRange = useGalaxyStore((state) => state.setRange);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -156,6 +157,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               sensors={sensors[instance.id]}
               connectors={connectors[instance.id]}
               refreshing={refreshing[instance.id]}
+              highlighted={highlightedInstanceId === instance.id}
               onOpenSettings={isAdmin ? openConfigure : undefined}
               tenants={tenants[instance.id]}
               selectedTenant={selectedTenant[instance.id] ?? null}
