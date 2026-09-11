@@ -18,8 +18,12 @@ export async function GET(request: Request, { params }: Context) {
     const row = getInstanceRow(id);
     if (!row) return NextResponse.json({ error: "Instance not found." }, { status: 404 });
 
-    const range = rangeFromParams(new URL(request.url).searchParams);
-    return NextResponse.json({ stats: await fetchCaseStats(row, range) });
+    const searchParams = new URL(request.url).searchParams;
+    const range = rangeFromParams(searchParams);
+    const tenantOverride = searchParams.has("tenantId")
+      ? searchParams.get("tenantId") || null
+      : undefined;
+    return NextResponse.json({ stats: await fetchCaseStats(row, range, tenantOverride) });
   } catch (error) {
     return errorResponse(error);
   }

@@ -16,7 +16,11 @@ export async function GET(request: Request, { params }: Context) {
     const { id } = await params;
     const row = getInstanceRow(id);
     if (!row) return NextResponse.json({ error: "Instance not found." }, { status: 404 });
-    return NextResponse.json({ sensors: await fetchSensorStatus(row) });
+    const searchParams = new URL(request.url).searchParams;
+    const tenantOverride = searchParams.has("tenantId")
+      ? searchParams.get("tenantId") || null
+      : undefined;
+    return NextResponse.json({ sensors: await fetchSensorStatus(row, tenantOverride) });
   } catch (error) {
     return errorResponse(error);
   }

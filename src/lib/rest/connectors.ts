@@ -39,15 +39,23 @@ function aggregate(connectors: ConnectorRow[]): Omit<ConnectorStatus, "instanceI
   return { total: collecting.length, active, healthy, issues: active - healthy };
 }
 
-/** Fetches collecting connectors over the REST API and summarizes their health for the tile. */
-export async function fetchConnectorStatus(row: InstanceRow): Promise<ConnectorStatus> {
+/**
+ * Fetches collecting connectors over the REST API and summarizes their health for the tile.
+ * `tenantOverride` (undefined = use the instance's configured tenant) lets a tile's dropdown
+ * scope this one request to a different tenant without changing the instance's saved setting.
+ */
+export async function fetchConnectorStatus(
+  row: InstanceRow,
+  tenantOverride?: string | null,
+): Promise<ConnectorStatus> {
   const base = { instanceId: row.id, fetchedAt: new Date().toISOString() };
   const origin = new URL(row.consoleUrl).origin;
+  const tenantId = tenantOverride !== undefined ? tenantOverride : row.tenantId;
 
   try {
     const request = async () => {
       const token = await getRestAccessToken(row);
-      return proxiedFetch(restUrl(origin, CONNECTORS_PATH, row.tenantId), {
+      return proxiedFetch(restUrl(origin, CONNECTORS_PATH, tenantId), {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });

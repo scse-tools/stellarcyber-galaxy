@@ -82,12 +82,27 @@ body {
   .tile-rise {
     animation: tile-rise 0.32s ease-out both;
   }
+
+  .toast-rise {
+    animation: toast-rise 0.22s ease-out both;
+  }
 }
 
 @keyframes tile-rise {
   from {
     opacity: 0;
     transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
   }
   to {
     opacity: 1;

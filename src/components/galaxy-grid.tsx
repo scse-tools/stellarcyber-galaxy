@@ -5,6 +5,8 @@ import { GalaxyHeader } from "@/components/galaxy-header";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
+import { NotificationsPanel } from "@/components/notifications-panel";
+import { ToastStack } from "@/components/toast-stack";
 import { Button } from "@/components/ui/button";
 import { useGalaxyStore } from "@/store/instances-store";
 import {
@@ -19,10 +21,23 @@ import type { SessionUser } from "@/lib/auth/types";
 const POLL_INTERVAL_MS = 60_000;
 
 export function GalaxyGrid({ user }: { user: SessionUser }) {
-  const { instances, stats, sensors, connectors, refreshing, loading, error, range } =
-    useGalaxyStore();
+  const {
+    instances,
+    stats,
+    sensors,
+    connectors,
+    refreshing,
+    loading,
+    error,
+    range,
+    tenants,
+    selectedTenant,
+    notifications,
+  } = useGalaxyStore();
   const loadInstances = useGalaxyStore((state) => state.loadInstances);
   const refreshStats = useGalaxyStore((state) => state.refreshStats);
+  const fetchTenants = useGalaxyStore((state) => state.fetchTenants);
+  const setSelectedTenant = useGalaxyStore((state) => state.setSelectedTenant);
   const removeInstance = useGalaxyStore((state) => state.removeInstance);
   const cloneInstance = useGalaxyStore((state) => state.cloneInstance);
   const setRange = useGalaxyStore((state) => state.setRange);
@@ -30,11 +45,16 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const isAdmin = user.role === "admin";
 
   useEffect(() => {
-    void loadInstances().then(() => refreshStats());
-  }, [loadInstances, refreshStats]);
+    // Initialization: load instances, then in parallel pull each tile's stats and its tenant list.
+    void loadInstances().then(() => {
+      void refreshStats();
+      void fetchTenants();
+    });
+  }, [loadInstances, refreshStats, fetchTenants]);
 
   useEffect(() => {
     const timer = setInterval(() => void refreshStats(), POLL_INTERVAL_MS);
@@ -108,7 +128,13 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         onAdd={openAdd}
         onOpenSettings={() => setSettingsOpen(true)}
         user={user}
+        notificationCount={notifications.length}
+        notificationsOpen={notificationsOpen}
+        onToggleNotifications={() => setNotificationsOpen((open) => !open)}
       />
+
+      <ToastStack />
+      <NotificationsPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
 
       {error ? (
         <p className="mb-6 rounded-md border border-critical/40 bg-critical/10 px-4 py-3 text-sm text-critical">
@@ -131,6 +157,9 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               connectors={connectors[instance.id]}
               refreshing={refreshing[instance.id]}
               onOpenSettings={isAdmin ? openConfigure : undefined}
+              tenants={tenants[instance.id]}
+              selectedTenant={selectedTenant[instance.id] ?? null}
+              onSelectTenant={(tenantId) => setSelectedTenant(instance.id, tenantId)}
             />
           ))}
         </div>

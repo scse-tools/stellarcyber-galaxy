@@ -100,3 +100,22 @@ export interface SensorStatus {
 }
 
 export const EMPTY_COUNTS: SeverityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
+
+/** One MSSP tenant/customer visible to an instance's API key. */
+export interface Tenant {
+  id: string;
+  name: string;
+}
+
+/** Raised when a poll finds more critical/high cases on an instance than the previous poll. */
+export interface AlertNotification {
+  id: string;
+  instanceId: string;
+  instanceName: string;
+  severity: Extract<Severity, "critical" | "high">;
+  /** How many new cases appeared in this bucket since the previous poll. */
+  delta: number;
+  /** The bucket's new total. */
+  total: number;
+  createdAt: string;
+}
