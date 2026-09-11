@@ -14,7 +14,7 @@ import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/
 
 const RANGE_STORAGE_KEY = "galaxy.timeRange";
 const TOAST_SECONDS_KEY = "galaxy.toastSeconds";
-const DEFAULT_TOAST_SECONDS = 15;
+const DEFAULT_TOAST_SECONDS = 5;
 const HIGHLIGHT_MS = 2600;
 /** Notifications are session-only; cap the backlog so a long-running tab doesn't grow it forever. */
 const MAX_NOTIFICATIONS = 200;
