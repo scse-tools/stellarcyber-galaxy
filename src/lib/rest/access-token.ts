@@ -28,13 +28,20 @@ function readToken(payload: unknown): { token: string; expSeconds: number | null
   return { token, expSeconds: typeof exp === "number" ? exp : null };
 }
 
-/** Trades the instance's API key for a REST access token, mirroring the console/MCP auth. */
-export async function getRestAccessToken(row: InstanceRow): Promise<string> {
-  const cached = cache.get(row.id);
+export interface RestAuthConfig {
+  /** Cache key — an instance id, or a synthetic key for an ad-hoc (unsaved) preview. */
+  id: string;
+  consoleUrl: string;
+  apiKey: string;
+}
+
+/** Trades an API key for a REST access token, given explicit credentials. */
+export async function getRestAccessTokenWith(config: RestAuthConfig): Promise<string> {
+  const cached = cache.get(config.id);
   if (cached && cached.expiresAt > Date.now()) return cached.token;
 
-  const { apiKey } = readCredentials(row);
-  const origin = new URL(row.consoleUrl).origin;
+  const { apiKey } = config;
+  const origin = new URL(config.consoleUrl).origin;
   const response = await proxiedFetch(`${origin}${ACCESS_TOKEN_PATH}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -58,8 +65,17 @@ export async function getRestAccessToken(row: InstanceRow): Promise<string> {
       : parsed.expSeconds > now / 1000 + 5
         ? parsed.expSeconds * 1000
         : now + parsed.expSeconds * 1000;
-  cache.set(row.id, { token: parsed.token, expiresAt: expiresAt - 60_000 });
+  cache.set(config.id, { token: parsed.token, expiresAt: expiresAt - 60_000 });
   return parsed.token;
+}
+
+/** Trades the instance's stored API key for a REST access token. */
+export async function getRestAccessToken(row: InstanceRow): Promise<string> {
+  return getRestAccessTokenWith({
+    id: row.id,
+    consoleUrl: row.consoleUrl,
+    apiKey: readCredentials(row).apiKey,
+  });
 }
 
 export function forgetRestAccessToken(instanceId: string): void {

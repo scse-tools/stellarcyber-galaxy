@@ -50,7 +50,7 @@ export async function fetchConnectorStatus(
 ): Promise<ConnectorStatus> {
   const base = { instanceId: row.id, fetchedAt: new Date().toISOString() };
   const origin = new URL(row.consoleUrl).origin;
-  const tenantId = tenantOverride !== undefined ? tenantOverride : row.tenantId;
+  const tenantId = row.tenantId ?? tenantOverride ?? null;
 
   try {
     const request = async () => {
