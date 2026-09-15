@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Settings, Table2 } from "lucide-react";
+import { SEVERITY_META } from "@/lib/severity";
 import { cn, hostOf } from "@/lib/utils";
 import { SEVERITIES } from "@/lib/types";
 import type {
@@ -30,6 +31,9 @@ interface InstancesTableProps {
 }
 
 const CASE_COLS = ["Open", "Critical", "High", "Medium", "Low"];
+const SEV_COLOR: Record<string, string> = Object.fromEntries(
+  SEVERITIES.map((severity) => [SEVERITY_META[severity].label, SEVERITY_META[severity].token]),
+);
 const HEALTH_COLS = ["Sensors", "Connected", "Disconnected", "No output", "Active", "Healthy", "Issues"];
 
 export function InstancesTable(props: InstancesTableProps) {
@@ -49,7 +53,11 @@ export function InstancesTable(props: InstancesTableProps) {
             <Th className="text-left">Instance</Th>
             <Th className="text-left">Tenant</Th>
             {metricCols.map((c) => (
-              <Th key={c} className="text-right">
+              <Th
+                key={c}
+                className="text-right"
+                style={viewMode === "cases" && SEV_COLOR[c] ? { color: SEV_COLOR[c] } : undefined}
+              >
                 {c}
               </Th>
             ))}
@@ -115,9 +123,18 @@ export function InstancesTable(props: InstancesTableProps) {
   );
 }
 
-function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+function Th({
+  children,
+  className,
+  style,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <th
+      style={style}
       className={cn(
         "whitespace-nowrap border-b border-sc-border px-3 py-2 font-medium uppercase tracking-wide text-[10px] text-sc-faint",
         className,
@@ -128,9 +145,23 @@ function Th({ children, className }: { children: React.ReactNode; className?: st
   );
 }
 
-function Num({ value, className }: { value: number | null; className?: string }) {
+function Num({
+  value,
+  className,
+  color,
+}: {
+  value: number | null;
+  className?: string;
+  color?: string;
+}) {
   return (
-    <td className={cn("px-3 py-2 text-right font-mono tabular-nums", className ?? "text-sc-text")}>
+    <td
+      style={color && value !== null ? { color } : undefined}
+      className={cn(
+        "px-3 py-2 text-right font-mono tabular-nums",
+        className ?? (color ? "text-sc-faint" : "text-sc-text"),
+      )}
+    >
       {value === null ? "—" : value.toLocaleString()}
     </td>
   );
@@ -140,9 +171,13 @@ function CaseCells({ stats }: { stats?: InstanceStats }) {
   const ok = stats?.status === "ok";
   return (
     <>
-      <Num value={ok ? stats!.total : null} />
+      <Num value={ok ? stats!.total : null} className="text-sc-text font-semibold" />
       {SEVERITIES.map((severity) => (
-        <Num key={severity} value={ok ? stats!.counts[severity] : null} />
+        <Num
+          key={severity}
+          value={ok ? stats!.counts[severity] : null}
+          color={SEVERITY_META[severity].token}
+        />
       ))}
     </>
   );
