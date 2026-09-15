@@ -13,6 +13,7 @@ import {
   type InstanceSummary,
   type SensorStatus,
   type Tenant,
+  type ViewMode,
 } from "@/lib/types";
 
 interface InstanceTileProps {
@@ -22,6 +23,7 @@ interface InstanceTileProps {
   connectors?: ConnectorStatus;
   refreshing?: boolean;
   highlighted?: boolean;
+  mode?: ViewMode;
   onOpenSettings?: (instance: InstanceSummary) => void;
   /** Tenants visible to this instance's API key. Omitted or empty hides the tenant picker. */
   tenants?: Tenant[];
@@ -37,6 +39,7 @@ export function InstanceTile({
   connectors,
   refreshing,
   highlighted,
+  mode = "cases",
   onOpenSettings,
   tenants,
   selectedTenant,
@@ -47,6 +50,7 @@ export function InstanceTile({
   const pending = !stats || refreshing;
   const counts = stats?.counts ?? EMPTY_COUNTS;
   const muted = failed || !stats;
+  const health = mode === "health";
   const ref = useRef<HTMLElement>(null);
 
   // Scroll the tile into view when a toast/notification points at it.
@@ -139,53 +143,54 @@ export function InstanceTile({
         </select>
       ) : null}
 
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <div
-            className={cn(
-              "font-mono text-[1.75rem] leading-none tabular-nums",
-              muted ? "text-sc-faint" : "text-sc-text",
-            )}
-          >
-            {muted ? "—" : (stats?.total ?? 0).toLocaleString()}
+      {health ? null : (
+        <>
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <div
+                className={cn(
+                  "font-mono text-[1.75rem] leading-none tabular-nums",
+                  muted ? "text-sc-faint" : "text-sc-text",
+                )}
+              >
+                {muted ? "—" : (stats?.total ?? 0).toLocaleString()}
+              </div>
+              <p className="mt-1 text-[9px] font-medium uppercase tracking-wider text-sc-faint">
+                Open cases
+              </p>
+            </div>
+            <TileLink href={consoleLink(instance.consoleUrl, "/cases")} label="Cases" />
           </div>
-          <p className="mt-1 text-[9px] font-medium uppercase tracking-wider text-sc-faint">
-            Open cases
-          </p>
-        </div>
-        <TileLink href={consoleLink(instance.consoleUrl, "/cases")} label="Cases" />
-      </div>
 
-      <SeverityRows
-        counts={counts}
-        statuses={stats?.statuses}
-        statusCounts={stats?.statusCounts}
-        muted={muted}
-        compact
-      />
+          <SeverityRows
+            counts={counts}
+            statuses={stats?.statuses}
+            statusCounts={stats?.statusCounts}
+            muted={muted}
+            compact
+          />
 
-      {failed ? (
-        <p className="truncate text-[9px] text-critical/90">{stats?.error}</p>
-      ) : null}
+          {failed ? (
+            <p className="truncate text-[9px] text-critical/90">{stats?.error}</p>
+          ) : null}
 
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          setExpanded((value) => !value);
-        }}
-        aria-expanded={expanded}
-        className="mt-auto flex items-center justify-between rounded-md border border-sc-border-soft px-2 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text"
-      >
-        <span>Sensors &amp; connectors</span>
-        <ChevronDown
-          size={13}
-          className={cn("transition-transform", expanded && "rotate-180")}
-        />
-      </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setExpanded((value) => !value);
+            }}
+            aria-expanded={expanded}
+            className="mt-auto flex items-center justify-between rounded-md border border-sc-border-soft px-2 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text"
+          >
+            <span>Sensors &amp; connectors</span>
+            <ChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
+          </button>
+        </>
+      )}
 
-      {expanded ? (
-        <div>
+      {health || expanded ? (
+        <div className={health ? "space-y-0" : undefined}>
           <SensorStatusBlock
             sensors={sensors}
             loading={refreshing}
