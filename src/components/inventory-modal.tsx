@@ -1,19 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Printer, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/field";
-import { cn } from "@/lib/utils";
 import { cellText, downloadCsv, printTable, toCsv, type Row } from "@/lib/table-export";
-import { matchesStatus, sectionize, type StatusFilter } from "@/lib/inventory-columns";
-import { InventoryTable } from "@/components/inventory-table";
+import { compareCells, DEFAULT_VISIBLE, matchesStatus, sectionize } from "@/lib/inventory-columns";
+import type { ColumnSection, StatusFilter } from "@/lib/inventory-columns";
+import { InventoryTable, type SortState } from "@/components/inventory-table";
+import { InventoryToolbar, type InventoryTab } from "@/components/inventory-toolbar";
 import type { InstanceSummary } from "@/lib/types";
 
-export type InventoryTab = "sensors" | "connectors";
+export type { InventoryTab };
 
-/** The field each tab is "broken out by", surfaced as the first column and the group filter. */
+/** The field each tab is "broken out by", surfaced first and used as the default sort key. */
 const GROUP_FIELD: Record<InventoryTab, string> = { sensors: "feature", connectors: "type" };
 interface InventoryData {
   sensors: Row[];
@@ -30,6 +28,13 @@ interface InventoryModalProps {
   onClose: () => void;
 }
 
+/** Keeps only the sections/columns the picker currently shows, preserving section order. */
+function visibleSectionsOf(sections: ColumnSection[], isVisible: (c: string) => boolean): ColumnSection[] {
+  return sections
+    .map((s) => ({ ...s, columns: s.columns.filter(isVisible) }))
+    .filter((s) => s.columns.length > 0);
+}
+
 export function InventoryModal({
   instance,
   initialTab,
@@ -41,12 +46,19 @@ export function InventoryModal({
   const [data, setData] = useState<InventoryData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [group, setGroup] = useState<string>("");
   const [status, setStatus] = useState<StatusFilter | null>(initialStatus ?? null);
+  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+  const [sort, setSort] = useState<SortState>(null);
+  const [colFilters, setColFilters] = useState<Record<string, string>>({});
 
   useEffect(() => setTab(initialTab), [initialTab, instance?.id]);
   useEffect(() => setStatus(initialStatus ?? null), [initialStatus, initialTab, instance?.id]);
-  useEffect(() => setGroup(""), [tab, instance?.id]);
+  useEffect(() => {
+    // Reset column controls whenever the dataset changes.
+    setVisibility({});
+    setSort(null);
+    setColFilters({});
+  }, [tab, instance?.id]);
 
   useEffect(() => {
     if (!instance) return;
@@ -70,33 +82,65 @@ export function InventoryModal({
   const tabError = tab === "sensors" ? data?.sensorError : data?.connectorError;
   const groupField = GROUP_FIELD[tab];
 
-  const groupValues = useMemo(() => {
-    const set = new Set<string>();
-    for (const row of allRows) set.add(cellText(row[groupField]) || "—");
-    return [...set].sort();
-  }, [allRows, groupField]);
-
-  const rows = useMemo(() => {
-    let filtered = group ? allRows.filter((r) => (cellText(r[groupField]) || "—") === group) : allRows;
-    if (status) filtered = filtered.filter((r) => matchesStatus(tab, status.key, r));
-    const secondKey = tab === "sensors" ? "hostname" : "name";
-    return [...filtered].sort((a, b) =>
-      (cellText(a[groupField]) || "").localeCompare(cellText(b[groupField]) || "") ||
-      cellText(a[secondKey]).localeCompare(cellText(b[secondKey])),
-    );
-  }, [allRows, group, groupField, tab, status]);
-
-  // Columns grouped into labelled, colour-accented sections; the flat list drives CSV/PDF.
-  const sections = useMemo(() => {
+  // Every column, grouped into labelled, colour-accented sections (drives the column picker).
+  const allSections = useMemo(() => {
     const keys = new Set<string>();
     for (const row of allRows) for (const key of Object.keys(row)) keys.add(key);
     return sectionize([...keys], groupField);
   }, [allRows, groupField]);
-  const columns = useMemo(() => sections.flatMap((section) => section.columns), [sections]);
 
-  const suffix = [group, status?.label].filter(Boolean).join("-");
+  const isVisible = useCallback(
+    (column: string) => visibility[column] ?? DEFAULT_VISIBLE[tab].includes(column),
+    [visibility, tab],
+  );
+
+  const sections = useMemo(() => visibleSectionsOf(allSections, isVisible), [allSections, isVisible]);
+  const columns = useMemo(() => sections.flatMap((section) => section.columns), [sections]);
+  const allColumnCount = useMemo(
+    () => allSections.reduce((sum, section) => sum + section.columns.length, 0),
+    [allSections],
+  );
+
+  const rows = useMemo(() => {
+    let filtered = status ? allRows.filter((r) => matchesStatus(tab, status.key, r)) : allRows;
+    for (const [column, term] of Object.entries(colFilters)) {
+      const needle = term.trim().toLowerCase();
+      if (needle) filtered = filtered.filter((r) => cellText(r[column]).toLowerCase().includes(needle));
+    }
+    const sortKey = sort?.col ?? groupField;
+    const dir = sort?.dir ?? "asc";
+    const secondKey = tab === "sensors" ? "hostname" : "name";
+    return [...filtered].sort((a, b) => {
+      const primary = compareCells(cellText(a[sortKey]), cellText(b[sortKey]));
+      const ordered = dir === "asc" ? primary : -primary;
+      return ordered || compareCells(cellText(a[secondKey]), cellText(b[secondKey]));
+    });
+  }, [allRows, status, colFilters, sort, groupField, tab]);
+
+  const toggleColumn = useCallback(
+    (column: string) => setVisibility((prev) => ({ ...prev, [column]: !(prev[column] ?? DEFAULT_VISIBLE[tab].includes(column)) })),
+    [tab],
+  );
+  const resetColumns = useCallback(() => setVisibility({}), []);
+  const cycleSort = useCallback(
+    (column: string) =>
+      setSort((prev) =>
+        prev?.col !== column
+          ? { col: column, dir: "asc" }
+          : prev.dir === "asc"
+            ? { col: column, dir: "desc" }
+            : null,
+      ),
+    [],
+  );
+  const setColFilter = useCallback(
+    (column: string, value: string) => setColFilters((prev) => ({ ...prev, [column]: value })),
+    [],
+  );
+
+  const suffix = status?.label ?? "";
   const baseName = `${instance?.name ?? "instance"}-${tab}${suffix ? `-${suffix}` : ""}`.replace(/\s+/g, "_");
-  const title = `${instance?.name ?? ""} — ${tab}${suffix ? ` (${[group ? `${groupField}: ${group}` : "", status?.label].filter(Boolean).join(" · ")})` : ""}`;
+  const title = `${instance?.name ?? ""} — ${tab}${suffix ? ` (${suffix})` : ""}`;
 
   const exportCsv = useCallback(() => downloadCsv(`${baseName}.csv`, toCsv(columns, rows)), [baseName, columns, rows]);
   const exportPdf = useCallback(() => printTable(title, columns, rows), [title, columns, rows]);
@@ -107,65 +151,31 @@ export function InventoryModal({
     <Modal
       open
       title={`Inventory · ${instance.name}`}
-      description="Full sensor and connector records, broken out by feature / type."
+      description="Full sensor and connector records. Pick columns, then sort or filter any of them."
       onClose={onClose}
       className="max-w-[min(96vw,1500px)]"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-lg border border-sc-border bg-sc-surface/70 p-1">
-          {(["sensors", "connectors"] as const).map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                setTab(id);
-                setStatus(null);
-              }}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors",
-                tab === id ? "bg-sc-primary text-white" : "text-sc-muted hover:bg-sc-active hover:text-sc-text",
-              )}
-            >
-              {id}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <Select
-            aria-label={`Filter by ${groupField}`}
-            className="w-40 py-1.5 text-xs"
-            value={group}
-            onChange={(event) => setGroup(event.target.value)}
-          >
-            <option value="">All {groupField}s</option>
-            {groupValues.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </Select>
-          {status ? (
-            <button
-              type="button"
-              onClick={() => setStatus(null)}
-              className="inline-flex items-center gap-1 rounded-md border border-sc-link/40 bg-sc-link/10 px-2 py-1 text-[11px] font-medium text-sc-link hover:bg-sc-link/20"
-              title="Clear status filter"
-            >
-              {status.label}
-              <X size={12} />
-            </button>
-          ) : null}
-          <Button onClick={exportCsv} disabled={rows.length === 0}>
-            <Download size={14} /> CSV
-          </Button>
-          <Button onClick={exportPdf} disabled={rows.length === 0}>
-            <Printer size={14} /> PDF
-          </Button>
-        </div>
-      </div>
+      <InventoryToolbar
+        tab={tab}
+        onTab={(id) => {
+          setTab(id);
+          setStatus(null);
+        }}
+        status={status}
+        onClearStatus={() => setStatus(null)}
+        sections={allSections}
+        isVisible={isVisible}
+        onToggleColumn={toggleColumn}
+        onResetColumns={resetColumns}
+        visibleCount={columns.length}
+        totalCount={allColumnCount}
+        onExportCsv={exportCsv}
+        onExportPdf={exportPdf}
+        exportDisabled={rows.length === 0}
+      />
 
       <p className="mt-2 text-[11px] text-sc-faint">
-        {loading ? "" : `${rows.length} row${rows.length === 1 ? "" : "s"} · ${columns.length} fields`}
+        {loading ? "" : `${rows.length} row${rows.length === 1 ? "" : "s"} · ${columns.length} of ${allColumnCount} fields`}
       </p>
 
       <InventoryTable
@@ -175,6 +185,10 @@ export function InventoryModal({
         sections={sections}
         columns={columns}
         rows={rows}
+        sort={sort}
+        onSort={cycleSort}
+        colFilters={colFilters}
+        onColFilter={setColFilter}
       />
     </Modal>
   );

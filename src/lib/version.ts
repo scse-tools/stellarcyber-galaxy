@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "1.1.12";
+export const APP_VERSION = "1.1.13";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "1.1.13",
+    date: "2026-09-15",
+    notes: [
+      "Inventory tables now have a column picker: sensible defaults (name, IP, tenant, status, and other key fields) show by default, and every other field can be turned on or off.",
+      "Every column is now sortable (click the header) and filterable (per-column search box).",
+      "Grid ↔ table layout toggle for both Cases and Deployment health views; case table columns are colour-coded by severity.",
+      "Clicking a sensor or connector status opens the inventory table pre-filtered to that status.",
+      "Tenant picker is sorted alphabetically with a search box.",
+    ],
+  },
   {
     version: "1.1.3",
     date: "2026-09-11",
