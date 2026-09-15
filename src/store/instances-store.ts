@@ -9,6 +9,7 @@ import type {
   SensorStatus,
   Tenant,
   ViewMode,
+  LayoutMode,
 } from "@/lib/types";
 import type { InstanceInput, InstanceUpdate } from "@/lib/schemas";
 import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
@@ -16,6 +17,7 @@ import { DEFAULT_SELECTION, resolveTimeRange, type TimeRangeSelection } from "@/
 const RANGE_STORAGE_KEY = "galaxy.timeRange";
 const TOAST_SECONDS_KEY = "galaxy.toastSeconds";
 const VIEW_MODE_KEY = "galaxy.viewMode";
+const LAYOUT_KEY = "galaxy.layout";
 const DEFAULT_TOAST_SECONDS = 5;
 const HIGHLIGHT_MS = 2600;
 /** Notifications are session-only; cap the backlog so a long-running tab doesn't grow it forever. */
@@ -64,6 +66,15 @@ function storedViewMode(): ViewMode {
   }
 }
 
+function storedLayout(): LayoutMode {
+  if (typeof window === "undefined") return "grid";
+  try {
+    return window.localStorage.getItem(LAYOUT_KEY) === "table" ? "table" : "grid";
+  } catch {
+    return "grid";
+  }
+}
+
 // A single timer clears the tile highlight; module-scoped so a new highlight resets it.
 let highlightTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -105,6 +116,8 @@ interface GalaxyState {
   toastSeconds: number;
   /** Which lens the tiles present: "cases" (default) or "health" (sensors + connectors only). */
   viewMode: ViewMode;
+  /** Grid of tiles (default) or a full table of rows. */
+  layout: LayoutMode;
   /** The instance whose tile is momentarily highlighted after a toast/notification click. */
   highlightedInstanceId: string | null;
   setRange: (range: TimeRangeSelection) => Promise<void>;
@@ -115,6 +128,7 @@ interface GalaxyState {
   clearNotifications: () => void;
   setToastSeconds: (seconds: number) => void;
   setViewMode: (mode: ViewMode) => void;
+  setLayout: (layout: LayoutMode) => void;
   highlightInstance: (instanceId: string) => void;
   saveInstance: (input: InstanceInput | InstanceUpdate, id?: string) => Promise<void>;
   cloneInstance: (id: string) => Promise<InstanceSummary>;
@@ -135,6 +149,7 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   notifications: [],
   toastSeconds: storedToastSeconds(),
   viewMode: storedViewMode(),
+  layout: storedLayout(),
   highlightedInstanceId: null,
 
   async setRange(range) {
@@ -290,6 +305,17 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       }
     }
     set({ viewMode: mode });
+  },
+
+  setLayout(layout) {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(LAYOUT_KEY, layout);
+      } catch {
+        /* private browsing - still applies for this session */
+      }
+    }
+    set({ layout });
   },
 
   highlightInstance(instanceId) {
