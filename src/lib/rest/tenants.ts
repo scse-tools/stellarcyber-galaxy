@@ -44,7 +44,7 @@ function normalize(rows: Record<string, unknown>[]): Tenant[] {
     if (!id) continue;
     tenants.push({ id, name: firstString(row, NAME_KEYS) ?? id });
   }
-  return tenants;
+  return tenants.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
 /**
