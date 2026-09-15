@@ -51,6 +51,7 @@ export function InstanceTile({
   const counts = stats?.counts ?? EMPTY_COUNTS;
   const muted = failed || !stats;
   const health = mode === "health";
+  const noOutput = sensors?.status === "ok" ? sensors.noOutput : 0;
   const ref = useRef<HTMLElement>(null);
 
   // Scroll the tile into view when a toast/notification points at it.
@@ -91,6 +92,15 @@ export function InstanceTile({
           <p className="truncate text-[10px] text-sc-faint">{hostOf(instance.consoleUrl)}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {noOutput > 0 ? (
+            <span
+              className="text-high"
+              title={`${noOutput} sensor${noOutput === 1 ? "" : "s"} receiving input but sending no output`}
+              aria-label={`${noOutput} sensors with no output`}
+            >
+              <AlertTriangle size={13} />
+            </span>
+          ) : null}
           <StatusDot failed={failed} pending={Boolean(pending)} />
           {onOpenSettings ? (
             <button

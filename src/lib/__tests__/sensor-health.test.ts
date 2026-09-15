@@ -8,6 +8,7 @@ const base: SensorStatus = {
   byFeature: { wds: 21, ds: 2, modular: 3 },
   connection: { connected: 21, disconnected: 5, other: 0 },
   upgrade: { need: 26, ok: 0 },
+  noOutput: 0,
   fetchedAt: "2026-09-04T00:00:00.000Z",
 };
 

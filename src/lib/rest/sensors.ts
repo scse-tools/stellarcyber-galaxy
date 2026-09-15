@@ -9,7 +9,14 @@ interface SensorRow {
   feature?: unknown;
   connection_status?: unknown;
   need_upgrade?: unknown;
+  inbytes_total?: unknown;
+  outbytes_total?: unknown;
 }
+
+const toNum = (value: unknown): number => {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -30,6 +37,7 @@ function aggregate(sensors: SensorRow[]): Omit<SensorStatus, "instanceId" | "sta
   const byFeature: Record<string, number> = {};
   const connection = { connected: 0, disconnected: 0, other: 0 };
   const upgrade = { need: 0, ok: 0 };
+  let noOutput = 0;
 
   for (const sensor of sensors) {
     const feature = typeof sensor.feature === "string" && sensor.feature ? sensor.feature : "unknown";
@@ -43,9 +51,12 @@ function aggregate(sensors: SensorRow[]): Omit<SensorStatus, "instanceId" | "sta
 
     if (sensor.need_upgrade === true || sensor.need_upgrade === "true") upgrade.need += 1;
     else upgrade.ok += 1;
+
+    // Receiving input but sending no output is a forwarding fault.
+    if (toNum(sensor.inbytes_total) > 0 && toNum(sensor.outbytes_total) <= 0) noOutput += 1;
   }
 
-  return { total: sensors.length, byFeature, connection, upgrade };
+  return { total: sensors.length, byFeature, connection, upgrade, noOutput };
 }
 
 /**
@@ -90,6 +101,7 @@ export async function fetchSensorStatus(
       byFeature: {},
       connection: { connected: 0, disconnected: 0, other: 0 },
       upgrade: { need: 0, ok: 0 },
+      noOutput: 0,
       error: error instanceof Error ? error.message : "Unknown sensor error.",
     };
   }
