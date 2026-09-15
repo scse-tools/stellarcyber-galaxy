@@ -161,3 +161,23 @@ export function matchesStatus(tab: "sensors" | "connectors", key: string, row: R
       return true;
   }
 }
+
+/**
+ * Columns shown by default per tab (name, IP, tenant name, status, and other relevant fields).
+ * Every other field is hidden by default but can be enabled from the column picker.
+ */
+export const DEFAULT_VISIBLE: Record<"sensors" | "connectors", string[]> = {
+  sensors: [
+    "hostname", "local_ip_address", "nat_ip_address", "cust_name",
+    "connection_status", "feature", "sw_version", "need_upgrade",
+  ],
+  connectors: ["name", "category", "type", "active", "is_collect", "status", "version"],
+};
+
+/** Numeric-aware comparison of two already-stringified cell values. */
+export function compareCells(a: string, b: string): number {
+  const na = Number(a);
+  const nb = Number(b);
+  if (a !== "" && b !== "" && Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
