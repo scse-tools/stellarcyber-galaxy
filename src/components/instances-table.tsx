@@ -15,6 +15,7 @@ import type {
   ViewMode,
 } from "@/lib/types";
 import type { InventoryTab } from "@/components/inventory-modal";
+import type { StatusFilter } from "@/lib/inventory-columns";
 
 interface InstancesTableProps {
   instances: InstanceSummary[];
@@ -27,7 +28,7 @@ interface InstancesTableProps {
   highlightedInstanceId: string | null;
   isAdmin: boolean;
   onOpenSettings: (instance: InstanceSummary) => void;
-  onOpenInventory: (instance: InstanceSummary, tab: InventoryTab) => void;
+  onOpenInventory: (instance: InstanceSummary, tab: InventoryTab, status?: StatusFilter) => void;
   onSelectTenant: (instanceId: string, tenantId: string | null) => void;
 }
 

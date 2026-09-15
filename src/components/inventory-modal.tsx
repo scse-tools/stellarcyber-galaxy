@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { cellText, downloadCsv, printTable, toCsv, type Row } from "@/lib/table-export";
-import { sectionize } from "@/lib/inventory-columns";
+import { matchesStatus, sectionize, type StatusFilter } from "@/lib/inventory-columns";
 import { InventoryTable } from "@/components/inventory-table";
 import type { InstanceSummary } from "@/lib/types";
 
@@ -25,18 +25,27 @@ interface InventoryData {
 interface InventoryModalProps {
   instance: InstanceSummary | null;
   initialTab: InventoryTab;
+  initialStatus?: StatusFilter | null;
   tenantId: string | null;
   onClose: () => void;
 }
 
-export function InventoryModal({ instance, initialTab, tenantId, onClose }: InventoryModalProps) {
+export function InventoryModal({
+  instance,
+  initialTab,
+  initialStatus,
+  tenantId,
+  onClose,
+}: InventoryModalProps) {
   const [tab, setTab] = useState<InventoryTab>(initialTab);
   const [data, setData] = useState<InventoryData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [group, setGroup] = useState<string>("");
+  const [status, setStatus] = useState<StatusFilter | null>(initialStatus ?? null);
 
   useEffect(() => setTab(initialTab), [initialTab, instance?.id]);
+  useEffect(() => setStatus(initialStatus ?? null), [initialStatus, initialTab, instance?.id]);
   useEffect(() => setGroup(""), [tab, instance?.id]);
 
   useEffect(() => {
@@ -68,13 +77,14 @@ export function InventoryModal({ instance, initialTab, tenantId, onClose }: Inve
   }, [allRows, groupField]);
 
   const rows = useMemo(() => {
-    const filtered = group ? allRows.filter((r) => (cellText(r[groupField]) || "—") === group) : allRows;
+    let filtered = group ? allRows.filter((r) => (cellText(r[groupField]) || "—") === group) : allRows;
+    if (status) filtered = filtered.filter((r) => matchesStatus(tab, status.key, r));
     const secondKey = tab === "sensors" ? "hostname" : "name";
     return [...filtered].sort((a, b) =>
       (cellText(a[groupField]) || "").localeCompare(cellText(b[groupField]) || "") ||
       cellText(a[secondKey]).localeCompare(cellText(b[secondKey])),
     );
-  }, [allRows, group, groupField, tab]);
+  }, [allRows, group, groupField, tab, status]);
 
   // Columns grouped into labelled, colour-accented sections; the flat list drives CSV/PDF.
   const sections = useMemo(() => {
@@ -84,8 +94,9 @@ export function InventoryModal({ instance, initialTab, tenantId, onClose }: Inve
   }, [allRows, groupField]);
   const columns = useMemo(() => sections.flatMap((section) => section.columns), [sections]);
 
-  const baseName = `${instance?.name ?? "instance"}-${tab}${group ? `-${group}` : ""}`.replace(/\s+/g, "_");
-  const title = `${instance?.name ?? ""} — ${tab}${group ? ` (${groupField}: ${group})` : ""}`;
+  const suffix = [group, status?.label].filter(Boolean).join("-");
+  const baseName = `${instance?.name ?? "instance"}-${tab}${suffix ? `-${suffix}` : ""}`.replace(/\s+/g, "_");
+  const title = `${instance?.name ?? ""} — ${tab}${suffix ? ` (${[group ? `${groupField}: ${group}` : "", status?.label].filter(Boolean).join(" · ")})` : ""}`;
 
   const exportCsv = useCallback(() => downloadCsv(`${baseName}.csv`, toCsv(columns, rows)), [baseName, columns, rows]);
   const exportPdf = useCallback(() => printTable(title, columns, rows), [title, columns, rows]);
@@ -106,7 +117,10 @@ export function InventoryModal({ instance, initialTab, tenantId, onClose }: Inve
             <button
               key={id}
               type="button"
-              onClick={() => setTab(id)}
+              onClick={() => {
+                setTab(id);
+                setStatus(null);
+              }}
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors",
                 tab === id ? "bg-sc-primary text-white" : "text-sc-muted hover:bg-sc-active hover:text-sc-text",
@@ -130,6 +144,17 @@ export function InventoryModal({ instance, initialTab, tenantId, onClose }: Inve
               </option>
             ))}
           </Select>
+          {status ? (
+            <button
+              type="button"
+              onClick={() => setStatus(null)}
+              className="inline-flex items-center gap-1 rounded-md border border-sc-link/40 bg-sc-link/10 px-2 py-1 text-[11px] font-medium text-sc-link hover:bg-sc-link/20"
+              title="Clear status filter"
+            >
+              {status.label}
+              <X size={12} />
+            </button>
+          ) : null}
           <Button onClick={exportCsv} disabled={rows.length === 0}>
             <Download size={14} /> CSV
           </Button>

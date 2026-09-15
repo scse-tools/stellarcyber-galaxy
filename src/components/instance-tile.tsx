@@ -17,6 +17,7 @@ import {
   type ViewMode,
 } from "@/lib/types";
 import type { InventoryTab } from "@/components/inventory-modal";
+import type { StatusFilter } from "@/lib/inventory-columns";
 
 interface InstanceTileProps {
   instance: InstanceSummary;
@@ -27,7 +28,7 @@ interface InstanceTileProps {
   highlighted?: boolean;
   mode?: ViewMode;
   onOpenSettings?: (instance: InstanceSummary) => void;
-  onOpenInventory?: (instance: InstanceSummary, tab: InventoryTab) => void;
+  onOpenInventory?: (instance: InstanceSummary, tab: InventoryTab, status?: StatusFilter) => void;
   /** Tenants visible to this instance's API key. Omitted or empty hides the tenant picker. */
   tenants?: Tenant[];
   /** The session-only tenant override in effect; `null` means "use the instance's default". */
@@ -201,6 +202,11 @@ export function InstanceTile({
           <SensorStatusBlock
             sensors={sensors}
             loading={refreshing}
+            onStatus={
+              onOpenInventory
+                ? (key, label) => onOpenInventory(instance, "sensors", { key, label })
+                : undefined
+            }
             action={
               <BlockActions
                 onTable={onOpenInventory ? () => onOpenInventory(instance, "sensors") : undefined}
@@ -212,6 +218,11 @@ export function InstanceTile({
           <ConnectorStatusBlock
             connectors={connectors}
             loading={refreshing}
+            onStatus={
+              onOpenInventory
+                ? (key, label) => onOpenInventory(instance, "connectors", { key, label })
+                : undefined
+            }
             action={
               <BlockActions
                 onTable={onOpenInventory ? () => onOpenInventory(instance, "connectors") : undefined}

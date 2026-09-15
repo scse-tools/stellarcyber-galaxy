@@ -6,6 +6,7 @@ import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
 import { InventoryModal, type InventoryTab } from "@/components/inventory-modal";
+import type { StatusFilter } from "@/lib/inventory-columns";
 import { InstancesTable } from "@/components/instances-table";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { ToastStack } from "@/components/toast-stack";
@@ -54,9 +55,11 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [inventory, setInventory] = useState<{ instance: InstanceSummary; tab: InventoryTab } | null>(
-    null,
-  );
+  const [inventory, setInventory] = useState<{
+    instance: InstanceSummary;
+    tab: InventoryTab;
+    status?: StatusFilter;
+  } | null>(null);
   const isAdmin = user.role === "admin";
 
   useEffect(() => {
@@ -208,7 +211,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
           highlightedInstanceId={highlightedInstanceId}
           isAdmin={isAdmin}
           onOpenSettings={openConfigure}
-          onOpenInventory={(target, tab) => setInventory({ instance: target, tab })}
+          onOpenInventory={(target, tab, status) => setInventory({ instance: target, tab, status })}
           onSelectTenant={setSelectedTenant}
         />
       ) : (
@@ -227,7 +230,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               tenants={tenants[instance.id]}
               selectedTenant={selectedTenant[instance.id] ?? null}
               onSelectTenant={(tenantId) => setSelectedTenant(instance.id, tenantId)}
-              onOpenInventory={(target, tab) => setInventory({ instance: target, tab })}
+              onOpenInventory={(target, tab, status) => setInventory({ instance: target, tab, status })}
             />
           ))}
         </div>
@@ -247,6 +250,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
       <InventoryModal
         instance={inventory?.instance ?? null}
         initialTab={inventory?.tab ?? "sensors"}
+        initialStatus={inventory?.status ?? null}
         tenantId={inventory ? (selectedTenant[inventory.instance.id] ?? null) : null}
         onClose={() => setInventory(null)}
       />

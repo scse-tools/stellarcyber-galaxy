@@ -124,3 +124,40 @@ export const TONE_TEXT: Record<Exclude<CellTone, null>, string> = {
   bad: "text-critical",
   warn: "text-high",
 };
+
+export interface StatusFilter {
+  key: string;
+  label: string;
+}
+
+/** True when a row matches a named sensor/connector status filter (as shown on the tiles). */
+export function matchesStatus(tab: "sensors" | "connectors", key: string, row: Row): boolean {
+  if (tab === "sensors") {
+    const conn = cellText(row.connection_status).toLowerCase();
+    switch (key) {
+      case "connected":
+        return conn === "connected";
+      case "disconnected":
+        return conn !== "connected";
+      case "nooutput":
+        return Number(row.inbytes_total ?? 0) > 0 && Number(row.outbytes_total ?? 0) <= 0;
+      case "upgrade":
+        return row.need_upgrade === true || row.need_upgrade === "true";
+      default:
+        return true;
+    }
+  }
+  const collecting = row.is_collect === true;
+  const active = row.active === true;
+  const code = isRecord(row.status) ? Number((row.status as { code?: unknown }).code) : NaN;
+  switch (key) {
+    case "active":
+      return collecting && active;
+    case "healthy":
+      return collecting && active && code === 0;
+    case "issues":
+      return collecting && active && code !== 0;
+    default:
+      return true;
+  }
+}
