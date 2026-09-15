@@ -1,6 +1,7 @@
 "use client";
 
-import { Field, Input, Select } from "@/components/ui/field";
+import { Field, Input } from "@/components/ui/field";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { Tenant } from "@/lib/types";
 
 export interface InstanceFormValues {
@@ -63,18 +64,21 @@ export function InstanceFormFields({
               : "Enter an API key and run Test connection to list tenants."
         }
       >
-        <Select {...bind("tenantId")} disabled={tenants.length === 0}>
-          <option value="">All tenants</option>
-          {/* Keep a locked value visible even before the list loads. */}
-          {values.tenantId && !tenants.some((t) => t.id === values.tenantId) ? (
-            <option value={values.tenantId}>{values.tenantId}</option>
-          ) : null}
-          {tenants.map((tenant) => (
-            <option key={tenant.id} value={tenant.id}>
-              {tenant.name}
-            </option>
-          ))}
-        </Select>
+        <SearchableSelect
+          value={values.tenantId}
+          disabled={tenants.length === 0}
+          ariaLabel="Lock to tenant"
+          className="w-full rounded-md border border-sc-border bg-sc-bg px-3 py-2 text-sm text-sc-text"
+          onChange={(value) => onChange("tenantId", value)}
+          options={[
+            { value: "", label: "All tenants" },
+            // Keep a locked value visible even before the list loads.
+            ...(values.tenantId && !tenants.some((t) => t.id === values.tenantId)
+              ? [{ value: values.tenantId, label: values.tenantId }]
+              : []),
+            ...tenants.map((tenant) => ({ value: tenant.id, label: tenant.name })),
+          ]}
+        />
       </Field>
       <details className="rounded-md border border-sc-border-soft px-3 py-2">
         <summary className="cursor-pointer text-xs text-sc-muted">Advanced tool override</summary>

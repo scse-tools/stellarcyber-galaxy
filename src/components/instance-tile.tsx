@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Settings, Table2 } from "lucide-react";
 import { SeverityRows } from "@/components/severity-bar";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SensorStatusBlock } from "@/components/sensor-status";
 import { ConnectorStatusBlock } from "@/components/connector-status";
 import { cn, consoleLink, hostOf } from "@/lib/utils";
@@ -136,24 +137,17 @@ export function InstanceTile({
           </option>
         </select>
       ) : tenants && tenants.length > 0 ? (
-        <select
+        <SearchableSelect
           value={selectedTenant ?? ""}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            event.stopPropagation();
-            onSelectTenant?.(event.target.value || null);
-          }}
-          aria-label={`${instance.name} tenant`}
+          onChange={(value) => onSelectTenant?.(value || null)}
+          ariaLabel={`${instance.name} tenant`}
           title="Scope this tile to a tenant"
-          className="w-full rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
-        >
-          <option value="">All tenants</option>
-          {tenants.map((tenant) => (
-            <option key={tenant.id} value={tenant.id}>
-              {tenant.name}
-            </option>
-          ))}
-        </select>
+          className="w-full rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text"
+          options={[
+            { value: "", label: "All tenants" },
+            ...tenants.map((tenant) => ({ value: tenant.id, label: tenant.name })),
+          ]}
+        />
       ) : null}
 
       {health ? null : (

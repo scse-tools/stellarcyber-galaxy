@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Settings, Table2 } from "lucide-react";
 import { SEVERITY_META } from "@/lib/severity";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn, hostOf } from "@/lib/utils";
 import { SEVERITIES } from "@/lib/types";
 import type {
@@ -216,17 +217,15 @@ function TenantCell({
   }
   if (!list || list.length === 0) return <span className="text-sc-faint">—</span>;
   return (
-    <select
+    <SearchableSelect
       value={selectedTenant[instance.id] ?? ""}
-      onChange={(event) => onSelectTenant(instance.id, event.target.value || null)}
-      className="w-36 rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[11px] text-sc-muted hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
-    >
-      <option value="">All tenants</option>
-      {list.map((tenant) => (
-        <option key={tenant.id} value={tenant.id}>
-          {tenant.name}
-        </option>
-      ))}
-    </select>
+      onChange={(value) => onSelectTenant(instance.id, value || null)}
+      ariaLabel={`${instance.name} tenant`}
+      className="w-40 rounded-md border border-sc-border-soft bg-sc-surface px-1.5 py-1 text-[11px] text-sc-muted hover:text-sc-text"
+      options={[
+        { value: "", label: "All tenants" },
+        ...list.map((tenant) => ({ value: tenant.id, label: tenant.name })),
+      ]}
+    />
   );
 }
