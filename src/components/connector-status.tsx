@@ -10,10 +10,12 @@ export function ConnectorStatusBlock({
   connectors,
   loading,
   action,
+  onStatus,
 }: {
   connectors?: ConnectorStatus;
   loading?: boolean;
   action?: ReactNode;
+  onStatus?: (key: string, label: string) => void;
 }) {
   return (
     <section className="border-t border-sc-border-soft pt-3">
@@ -41,9 +43,9 @@ export function ConnectorStatusBlock({
         <p className="text-[11px] text-sc-faint">No collecting connectors.</p>
       ) : (
         <div className="flex items-stretch gap-2">
-          <Metric label="Active" value={connectors.active} sub={`of ${connectors.total}`} />
-          <Metric label="Healthy" value={connectors.healthy} tone="good" />
-          <Metric label="Issues" value={connectors.issues} tone={connectors.issues > 0 ? "bad" : "good"} />
+          <Metric label="Active" value={connectors.active} sub={`of ${connectors.total}`} onClick={onStatus && (() => onStatus("active", "Active"))} />
+          <Metric label="Healthy" value={connectors.healthy} tone="good" onClick={onStatus && (() => onStatus("healthy", "Healthy"))} />
+          <Metric label="Issues" value={connectors.issues} tone={connectors.issues > 0 ? "bad" : "good"} onClick={onStatus && (() => onStatus("issues", "Issues"))} />
         </div>
       )}
     </section>
@@ -62,14 +64,16 @@ function Metric({
   value,
   sub,
   tone = "neutral",
+  onClick,
 }: {
   label: string;
   value: number;
   sub?: string;
   tone?: Tone;
+  onClick?: (() => void) | false;
 }) {
-  return (
-    <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
+  const inner = (
+    <>
       <div className="flex items-center gap-1.5">
         <span aria-hidden className={cn("size-2 rounded-full", TONE[tone].dot)} />
         <span className={cn("font-mono text-base tabular-nums", TONE[tone].value)}>
@@ -78,6 +82,22 @@ function Metric({
         {sub ? <span className="text-[10px] text-sc-faint">{sub}</span> : null}
       </div>
       <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-sc-faint">{label}</p>
-    </div>
+    </>
+  );
+  const base =
+    "min-w-0 flex-1 overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5 text-left";
+  if (!onClick) return <div className={base}>{inner}</div>;
+  return (
+    <button
+      type="button"
+      title={`Show ${label} in the table`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={cn(base, "transition-colors hover:border-sc-link hover:bg-sc-active")}
+    >
+      {inner}
+    </button>
   );
 }

@@ -12,10 +12,12 @@ export function SensorStatusBlock({
   sensors,
   loading,
   action,
+  onStatus,
 }: {
   sensors?: SensorStatus;
   loading?: boolean;
   action?: ReactNode;
+  onStatus?: (key: string, label: string) => void;
 }) {
   const down = sensors ? sensors.connection.disconnected + sensors.connection.other : 0;
   const features = sensors
@@ -45,11 +47,11 @@ export function SensorStatusBlock({
       ) : (
         <div className="space-y-2">
           <div className="flex flex-wrap items-stretch gap-2">
-            <Stat label="Connected" value={sensors.connection.connected} tone="good" />
-            <Stat label="Disconnected" value={down} tone={down > 0 ? "bad" : "good"} />
-            <Stat label="No output" value={sensors.noOutput} tone={sensors.noOutput > 0 ? "warn" : "good"} />
+            <Stat label="Connected" value={sensors.connection.connected} tone="good" onClick={onStatus && (() => onStatus("connected", "Connected"))} />
+            <Stat label="Disconnected" value={down} tone={down > 0 ? "bad" : "good"} onClick={onStatus && (() => onStatus("disconnected", "Disconnected"))} />
+            <Stat label="No output" value={sensors.noOutput} tone={sensors.noOutput > 0 ? "warn" : "good"} onClick={onStatus && (() => onStatus("nooutput", "No output"))} />
             {sensors.upgrade.need > 0 ? (
-              <Stat label="Upgrade" value={sensors.upgrade.need} tone="warn" />
+              <Stat label="Upgrade" value={sensors.upgrade.need} tone="warn" onClick={onStatus && (() => onStatus("upgrade", "Upgrade"))} />
             ) : null}
           </div>
           <p className="truncate text-[11px] text-sc-muted">
@@ -69,9 +71,19 @@ const TONE: Record<Tone, { dot: string; value: string }> = {
   warn: { dot: "bg-high", value: "text-high" },
 };
 
-function Stat({ label, value, tone }: { label: string; value: number; tone: Tone }) {
-  return (
-    <div className="min-w-0 grow basis-[calc(50%-0.25rem)] overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
+function Stat({
+  label,
+  value,
+  tone,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  tone: Tone;
+  onClick?: (() => void) | false;
+}) {
+  const inner = (
+    <>
       <div className="flex items-center gap-1.5">
         <span aria-hidden className={`size-2 rounded-full ${TONE[tone].dot}`} />
         <span className={`font-mono text-base tabular-nums ${TONE[tone].value}`}>
@@ -79,7 +91,23 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: Tone
         </span>
       </div>
       <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-sc-faint">{label}</p>
-    </div>
+    </>
+  );
+  const base =
+    "min-w-0 grow basis-[calc(50%-0.25rem)] overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5 text-left";
+  if (!onClick) return <div className={base}>{inner}</div>;
+  return (
+    <button
+      type="button"
+      title={`Show ${label} in the table`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`${base} transition-colors hover:border-sc-link hover:bg-sc-active`}
+    >
+      {inner}
+    </button>
   );
 }
 
