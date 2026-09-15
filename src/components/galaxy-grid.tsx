@@ -78,6 +78,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
     const acc: HealthTotals = {
       sensorsTotal: 0,
       sensorsDisconnected: 0,
+      sensorsNoOutput: 0,
       connectorsActive: 0,
       connectorsIssues: 0,
     };
@@ -85,6 +86,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
       if (sensor.status !== "ok") continue;
       acc.sensorsTotal += sensor.total;
       acc.sensorsDisconnected += sensor.connection.disconnected + sensor.connection.other;
+      acc.sensorsNoOutput += sensor.noOutput;
     }
     for (const connector of Object.values(connectors)) {
       if (connector.status !== "ok") continue;
@@ -102,7 +104,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         const s = sensors[id];
         const c = connectors[id];
         let score = 0;
-        score += !s || s.status !== "ok" ? 1000 : s.connection.disconnected + s.connection.other;
+        score += !s || s.status !== "ok" ? 1000 : s.connection.disconnected + s.connection.other + s.noOutput;
         score += !c || c.status !== "ok" ? 1000 : c.issues;
         return score;
       };

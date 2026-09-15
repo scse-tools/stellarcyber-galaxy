@@ -44,9 +44,12 @@ export function SensorStatusBlock({
         <p className="text-[11px] text-sc-faint">No sensors configured.</p>
       ) : (
         <div className="space-y-2">
-          <div className="flex items-stretch gap-2">
+          <div className="flex flex-wrap items-stretch gap-2">
             <Stat label="Connected" value={sensors.connection.connected} tone="good" />
             <Stat label="Disconnected" value={down} tone={down > 0 ? "bad" : "good"} />
+            {sensors.noOutput > 0 ? (
+              <Stat label="No output" value={sensors.noOutput} tone="warn" />
+            ) : null}
             {sensors.upgrade.need > 0 ? (
               <Stat label="Upgrade" value={sensors.upgrade.need} tone="warn" />
             ) : null}
@@ -70,7 +73,7 @@ const TONE: Record<Tone, { dot: string; value: string }> = {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: Tone }) {
   return (
-    <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
+    <div className="min-w-0 grow basis-[calc(50%-0.25rem)] overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
       <div className="flex items-center gap-1.5">
         <span aria-hidden className={`size-2 rounded-full ${TONE[tone].dot}`} />
         <span className={`font-mono text-base tabular-nums ${TONE[tone].value}`}>

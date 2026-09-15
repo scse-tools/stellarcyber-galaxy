@@ -95,6 +95,8 @@ export interface SensorStatus {
   byFeature: Record<string, number>;
   connection: { connected: number; disconnected: number; other: number };
   upgrade: { need: number; ok: number };
+  /** Sensors receiving input but forwarding no output — an error condition. */
+  noOutput: number;
   fetchedAt: string;
   error?: string;
 }
@@ -108,6 +110,7 @@ export type ViewMode = "cases" | "health";
 export interface HealthTotals {
   sensorsTotal: number;
   sensorsDisconnected: number;
+  sensorsNoOutput: number;
   connectorsActive: number;
   connectorsIssues: number;
 }

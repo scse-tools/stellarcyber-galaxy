@@ -160,12 +160,17 @@ export function GalaxyHeader({
         )}
 
         {viewMode === "health" ? (
-          <dl className="flex items-center gap-5">
+          <dl className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
             <HealthStat label="Sensors" value={healthTotals.sensorsTotal} />
             <HealthStat
               label="Disconnected"
               value={healthTotals.sensorsDisconnected}
               tone={healthTotals.sensorsDisconnected > 0 ? "bad" : "good"}
+            />
+            <HealthStat
+              label="No output"
+              value={healthTotals.sensorsNoOutput}
+              tone={healthTotals.sensorsNoOutput > 0 ? "warn" : "good"}
             />
             <HealthStat label="Connectors active" value={healthTotals.connectorsActive} />
             <HealthStat
@@ -207,10 +212,16 @@ function HealthStat({
 }: {
   label: string;
   value: number;
-  tone?: "neutral" | "good" | "bad";
+  tone?: "neutral" | "good" | "bad" | "warn";
 }) {
   const color =
-    tone === "bad" ? "text-critical" : tone === "good" ? "text-[var(--severity-success)]" : "text-sc-text";
+    tone === "bad"
+      ? "text-critical"
+      : tone === "warn"
+        ? "text-high"
+        : tone === "good"
+          ? "text-[var(--severity-success)]"
+          : "text-sc-text";
   return (
     <div className="text-right">
       <dt className="text-[10px] font-medium uppercase tracking-wide text-sc-faint">{label}</dt>
