@@ -1,9 +1,11 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Fragment, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { cellText, type Row } from "@/lib/table-export";
 import { cellTone, TONE_TEXT, type ColumnSection } from "@/lib/inventory-columns";
+import { InventoryRowDetail } from "@/components/inventory-row-detail";
 
 export type SortState = { col: string; dir: "asc" | "desc" } | null;
 
@@ -18,9 +20,13 @@ interface InventoryTableProps {
   onSort: (column: string) => void;
   colFilters: Record<string, string>;
   onColFilter: (column: string, value: string) => void;
+  /** Every field, grouped — drives the per-row expand panel. */
+  allSections: ColumnSection[];
+  isVisible: (column: string) => boolean;
+  onToggleColumn: (column: string) => void;
 }
 
-/** The scrollable, section-headered, colour-accented records table with per-column sort + filter. */
+/** The scrollable, section-headered records table with per-column sort/filter and row expanders. */
 export function InventoryTable({
   loading,
   error,
@@ -32,7 +38,21 @@ export function InventoryTable({
   onSort,
   colFilters,
   onColFilter,
+  allSections,
+  isVisible,
+  onToggleColumn,
 }: InventoryTableProps) {
+  const [expanded, setExpanded] = useState<Set<Row>>(new Set());
+  const toggleRow = (row: Row) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(row)) next.delete(row);
+      else next.add(row);
+      return next;
+    });
+
+  const span = columns.length + 1;
+
   return (
     <div className="mt-2 max-h-[62vh] overflow-auto rounded-lg border border-sc-border-soft">
       {loading ? (
@@ -41,12 +61,15 @@ export function InventoryTable({
         </p>
       ) : error ? (
         <p className="px-3 py-6 text-xs text-critical">{error}</p>
-      ) : columns.length === 0 ? (
-        <p className="px-3 py-6 text-xs text-sc-faint">No columns selected.</p>
       ) : (
         <table className="w-full border-collapse text-[11px]">
           <thead className="sticky top-0 z-10">
             <tr>
+              <th
+                rowSpan={2}
+                className="w-8 border-b border-sc-border bg-sc-raised px-1"
+                aria-label="Expand row"
+              />
               {sections.map((section) => (
                 <th
                   key={section.label}
@@ -97,31 +120,59 @@ export function InventoryTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-3 py-6 text-center text-xs text-sc-faint">
+                <td colSpan={span} className="px-3 py-6 text-center text-xs text-sc-faint">
                   {emptyLabel}
                 </td>
               </tr>
             ) : (
-              rows.map((row, index) => (
-                <tr key={index} className="odd:bg-sc-surface/40">
-                  {columns.map((column) => {
-                    const text = cellText(row[column]);
-                    const tone = cellTone(column, row[column], row);
-                    return (
-                      <td
-                        key={column}
-                        title={text}
-                        className={cn(
-                          "max-w-[240px] truncate border-b border-sc-border-soft px-2 py-1",
-                          tone ? `${TONE_TEXT[tone]} font-medium` : "text-sc-text",
-                        )}
-                      >
-                        {text}
+              rows.map((row, index) => {
+                const open = expanded.has(row);
+                return (
+                  <Fragment key={index}>
+                    <tr className={cn(!open && "odd:bg-sc-surface/40")}>
+                      <td className="border-b border-sc-border-soft px-1 text-center align-middle">
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(row)}
+                          className="text-sc-faint hover:text-sc-text"
+                          title={open ? "Collapse" : "Show all fields"}
+                          aria-expanded={open}
+                        >
+                          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        </button>
                       </td>
-                    );
-                  })}
-                </tr>
-              ))
+                      {columns.map((column) => {
+                        const text = cellText(row[column]);
+                        const tone = cellTone(column, row[column], row);
+                        return (
+                          <td
+                            key={column}
+                            title={text}
+                            className={cn(
+                              "max-w-[240px] truncate border-b border-sc-border-soft px-2 py-1",
+                              tone ? `${TONE_TEXT[tone]} font-medium` : "text-sc-text",
+                            )}
+                          >
+                            {text}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    {open ? (
+                      <tr>
+                        <td colSpan={span} className="border-b border-sc-border">
+                          <InventoryRowDetail
+                            row={row}
+                            sections={allSections}
+                            isVisible={isVisible}
+                            onToggleColumn={onToggleColumn}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

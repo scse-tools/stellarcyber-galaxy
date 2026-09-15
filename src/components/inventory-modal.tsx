@@ -189,6 +189,9 @@ export function InventoryModal({
         onSort={cycleSort}
         colFilters={colFilters}
         onColFilter={setColFilter}
+        allSections={allSections}
+        isVisible={isVisible}
+        onToggleColumn={toggleColumn}
       />
     </Modal>
   );
