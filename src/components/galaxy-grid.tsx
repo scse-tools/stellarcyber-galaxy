@@ -6,6 +6,7 @@ import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
 import { InventoryModal, type InventoryTab } from "@/components/inventory-modal";
+import { InstancesTable } from "@/components/instances-table";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { ToastStack } from "@/components/toast-stack";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
     selectedTenant,
     notifications,
     viewMode,
+    layout,
   } = useGalaxyStore();
   const loadInstances = useGalaxyStore((state) => state.loadInstances);
   const refreshStats = useGalaxyStore((state) => state.refreshStats);
@@ -46,6 +48,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const highlightedInstanceId = useGalaxyStore((state) => state.highlightedInstanceId);
   const setRange = useGalaxyStore((state) => state.setRange);
   const setViewMode = useGalaxyStore((state) => state.setViewMode);
+  const setLayout = useGalaxyStore((state) => state.setLayout);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
@@ -168,6 +171,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         onRangeChange={(next) => void setRange(next)}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        layout={layout}
+        onLayoutChange={setLayout}
         healthTotals={healthTotals}
         onRefresh={() => void refreshStats()}
         onAdd={openAdd}
@@ -191,6 +196,21 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         <p className="text-sm text-sc-faint">Loading constellation…</p>
       ) : instances.length === 0 ? (
         <EmptyState onAdd={openAdd} />
+      ) : layout === "table" ? (
+        <InstancesTable
+          instances={sortedInstances}
+          stats={stats}
+          sensors={sensors}
+          connectors={connectors}
+          tenants={tenants}
+          selectedTenant={selectedTenant}
+          viewMode={viewMode}
+          highlightedInstanceId={highlightedInstanceId}
+          isAdmin={isAdmin}
+          onOpenSettings={openConfigure}
+          onOpenInventory={(target, tab) => setInventory({ instance: target, tab })}
+          onSelectTenant={setSelectedTenant}
+        />
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] items-start gap-3">
           {sortedInstances.map((instance) => (

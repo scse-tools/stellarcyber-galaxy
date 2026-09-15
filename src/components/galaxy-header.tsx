@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Bell, LayoutGrid, Plus, RefreshCw, Settings2 } from "lucide-react";
+import { Activity, Bell, LayoutGrid, Plus, RefreshCw, Rows3, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { UserMenu } from "@/components/user-menu";
@@ -10,7 +10,13 @@ import { APP_VERSION } from "@/lib/version";
 import { SEVERITY_META } from "@/lib/severity";
 import { cn } from "@/lib/utils";
 import { describeRange, type TimeRangeSelection } from "@/lib/time-range";
-import { SEVERITIES, type HealthTotals, type SeverityCounts, type ViewMode } from "@/lib/types";
+import {
+  SEVERITIES,
+  type HealthTotals,
+  type LayoutMode,
+  type SeverityCounts,
+  type ViewMode,
+} from "@/lib/types";
 import type { SessionUser } from "@/lib/auth/types";
 
 interface GalaxyHeaderProps {
@@ -20,6 +26,7 @@ interface GalaxyHeaderProps {
   refreshing: boolean;
   range: TimeRangeSelection;
   viewMode: ViewMode;
+  layout: LayoutMode;
   healthTotals: HealthTotals;
   user: SessionUser;
   notificationCount: number;
@@ -27,6 +34,7 @@ interface GalaxyHeaderProps {
   onToggleNotifications: () => void;
   onRangeChange: (range: TimeRangeSelection) => void;
   onViewModeChange: (mode: ViewMode) => void;
+  onLayoutChange: (layout: LayoutMode) => void;
   onRefresh: () => void;
   onAdd: () => void;
   onOpenSettings: () => void;
@@ -39,6 +47,7 @@ export function GalaxyHeader({
   refreshing,
   range,
   viewMode,
+  layout,
   healthTotals,
   user,
   notificationCount,
@@ -46,6 +55,7 @@ export function GalaxyHeader({
   onToggleNotifications,
   onRangeChange,
   onViewModeChange,
+  onLayoutChange,
   onRefresh,
   onAdd,
   onOpenSettings,
@@ -106,6 +116,35 @@ export function GalaxyHeader({
               >
                 <Icon size={13} />
                 {label}
+              </button>
+            ))}
+          </div>
+          <div
+            role="group"
+            aria-label="Layout"
+            className="flex items-center gap-1 rounded-lg border border-sc-border bg-sc-surface/70 p-1"
+          >
+            {(
+              [
+                { id: "grid", label: "Grid view", Icon: LayoutGrid },
+                { id: "table", label: "Table view", Icon: Rows3 },
+              ] as const
+            ).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onLayoutChange(id)}
+                aria-pressed={layout === id}
+                title={label}
+                className={cn(
+                  "inline-flex items-center rounded-md p-1.5 transition-colors",
+                  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
+                  layout === id
+                    ? "bg-sc-primary text-white"
+                    : "text-sc-muted hover:bg-sc-active hover:text-sc-text",
+                )}
+              >
+                <Icon size={15} />
               </button>
             ))}
           </div>
