@@ -1,24 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Loader2, Printer } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { cellText, downloadCsv, printTable, toCsv, type Row } from "@/lib/table-export";
+import { sectionize } from "@/lib/inventory-columns";
+import { InventoryTable } from "@/components/inventory-table";
 import type { InstanceSummary } from "@/lib/types";
 
 export type InventoryTab = "sensors" | "connectors";
 
 /** The field each tab is "broken out by", surfaced as the first column and the group filter. */
 const GROUP_FIELD: Record<InventoryTab, string> = { sensors: "feature", connectors: "type" };
-// Identity-ish columns worth showing first, after the group field.
-const LEAD: Record<InventoryTab, string[]> = {
-  sensors: ["hostname", "sensor_id", "connection_status", "sw_version"],
-  connectors: ["name", "category", "active", "is_collect"],
-};
-
 interface InventoryData {
   sensors: Row[];
   connectors: Row[];
@@ -73,20 +69,20 @@ export function InventoryModal({ instance, initialTab, tenantId, onClose }: Inve
 
   const rows = useMemo(() => {
     const filtered = group ? allRows.filter((r) => (cellText(r[groupField]) || "—") === group) : allRows;
+    const secondKey = tab === "sensors" ? "hostname" : "name";
     return [...filtered].sort((a, b) =>
       (cellText(a[groupField]) || "").localeCompare(cellText(b[groupField]) || "") ||
-      cellText(a[LEAD[tab][0]]).localeCompare(cellText(b[LEAD[tab][0]])),
+      cellText(a[secondKey]).localeCompare(cellText(b[secondKey])),
     );
   }, [allRows, group, groupField, tab]);
 
-  // Column order: group field, lead identity fields, then every remaining field alphabetically.
-  const columns = useMemo(() => {
+  // Columns grouped into labelled, colour-accented sections; the flat list drives CSV/PDF.
+  const sections = useMemo(() => {
     const keys = new Set<string>();
     for (const row of allRows) for (const key of Object.keys(row)) keys.add(key);
-    const lead = [groupField, ...LEAD[tab]].filter((k) => keys.has(k));
-    const rest = [...keys].filter((k) => !lead.includes(k)).sort();
-    return [...lead, ...rest];
-  }, [allRows, groupField, tab]);
+    return sectionize([...keys], groupField);
+  }, [allRows, groupField]);
+  const columns = useMemo(() => sections.flatMap((section) => section.columns), [sections]);
 
   const baseName = `${instance?.name ?? "instance"}-${tab}${group ? `-${group}` : ""}`.replace(/\s+/g, "_");
   const title = `${instance?.name ?? ""} — ${tab}${group ? ` (${groupField}: ${group})` : ""}`;
@@ -147,50 +143,14 @@ export function InventoryModal({ instance, initialTab, tenantId, onClose }: Inve
         {loading ? "" : `${rows.length} row${rows.length === 1 ? "" : "s"} · ${columns.length} fields`}
       </p>
 
-      <div className="mt-2 max-h-[62vh] overflow-auto rounded-lg border border-sc-border-soft">
-        {loading ? (
-          <p className="flex items-center gap-2 px-3 py-6 text-xs text-sc-faint">
-            <Loader2 size={14} className="animate-spin" /> Loading inventory…
-          </p>
-        ) : error || tabError ? (
-          <p className="px-3 py-6 text-xs text-critical">{error ?? tabError}</p>
-        ) : rows.length === 0 ? (
-          <p className="px-3 py-6 text-xs text-sc-faint">No {tab}.</p>
-        ) : (
-          <table className="w-full border-collapse text-[11px]">
-            <thead className="sticky top-0 bg-sc-raised">
-              <tr>
-                {columns.map((column) => (
-                  <th
-                    key={column}
-                    className="whitespace-nowrap border-b border-sc-border-soft px-2 py-1.5 text-left font-medium text-sc-muted"
-                  >
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr key={index} className="odd:bg-sc-surface/40">
-                  {columns.map((column) => {
-                    const text = cellText(row[column]);
-                    return (
-                      <td
-                        key={column}
-                        title={text}
-                        className="max-w-[240px] truncate border-b border-sc-border-soft px-2 py-1 text-sc-text"
-                      >
-                        {text}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <InventoryTable
+        loading={loading}
+        error={error ?? tabError ?? null}
+        emptyLabel={`No ${tab}.`}
+        sections={sections}
+        columns={columns}
+        rows={rows}
+      />
     </Modal>
   );
 }
