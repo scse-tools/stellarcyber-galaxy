@@ -12,6 +12,7 @@ import { useGalaxyStore } from "@/store/instances-store";
 import {
   EMPTY_COUNTS,
   SEVERITIES,
+  type HealthTotals,
   type InstanceStats,
   type InstanceSummary,
   type SeverityCounts,
@@ -33,6 +34,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
     tenants,
     selectedTenant,
     notifications,
+    viewMode,
   } = useGalaxyStore();
   const loadInstances = useGalaxyStore((state) => state.loadInstances);
   const refreshStats = useGalaxyStore((state) => state.refreshStats);
@@ -42,6 +44,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const cloneInstance = useGalaxyStore((state) => state.cloneInstance);
   const highlightedInstanceId = useGalaxyStore((state) => state.highlightedInstanceId);
   const setRange = useGalaxyStore((state) => state.setRange);
+  const setViewMode = useGalaxyStore((state) => state.setViewMode);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
@@ -71,8 +74,40 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
     return sum;
   }, [stats]);
 
+  const healthTotals = useMemo<HealthTotals>(() => {
+    const acc: HealthTotals = {
+      sensorsTotal: 0,
+      sensorsDisconnected: 0,
+      connectorsActive: 0,
+      connectorsIssues: 0,
+    };
+    for (const sensor of Object.values(sensors)) {
+      if (sensor.status !== "ok") continue;
+      acc.sensorsTotal += sensor.total;
+      acc.sensorsDisconnected += sensor.connection.disconnected + sensor.connection.other;
+    }
+    for (const connector of Object.values(connectors)) {
+      if (connector.status !== "ok") continue;
+      acc.connectorsActive += connector.active;
+      acc.connectorsIssues += connector.issues;
+    }
+    return acc;
+  }, [sensors, connectors]);
+
   // Tiles flow left-to-right, top-to-bottom, ranked by Critical, then High, then total open cases.
   const sortedInstances = useMemo(() => {
+    if (viewMode === "health") {
+      // Most trouble first: unreachable health counts high so it surfaces for attention.
+      const trouble = (id: string) => {
+        const s = sensors[id];
+        const c = connectors[id];
+        let score = 0;
+        score += !s || s.status !== "ok" ? 1000 : s.connection.disconnected + s.connection.other;
+        score += !c || c.status !== "ok" ? 1000 : c.issues;
+        return score;
+      };
+      return [...instances].sort((a, b) => trouble(b.id) - trouble(a.id));
+    }
     const rank = (s?: InstanceStats) =>
       s && s.status === "ok"
         ? { c: s.counts.critical, h: s.counts.high, t: s.total }
@@ -82,7 +117,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
       const rb = rank(stats[b.id]);
       return rb.c - ra.c || rb.h - ra.h || rb.t - ra.t;
     });
-  }, [instances, stats]);
+  }, [instances, stats, sensors, connectors, viewMode]);
 
   const onlineCount = Object.values(stats).filter((stat) => stat.status === "ok").length;
   const anyRefreshing = Object.values(refreshing).some(Boolean);
@@ -125,6 +160,9 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         refreshing={anyRefreshing}
         range={range}
         onRangeChange={(next) => void setRange(next)}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        healthTotals={healthTotals}
         onRefresh={() => void refreshStats()}
         onAdd={openAdd}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -158,6 +196,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               connectors={connectors[instance.id]}
               refreshing={refreshing[instance.id]}
               highlighted={highlightedInstanceId === instance.id}
+              mode={viewMode}
               onOpenSettings={isAdmin ? openConfigure : undefined}
               tenants={tenants[instance.id]}
               selectedTenant={selectedTenant[instance.id] ?? null}

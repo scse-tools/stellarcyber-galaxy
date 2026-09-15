@@ -102,6 +102,16 @@ export interface SensorStatus {
 export const EMPTY_COUNTS: SeverityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
 
 /** One MSSP tenant/customer visible to an instance's API key. */
+export type ViewMode = "cases" | "health";
+
+/** Aggregate deployment health across all reachable instances, for the header rollup. */
+export interface HealthTotals {
+  sensorsTotal: number;
+  sensorsDisconnected: number;
+  connectorsActive: number;
+  connectorsIssues: number;
+}
+
 export interface Tenant {
   id: string;
   name: string;
