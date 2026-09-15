@@ -5,6 +5,7 @@ import { GalaxyHeader } from "@/components/galaxy-header";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
+import { InventoryModal, type InventoryTab } from "@/components/inventory-modal";
 import { NotificationsPanel } from "@/components/notifications-panel";
 import { ToastStack } from "@/components/toast-stack";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,9 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [inventory, setInventory] = useState<{ instance: InstanceSummary; tab: InventoryTab } | null>(
+    null,
+  );
   const isAdmin = user.role === "admin";
 
   useEffect(() => {
@@ -203,6 +207,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               tenants={tenants[instance.id]}
               selectedTenant={selectedTenant[instance.id] ?? null}
               onSelectTenant={(tenantId) => setSelectedTenant(instance.id, tenantId)}
+              onOpenInventory={(target, tab) => setInventory({ instance: target, tab })}
             />
           ))}
         </div>
@@ -217,6 +222,13 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         }}
         onDelete={(instance) => void handleDelete(instance)}
         onDuplicate={(instance) => void handleDuplicate(instance)}
+      />
+
+      <InventoryModal
+        instance={inventory?.instance ?? null}
+        initialTab={inventory?.tab ?? "sensors"}
+        tenantId={inventory ? (selectedTenant[inventory.instance.id] ?? null) : null}
+        onClose={() => setInventory(null)}
       />
 
       {isAdmin ? (

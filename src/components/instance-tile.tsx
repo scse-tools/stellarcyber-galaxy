@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Settings } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Settings, Table2 } from "lucide-react";
 import { SeverityRows } from "@/components/severity-bar";
 import { SensorStatusBlock } from "@/components/sensor-status";
 import { ConnectorStatusBlock } from "@/components/connector-status";
@@ -15,6 +15,7 @@ import {
   type Tenant,
   type ViewMode,
 } from "@/lib/types";
+import type { InventoryTab } from "@/components/inventory-modal";
 
 interface InstanceTileProps {
   instance: InstanceSummary;
@@ -25,6 +26,7 @@ interface InstanceTileProps {
   highlighted?: boolean;
   mode?: ViewMode;
   onOpenSettings?: (instance: InstanceSummary) => void;
+  onOpenInventory?: (instance: InstanceSummary, tab: InventoryTab) => void;
   /** Tenants visible to this instance's API key. Omitted or empty hides the tenant picker. */
   tenants?: Tenant[];
   /** The session-only tenant override in effect; `null` means "use the instance's default". */
@@ -41,6 +43,7 @@ export function InstanceTile({
   highlighted,
   mode = "cases",
   onOpenSettings,
+  onOpenInventory,
   tenants,
   selectedTenant,
   onSelectTenant,
@@ -205,7 +208,8 @@ export function InstanceTile({
             sensors={sensors}
             loading={refreshing}
             action={
-              <TileLink
+              <BlockActions
+                onTable={onOpenInventory ? () => onOpenInventory(instance, "sensors") : undefined}
                 href={consoleLink(instance.consoleUrl, "/system/collect/sensors")}
                 label="Sensors"
               />
@@ -215,7 +219,8 @@ export function InstanceTile({
             connectors={connectors}
             loading={refreshing}
             action={
-              <TileLink
+              <BlockActions
+                onTable={onOpenInventory ? () => onOpenInventory(instance, "connectors") : undefined}
                 href={consoleLink(instance.consoleUrl, "/system/integrations/connectors")}
                 label="Connectors"
               />
@@ -224,6 +229,37 @@ export function InstanceTile({
         </div>
       ) : null}
     </article>
+  );
+}
+
+/** A "table" button (opens the inventory modal) beside the console deep link. */
+function BlockActions({
+  onTable,
+  href,
+  label,
+}: {
+  onTable?: () => void;
+  href: string;
+  label: string;
+}) {
+  return (
+    <span className="flex items-center gap-1">
+      {onTable ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onTable();
+          }}
+          title="Open full table"
+          aria-label={`${label} table`}
+          className="rounded p-0.5 text-sc-faint transition-colors hover:bg-sc-active hover:text-sc-text"
+        >
+          <Table2 size={12} />
+        </button>
+      ) : null}
+      <TileLink href={href} label={label} />
+    </span>
   );
 }
 

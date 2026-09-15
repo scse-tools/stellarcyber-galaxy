@@ -47,9 +47,7 @@ export function SensorStatusBlock({
           <div className="flex flex-wrap items-stretch gap-2">
             <Stat label="Connected" value={sensors.connection.connected} tone="good" />
             <Stat label="Disconnected" value={down} tone={down > 0 ? "bad" : "good"} />
-            {sensors.noOutput > 0 ? (
-              <Stat label="No output" value={sensors.noOutput} tone="warn" />
-            ) : null}
+            <Stat label="No output" value={sensors.noOutput} tone={sensors.noOutput > 0 ? "warn" : "good"} />
             {sensors.upgrade.need > 0 ? (
               <Stat label="Upgrade" value={sensors.upgrade.need} tone="warn" />
             ) : null}
