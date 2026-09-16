@@ -57,6 +57,66 @@ export function fetchConnectorRows(row: InstanceRow, tenantOverride?: string | n
   return fetchRows(row, CONNECTORS_PATH, ["connectors", "data", "results", "items"], tenantOverride);
 }
 
+// Feedback sub-fields whose numeric value is an epoch timestamp (seconds or milliseconds).
+const TS_KEY = /(timestamp|_ts$|_time$|_at$|(^|_)time$)/i;
+
+/** Formats an epoch (ms) as a readable `YYYY-MM-DD HH:MM:SS UTC` string. */
+function formatTimestamp(ms: number): string {
+  return new Date(ms).toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+}
+
+/** Normalizes an epoch value to milliseconds, or null when it isn't a plausible timestamp. */
+function epochToMs(value: number): number | null {
+  if (value >= 1e12) return value; // already milliseconds
+  if (value >= 1e9) return value * 1000; // seconds
+  return null;
+}
+
+/** Recursively rewrites timestamp fields to readable strings, collecting the epochs seen (ms). */
+function humanizeTimestamps(value: unknown, key: string | undefined, seen: number[]): unknown {
+  if (Array.isArray(value)) return value.map((item) => humanizeTimestamps(item, key, seen));
+  if (isRecord(value)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = humanizeTimestamps(v, k, seen);
+    return out;
+  }
+  if (typeof value === "number" && key && TS_KEY.test(key)) {
+    const ms = epochToMs(value);
+    if (ms !== null) {
+      seen.push(ms);
+      return formatTimestamp(ms);
+    }
+  }
+  return value;
+}
+
+/**
+ * Pretty-prints each sensor's `feedback` JSON, replaces its epoch timestamp fields with readable
+ * strings, and adds an `oldest timestamp` column populated from the earliest feedback timestamp.
+ */
+export function enrichSensorRows(rows: InventoryRow[]): InventoryRow[] {
+  return rows.map((row) => {
+    const raw = row.feedback;
+    let parsed: unknown;
+    if (typeof raw === "string" && raw.trim()) {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return row;
+      }
+    } else if (isRecord(raw)) {
+      parsed = raw;
+    } else {
+      return row;
+    }
+    const seen: number[] = [];
+    const humanized = humanizeTimestamps(parsed, undefined, seen);
+    const out: InventoryRow = { ...row, feedback: JSON.stringify(humanized, null, 2) };
+    if (seen.length) out["oldest timestamp"] = formatTimestamp(Math.min(...seen));
+    return out;
+  });
+}
+
 const TENANT_ID_KEYS = ["tenantid", "tenant_id", "cust_id", "custid"];
 
 /** A connector's tenant id, under whichever of the known key spellings it uses. */

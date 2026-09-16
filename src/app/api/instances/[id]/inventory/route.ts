@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getInstanceRow } from "@/lib/instance-repo";
 import {
   enrichConnectorRows,
+  enrichSensorRows,
   fetchConnectorRows,
   fetchSensorRows,
   type InventoryRow,
@@ -43,7 +44,7 @@ export async function GET(request: Request, { params }: Context) {
     ]);
     const tenantNameById = new Map(tenants.map((tenant) => [tenant.id, tenant.name]));
     return NextResponse.json({
-      sensors: sensors.rows,
+      sensors: enrichSensorRows(sensors.rows),
       connectors: enrichConnectorRows(connectors.rows, tenantNameById),
       sensorError: sensors.error,
       connectorError: connectors.error,
