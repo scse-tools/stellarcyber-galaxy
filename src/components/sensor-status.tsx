@@ -2,7 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { SensorStatus } from "@/lib/types";
+import type { SensorMetrics, SensorStatus } from "@/lib/types";
+import { formatBytes } from "@/lib/utils";
 
 const FEATURE_LABEL: Record<string, string> = { wds: "WDS", ds: "DS", modular: "Modular" };
 const featureLabel = (f: string) => FEATURE_LABEL[f] ?? f.toUpperCase();
@@ -13,11 +14,13 @@ export function SensorStatusBlock({
   loading,
   action,
   onStatus,
+  showMetrics,
 }: {
   sensors?: SensorStatus;
   loading?: boolean;
   action?: ReactNode;
   onStatus?: (key: string, label: string) => void;
+  showMetrics?: boolean;
 }) {
   const down = sensors ? sensors.connection.disconnected + sensors.connection.other : 0;
   const features = sensors
@@ -58,9 +61,50 @@ export function SensorStatusBlock({
             <span className="text-sc-faint">Features:</span>{" "}
             {features.map(([feature, count]) => `${featureLabel(feature)} ${count}`).join(" · ")}
           </p>
+          {showMetrics ? <SensorMetricsRow metrics={sensors.metrics} /> : null}
         </div>
       )}
     </section>
+  );
+}
+
+const usageTone = (pct: number) =>
+  pct >= 90 ? "bg-critical" : pct >= 75 ? "bg-high" : "bg-[var(--severity-success)]";
+
+/** CPU / disk usage bars (0–100) plus total in/out throughput, shown in health mode. */
+function SensorMetricsRow({ metrics }: { metrics: SensorMetrics }) {
+  return (
+    <div className="space-y-1.5 border-t border-sc-border-soft pt-2">
+      <UsageBar label="CPU" avg={metrics.cpuAvg} max={metrics.cpuMax} />
+      <UsageBar label="Disk" avg={metrics.diskAvg} max={metrics.diskMax} />
+      <div className="flex gap-2 pt-0.5">
+        <Throughput label="In" bytes={metrics.inBytes} />
+        <Throughput label="Out" bytes={metrics.outBytes} />
+      </div>
+    </div>
+  );
+}
+
+function UsageBar({ label, avg, max }: { label: string; avg: number; max: number }) {
+  return (
+    <div className="flex items-center gap-2" title={`avg ${avg}% · peak ${max}%`}>
+      <span className="w-8 shrink-0 text-[10px] uppercase tracking-wide text-sc-faint">{label}</span>
+      <div className="h-1.5 grow overflow-hidden rounded-full bg-sc-raised">
+        <div className={`h-full rounded-full ${usageTone(avg)}`} style={{ width: `${avg}%` }} />
+      </div>
+      <span className="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-sc-text">
+        {avg}%
+      </span>
+    </div>
+  );
+}
+
+function Throughput({ label, bytes }: { label: string; bytes: number }) {
+  return (
+    <div className="min-w-0 grow basis-1/2 overflow-hidden rounded-md border border-sc-border-soft bg-sc-raised/40 px-2.5 py-1.5">
+      <p className="truncate font-mono text-[13px] tabular-nums text-sc-text">{formatBytes(bytes)}</p>
+      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-sc-faint">{label}</p>
+    </div>
   );
 }
 
