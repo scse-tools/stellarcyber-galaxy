@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { cellText, downloadCsv, printTable, toCsv, type Row } from "@/lib/table-export";
-import { compareCells, DEFAULT_VISIBLE, matchesStatus, sectionize } from "@/lib/inventory-columns";
+import { compareCells, matchesStatus, sectionize } from "@/lib/inventory-columns";
 import type { ColumnSection, StatusFilter } from "@/lib/inventory-columns";
-import { InventoryTable, type SortState } from "@/components/inventory-table";
+import { InventoryTable } from "@/components/inventory-table";
 import { InventoryToolbar, type InventoryTab } from "@/components/inventory-toolbar";
+import { useColumnControls } from "@/lib/use-column-controls";
 import type { InstanceSummary } from "@/lib/types";
 
 export type { InventoryTab };
@@ -47,18 +48,11 @@ export function InventoryModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter | null>(initialStatus ?? null);
-  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
-  const [sort, setSort] = useState<SortState>(null);
-  const [colFilters, setColFilters] = useState<Record<string, string>>({});
+  const { isVisible, toggleColumn, resetColumns, sort, cycleSort, colFilters, setColFilter } =
+    useColumnControls(tab, instance?.id);
 
   useEffect(() => setTab(initialTab), [initialTab, instance?.id]);
   useEffect(() => setStatus(initialStatus ?? null), [initialStatus, initialTab, instance?.id]);
-  useEffect(() => {
-    // Reset column controls whenever the dataset changes.
-    setVisibility({});
-    setSort(null);
-    setColFilters({});
-  }, [tab, instance?.id]);
 
   useEffect(() => {
     if (!instance) return;
@@ -89,11 +83,6 @@ export function InventoryModal({
     return sectionize([...keys], groupField);
   }, [allRows, groupField]);
 
-  const isVisible = useCallback(
-    (column: string) => visibility[column] ?? DEFAULT_VISIBLE[tab].includes(column),
-    [visibility, tab],
-  );
-
   const sections = useMemo(() => visibleSectionsOf(allSections, isVisible), [allSections, isVisible]);
   const columns = useMemo(() => sections.flatMap((section) => section.columns), [sections]);
   const allColumnCount = useMemo(
@@ -116,27 +105,6 @@ export function InventoryModal({
       return ordered || compareCells(cellText(a[secondKey]), cellText(b[secondKey]));
     });
   }, [allRows, status, colFilters, sort, groupField, tab]);
-
-  const toggleColumn = useCallback(
-    (column: string) => setVisibility((prev) => ({ ...prev, [column]: !(prev[column] ?? DEFAULT_VISIBLE[tab].includes(column)) })),
-    [tab],
-  );
-  const resetColumns = useCallback(() => setVisibility({}), []);
-  const cycleSort = useCallback(
-    (column: string) =>
-      setSort((prev) =>
-        prev?.col !== column
-          ? { col: column, dir: "asc" }
-          : prev.dir === "asc"
-            ? { col: column, dir: "desc" }
-            : null,
-      ),
-    [],
-  );
-  const setColFilter = useCallback(
-    (column: string, value: string) => setColFilters((prev) => ({ ...prev, [column]: value })),
-    [],
-  );
 
   const suffix = status?.label ?? "";
   const baseName = `${instance?.name ?? "instance"}-${tab}${suffix ? `-${suffix}` : ""}`.replace(/\s+/g, "_");
