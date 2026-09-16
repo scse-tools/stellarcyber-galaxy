@@ -68,15 +68,21 @@ export function GalaxyHeader({
     <header className="mb-8 space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-sc-text">
-              Stellar Cyber <span className="text-sc-accent">Galaxy</span>
-            </h1>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/stellar-logo-dark.svg"
+              alt="Stellar Cyber"
+              className="h-6 w-auto"
+              width={159}
+              height={22}
+            />
+            <h1 className="text-3xl font-semibold tracking-tight text-sc-accent">Galaxy</h1>
             <button
               type="button"
               onClick={() => setChangelogOpen(true)}
               title="Release notes"
-              className="rounded font-mono text-[11px] text-sc-faint transition-colors hover:text-sc-link focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
+              className="self-end rounded font-mono text-[11px] text-sc-faint transition-colors hover:text-sc-link focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
             >
               v{APP_VERSION}
             </button>
