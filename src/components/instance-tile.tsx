@@ -202,6 +202,7 @@ export function InstanceTile({
           <SensorStatusBlock
             sensors={sensors}
             loading={refreshing}
+            showMetrics={health}
             onStatus={
               onOpenInventory
                 ? (key, label) => onOpenInventory(instance, "sensors", { key, label })

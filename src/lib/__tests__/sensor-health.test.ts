@@ -9,6 +9,7 @@ const base: SensorStatus = {
   connection: { connected: 21, disconnected: 5, other: 0 },
   upgrade: { need: 26, ok: 0 },
   noOutput: 0,
+  metrics: { cpuAvg: 0, cpuMax: 0, diskAvg: 0, diskMax: 0, inBytes: 0, outBytes: 0 },
   fetchedAt: "2026-09-04T00:00:00.000Z",
 };
 

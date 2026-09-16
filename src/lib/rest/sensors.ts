@@ -1,6 +1,16 @@
 import { proxiedFetch, restUrl } from "@/lib/http";
 import { forgetRestAccessToken, getRestAccessToken } from "@/lib/rest/access-token";
-import type { InstanceRow, SensorStatus } from "@/lib/types";
+import type { InstanceRow, SensorMetrics, SensorStatus } from "@/lib/types";
+
+const EMPTY_METRICS: SensorMetrics = {
+  cpuAvg: 0, cpuMax: 0, diskAvg: 0, diskMax: 0, inBytes: 0, outBytes: 0,
+};
+
+/** Reads a 0–100 usage value, or null when the sensor doesn't report one. */
+const toPct = (value: unknown): number | null => {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null;
+};
 
 const DATA_SENSORS_PATH = "/connect/api/v1/data_sensors";
 const REQUEST_TIMEOUT_MS = Number(process.env.GALAXY_REST_TIMEOUT_MS ?? 15_000);
@@ -11,6 +21,8 @@ interface SensorRow {
   need_upgrade?: unknown;
   inbytes_total?: unknown;
   outbytes_total?: unknown;
+  cpu_usage?: unknown;
+  disk_usage?: unknown;
 }
 
 const toNum = (value: unknown): number => {
@@ -38,6 +50,10 @@ function aggregate(sensors: SensorRow[]): Omit<SensorStatus, "instanceId" | "sta
   const connection = { connected: 0, disconnected: 0, other: 0 };
   const upgrade = { need: 0, ok: 0 };
   let noOutput = 0;
+  const cpu: number[] = [];
+  const disk: number[] = [];
+  let inBytes = 0;
+  let outBytes = 0;
 
   for (const sensor of sensors) {
     const feature = typeof sensor.feature === "string" && sensor.feature ? sensor.feature : "unknown";
@@ -53,10 +69,29 @@ function aggregate(sensors: SensorRow[]): Omit<SensorStatus, "instanceId" | "sta
     else upgrade.ok += 1;
 
     // Receiving input but sending no output is a forwarding fault.
-    if (toNum(sensor.inbytes_total) > 0 && toNum(sensor.outbytes_total) <= 0) noOutput += 1;
+    const sensorIn = toNum(sensor.inbytes_total);
+    const sensorOut = toNum(sensor.outbytes_total);
+    if (sensorIn > 0 && sensorOut <= 0) noOutput += 1;
+    inBytes += sensorIn;
+    outBytes += sensorOut;
+
+    const cpuPct = toPct(sensor.cpu_usage);
+    if (cpuPct !== null) cpu.push(cpuPct);
+    const diskPct = toPct(sensor.disk_usage);
+    if (diskPct !== null) disk.push(diskPct);
   }
 
-  return { total: sensors.length, byFeature, connection, upgrade, noOutput };
+  const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0);
+  const metrics: SensorMetrics = {
+    cpuAvg: mean(cpu),
+    cpuMax: cpu.length ? Math.round(Math.max(...cpu)) : 0,
+    diskAvg: mean(disk),
+    diskMax: disk.length ? Math.round(Math.max(...disk)) : 0,
+    inBytes,
+    outBytes,
+  };
+
+  return { total: sensors.length, byFeature, connection, upgrade, noOutput, metrics };
 }
 
 /**
@@ -102,6 +137,7 @@ export async function fetchSensorStatus(
       connection: { connected: 0, disconnected: 0, other: 0 },
       upgrade: { need: 0, ok: 0 },
       noOutput: 0,
+      metrics: EMPTY_METRICS,
       error: error instanceof Error ? error.message : "Unknown sensor error.",
     };
   }

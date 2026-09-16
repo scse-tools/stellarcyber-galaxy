@@ -97,8 +97,21 @@ export interface SensorStatus {
   upgrade: { need: number; ok: number };
   /** Sensors receiving input but forwarding no output — an error condition. */
   noOutput: number;
+  /** Aggregate resource/throughput metrics across the instance's sensors. */
+  metrics: SensorMetrics;
   fetchedAt: string;
   error?: string;
+}
+
+export interface SensorMetrics {
+  /** Mean and peak CPU/disk usage (0–100) across sensors reporting a value. */
+  cpuAvg: number;
+  cpuMax: number;
+  diskAvg: number;
+  diskMax: number;
+  /** Total bytes in/out across all sensors. */
+  inBytes: number;
+  outBytes: number;
 }
 
 export const EMPTY_COUNTS: SeverityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
