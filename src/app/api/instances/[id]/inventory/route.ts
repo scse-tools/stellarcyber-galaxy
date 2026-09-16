@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getInstanceRow } from "@/lib/instance-repo";
-import { fetchConnectorRows, fetchSensorRows, type InventoryRow } from "@/lib/rest/inventory";
+import {
+  enrichConnectorRows,
+  fetchConnectorRows,
+  fetchSensorRows,
+  type InventoryRow,
+} from "@/lib/rest/inventory";
+import { fetchTenants } from "@/lib/rest/tenants";
 import { errorResponse } from "@/lib/api-error";
 import { requireUser, isGuardFailure } from "@/lib/auth/session";
 
@@ -30,13 +36,15 @@ export async function GET(request: Request, { params }: Context) {
         return { rows: [] as InventoryRow[], error: error instanceof Error ? error.message : "failed" };
       }
     };
-    const [sensors, connectors] = await Promise.all([
+    const [sensors, connectors, tenants] = await Promise.all([
       settle(fetchSensorRows(row, tenantOverride)),
       settle(fetchConnectorRows(row, tenantOverride)),
+      fetchTenants(row).catch(() => []),
     ]);
+    const tenantNameById = new Map(tenants.map((tenant) => [tenant.id, tenant.name]));
     return NextResponse.json({
       sensors: sensors.rows,
-      connectors: connectors.rows,
+      connectors: enrichConnectorRows(connectors.rows, tenantNameById),
       sensorError: sensors.error,
       connectorError: connectors.error,
     });
