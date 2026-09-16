@@ -150,6 +150,7 @@ export function InventoryModal({
   return (
     <Modal
       open
+      variant="overlay"
       title={`Inventory · ${instance.name}`}
       description="Full sensor and connector records. Pick columns, then sort or filter any of them."
       onClose={onClose}

@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "1.1.16";
+export const APP_VERSION = "1.1.17";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,13 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "1.1.17",
+    date: "2026-09-16",
+    notes: [
+      "The sensor/connector inventory now opens as a lighter floating overlay instead of a blocking modal — it no longer dims and locks the page, and disappears the moment you click away or press Escape.",
+    ],
+  },
   {
     version: "1.1.16",
     date: "2026-09-16",
