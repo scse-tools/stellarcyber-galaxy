@@ -73,7 +73,7 @@ export function GalaxyHeader({
             <img
               src="/stellar-logo-dark.svg"
               alt="Stellar Cyber"
-              className="h-6 w-auto"
+              className="h-8 w-auto"
               width={159}
               height={22}
             />
