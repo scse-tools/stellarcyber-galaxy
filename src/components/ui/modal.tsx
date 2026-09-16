@@ -11,10 +11,24 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  /**
+   * "modal" (default) dims and blurs the page and locks scroll. "overlay" is a lighter floating
+   * window: no blur, no scroll lock, and it disappears the moment you click away or press Escape.
+   */
+  variant?: "modal" | "overlay";
 }
 
-export function Modal({ open, title, description, onClose, children, className }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  description,
+  onClose,
+  children,
+  className,
+  variant = "modal",
+}: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const overlay = variant === "overlay";
 
   useEffect(() => {
     if (!open) return;
@@ -22,20 +36,24 @@ export function Modal({ open, title, description, onClose, children, className }
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
+    // A blocking modal locks page scroll; a floating overlay leaves the page as-is.
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!overlay) document.body.style.overflow = "hidden";
     panelRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
+      if (!overlay) document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open, onClose, overlay]);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className={cn(
+        "fixed inset-0 z-50 flex items-center justify-center p-4",
+        overlay ? "bg-black/20" : "bg-black/60 backdrop-blur-sm",
+      )}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -43,7 +61,7 @@ export function Modal({ open, title, description, onClose, children, className }
       <div
         ref={panelRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal={!overlay}
         aria-label={title}
         tabIndex={-1}
         className={cn(
