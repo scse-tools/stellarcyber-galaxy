@@ -29,8 +29,15 @@ export function InventoryRowDetail({ row, sections, isVisible, onToggleColumn }:
               const text = cellText(row[column]);
               const tone = cellTone(column, row[column], row);
               const shown = isVisible(column);
+              const multiline = text.includes("\n");
               return (
-                <div key={column} className="flex items-start gap-1.5 py-0.5 text-[11px]">
+                <div
+                  key={column}
+                  className={cn(
+                    "flex items-start gap-1.5 py-0.5 text-[11px]",
+                    multiline && "col-span-full",
+                  )}
+                >
                   <button
                     type="button"
                     onClick={() => onToggleColumn(column)}
@@ -43,15 +50,21 @@ export function InventoryRowDetail({ row, sections, isVisible, onToggleColumn }:
                     {shown ? <Eye size={12} /> : <EyeOff size={12} />}
                   </button>
                   <span className="shrink-0 text-sc-faint">{column}</span>
-                  <span
-                    title={text}
-                    className={cn(
-                      "ml-auto max-w-[60%] truncate text-right",
-                      tone ? `${TONE_TEXT[tone]} font-medium` : "text-sc-text",
-                    )}
-                  >
-                    {text || "—"}
-                  </span>
+                  {multiline ? (
+                    <pre className="ml-auto max-h-56 w-full max-w-[85%] overflow-auto rounded border border-sc-border-soft bg-sc-surface px-2 py-1 text-left font-mono text-[10px] text-sc-text">
+                      {text}
+                    </pre>
+                  ) : (
+                    <span
+                      title={text}
+                      className={cn(
+                        "ml-auto max-w-[60%] truncate text-right",
+                        tone ? `${TONE_TEXT[tone]} font-medium` : "text-sc-text",
+                      )}
+                    >
+                      {text || "—"}
+                    </span>
+                  )}
                 </div>
               );
             })}

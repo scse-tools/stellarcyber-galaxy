@@ -61,7 +61,7 @@ const SECTION_DEFS: SectionDef[] = [
     key: "time",
     label: "Timestamps",
     hue: "220 12% 64%",
-    match: (f) => /(_at$|_time$|^last_|timezone|created|modified)/.test(f),
+    match: (f) => /(_at$|_time$|^last_|timezone|created|modified|timestamp)/.test(f),
   },
   { key: "other", label: "Config & other", hue: "220 8% 56%", match: () => true },
 ];
@@ -168,7 +168,7 @@ export function matchesStatus(tab: "sensors" | "connectors", key: string, row: R
 export const DEFAULT_VISIBLE: Record<"sensors" | "connectors", string[]> = {
   sensors: [
     "hostname", "local_ip_address", "nat_ip_address", "cust_name",
-    "connection_status", "feature", "sw_version", "need_upgrade",
+    "connection_status", "feature", "sw_version", "need_upgrade", "oldest timestamp",
   ],
   connectors: ["name", "tenant_name", "category", "type", "active", "is_collect", "status_code", "version"],
 };
