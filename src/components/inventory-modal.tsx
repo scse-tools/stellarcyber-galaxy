@@ -90,6 +90,20 @@ export function InventoryModal({
     [allSections],
   );
 
+  // Distinct values per visible column, offered as pickable filter suggestions.
+  const columnValues = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const column of columns) {
+      const set = new Set<string>();
+      for (const row of allRows) {
+        const text = cellText(row[column]);
+        if (text) set.add(text);
+      }
+      map[column] = [...set].sort(compareCells).slice(0, 500);
+    }
+    return map;
+  }, [columns, allRows]);
+
   const rows = useMemo(() => {
     let filtered = status ? allRows.filter((r) => matchesStatus(tab, status.key, r)) : allRows;
     for (const [column, term] of Object.entries(colFilters)) {
@@ -158,6 +172,7 @@ export function InventoryModal({
         onSort={cycleSort}
         colFilters={colFilters}
         onColFilter={setColFilter}
+        columnValues={columnValues}
         allSections={allSections}
         isVisible={isVisible}
         onToggleColumn={toggleColumn}

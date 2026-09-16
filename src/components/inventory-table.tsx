@@ -20,11 +20,16 @@ interface InventoryTableProps {
   onSort: (column: string) => void;
   colFilters: Record<string, string>;
   onColFilter: (column: string, value: string) => void;
+  /** Distinct values per column, offered as pickable suggestions beside each filter box. */
+  columnValues: Record<string, string[]>;
   /** Every field, grouped — drives the per-row expand panel. */
   allSections: ColumnSection[];
   isVisible: (column: string) => boolean;
   onToggleColumn: (column: string) => void;
 }
+
+/** A DOM-id-safe datalist id for a column's distinct-value suggestions. */
+const valuesListId = (column: string) => `vals-${column.replace(/[^\w-]/g, "_")}`;
 
 /** The scrollable, section-headered records table with per-column sort/filter and row expanders. */
 export function InventoryTable({
@@ -38,6 +43,7 @@ export function InventoryTable({
   onSort,
   colFilters,
   onColFilter,
+  columnValues,
   allSections,
   isVisible,
   onToggleColumn,
@@ -110,8 +116,14 @@ export function InventoryTable({
                       value={colFilters[column] ?? ""}
                       onChange={(event) => onColFilter(column, event.target.value)}
                       placeholder="Filter…"
+                      list={valuesListId(column)}
                       className="mt-1 w-full min-w-[70px] rounded border border-sc-border-soft bg-sc-surface px-1.5 py-0.5 text-[10px] font-normal text-sc-text placeholder:text-sc-faint/70 focus:border-sc-link focus:outline-none"
                     />
+                    <datalist id={valuesListId(column)}>
+                      {(columnValues[column] ?? []).map((value) => (
+                        <option key={value} value={value} />
+                      ))}
+                    </datalist>
                   </th>
                 );
               })}
