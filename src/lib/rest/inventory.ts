@@ -56,3 +56,35 @@ export function fetchSensorRows(row: InstanceRow, tenantOverride?: string | null
 export function fetchConnectorRows(row: InstanceRow, tenantOverride?: string | null) {
   return fetchRows(row, CONNECTORS_PATH, ["connectors", "data", "results", "items"], tenantOverride);
 }
+
+const TENANT_ID_KEYS = ["tenantid", "tenant_id", "cust_id", "custid"];
+
+/** A connector's tenant id, under whichever of the known key spellings it uses. */
+function connectorTenantId(row: InventoryRow): string | null {
+  for (const key of TENANT_ID_KEYS) {
+    const value = row[key];
+    if (typeof value === "string" && value) return value;
+    if (typeof value === "number") return String(value);
+  }
+  return null;
+}
+
+/**
+ * Adds a `tenant_name` (mapped from the connector's tenant id) and flattens the nested `status`
+ * object into individual `status_<field>` pairs, so both surface as real table columns.
+ */
+export function enrichConnectorRows(
+  rows: InventoryRow[],
+  tenantNameById: Map<string, string>,
+): InventoryRow[] {
+  return rows.map((row) => {
+    const out: InventoryRow = { ...row };
+    const tenantId = connectorTenantId(row);
+    if (tenantId) out.tenant_name = tenantNameById.get(tenantId) ?? tenantId;
+    if (isRecord(row.status)) {
+      delete out.status;
+      for (const [key, value] of Object.entries(row.status)) out[`status_${key}`] = value;
+    }
+    return out;
+  });
+}

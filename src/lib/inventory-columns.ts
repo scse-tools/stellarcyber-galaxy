@@ -21,7 +21,7 @@ const SECTION_DEFS: SectionDef[] = [
     label: "Identity",
     hue: "210 90% 62%",
     match: (f) =>
-      /(^name$|hostname|_id$|^id$|sensor_id|internal_sensor_id|cust_id|cust_name|tenantid|run_on)/.test(f),
+      /(^name$|hostname|_id$|^id$|sensor_id|internal_sensor_id|cust_id|cust_name|tenantid|tenant_name|run_on)/.test(f),
   },
   {
     key: "class",
@@ -38,8 +38,9 @@ const SECTION_DEFS: SectionDef[] = [
     label: "Status & health",
     hue: "150 62% 52%",
     match: (f) =>
+      /^status(_|$)/.test(f) ||
       [
-        "connection_status", "active", "status", "auth_state_code", "need_upgrade",
+        "connection_status", "active", "auth_state_code", "need_upgrade",
         "license_log", "message", "service_status", "feedback",
       ].includes(f),
   },
@@ -89,8 +90,6 @@ export function sectionize(columns: string[], groupField: string): ColumnSection
 
 export type CellTone = "good" | "bad" | "warn" | null;
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-
 /** Status-aware colour for a cell, based on the field and (occasionally) the whole row. */
 export function cellTone(column: string, raw: unknown, row: Row): CellTone {
   const text = cellText(raw).toLowerCase();
@@ -101,8 +100,8 @@ export function cellTone(column: string, raw: unknown, row: Row): CellTone {
       return text === "true" ? "good" : "bad";
     case "need_upgrade":
       return text === "true" ? "warn" : "good";
-    case "status": {
-      const code = isRecord(raw) ? Number((raw as { code?: unknown }).code) : NaN;
+    case "status_code": {
+      const code = Number(raw);
       return Number.isFinite(code) ? (code === 0 ? "good" : "bad") : null;
     }
     case "outbytes_total": {
@@ -149,7 +148,7 @@ export function matchesStatus(tab: "sensors" | "connectors", key: string, row: R
   }
   const collecting = row.is_collect === true;
   const active = row.active === true;
-  const code = isRecord(row.status) ? Number((row.status as { code?: unknown }).code) : NaN;
+  const code = Number(row.status_code);
   switch (key) {
     case "active":
       return collecting && active;
@@ -171,7 +170,7 @@ export const DEFAULT_VISIBLE: Record<"sensors" | "connectors", string[]> = {
     "hostname", "local_ip_address", "nat_ip_address", "cust_name",
     "connection_status", "feature", "sw_version", "need_upgrade",
   ],
-  connectors: ["name", "category", "type", "active", "is_collect", "status", "version"],
+  connectors: ["name", "tenant_name", "category", "type", "active", "is_collect", "status_code", "version"],
 };
 
 /** Numeric-aware comparison of two already-stringified cell values. */
