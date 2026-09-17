@@ -8,6 +8,7 @@ import type { ColumnSection, StatusFilter } from "@/lib/inventory-columns";
 import { InventoryTable } from "@/components/inventory-table";
 import { InventoryToolbar, type InventoryTab } from "@/components/inventory-toolbar";
 import { SensorDetailModal } from "@/components/sensor-detail-modal";
+import { ConnectorDetailModal } from "@/components/connector-detail-modal";
 import { useColumnControls } from "@/lib/use-column-controls";
 import type { InstanceSummary } from "@/lib/types";
 
@@ -49,13 +50,13 @@ export function InventoryModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter | null>(initialStatus ?? null);
-  const [detailSensor, setDetailSensor] = useState<Row | null>(null);
+  const [detailRow, setDetailRow] = useState<Row | null>(null);
   const { isVisible, toggleColumn, resetColumns, sort, cycleSort, colFilters, setColFilter } =
     useColumnControls(tab, instance?.id);
 
   useEffect(() => setTab(initialTab), [initialTab, instance?.id]);
   useEffect(() => setStatus(initialStatus ?? null), [initialStatus, initialTab, instance?.id]);
-  useEffect(() => setDetailSensor(null), [tab, instance?.id]);
+  useEffect(() => setDetailRow(null), [tab, instance?.id]);
 
   useEffect(() => {
     if (!instance) return;
@@ -179,9 +180,13 @@ export function InventoryModal({
         allSections={allSections}
         isVisible={isVisible}
         onToggleColumn={toggleColumn}
-        onRowClick={tab === "sensors" ? setDetailSensor : undefined}
+        onRowClick={setDetailRow}
       />
-      <SensorDetailModal sensor={detailSensor} onClose={() => setDetailSensor(null)} />
+      {tab === "sensors" ? (
+        <SensorDetailModal sensor={detailRow} onClose={() => setDetailRow(null)} />
+      ) : (
+        <ConnectorDetailModal connector={detailRow} onClose={() => setDetailRow(null)} />
+      )}
     </Modal>
   );
 }
