@@ -102,6 +102,13 @@ export function enrichSensorRows(rows: InventoryRow[]): InventoryRow[] {
       out.tenant_name = out.cust_name;
       delete out.cust_name;
     }
+    // Rewrite every top-level epoch timestamp field as a readable date string.
+    for (const key of Object.keys(out)) {
+      if (typeof out[key] === "number" && TS_KEY.test(key)) {
+        const ms = epochToMs(out[key] as number);
+        if (ms !== null) out[key] = formatTimestamp(ms);
+      }
+    }
     const raw = row.feedback;
     let parsed: unknown;
     if (typeof raw === "string" && raw.trim()) {
