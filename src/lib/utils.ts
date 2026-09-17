@@ -33,8 +33,15 @@ export function deriveMcpUrl(consoleUrl: string): string {
   }
 }
 
-/** Normalizes an epoch value to milliseconds, or null when it isn't a plausible timestamp. */
+/** Normalizes an epoch value (number, numeric string, or readable date string) to milliseconds. */
 export function epochMs(value: unknown): number | null {
+  if (typeof value === "string") {
+    const s = value.trim();
+    if (s && !/^\d+$/.test(s)) {
+      const parsed = Date.parse(s.replace(" UTC", "Z").replace(" ", "T"));
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+  }
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   if (n >= 1e12) return n; // milliseconds
