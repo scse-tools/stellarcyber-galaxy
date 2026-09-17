@@ -33,6 +33,21 @@ export function deriveMcpUrl(consoleUrl: string): string {
   }
 }
 
+/** Normalizes an epoch value to milliseconds, or null when it isn't a plausible timestamp. */
+export function epochMs(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 1e12) return n; // milliseconds
+  if (n >= 1e9) return n * 1000; // seconds
+  return null;
+}
+
+/** Formats an epoch value (s or ms) as `YYYY-MM-DD HH:MM:SS UTC`, or "" when not a timestamp. */
+export function formatEpoch(value: unknown): string {
+  const ms = epochMs(value);
+  return ms === null ? "" : new Date(ms).toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+}
+
 /** Human-readable byte size, e.g. 1536 → "1.5 KB", 0 → "0 B". */
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";

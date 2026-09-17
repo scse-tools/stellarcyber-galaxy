@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/utils";
 import { cellText, type Row } from "@/lib/table-export";
 import { cellTone, displayCell, sectionize, TONE_TEXT } from "@/lib/inventory-columns";
+import { Pill } from "@/components/detail-ui";
 
 /** Fields rendered by the hero/metrics area, so the details grid doesn't repeat them. */
 const HERO_FIELDS = new Set([
@@ -92,21 +93,6 @@ export function SensorDetailModal({ sensor, onClose }: { sensor: Row | null; onC
         ) : null}
       </div>
     </Modal>
-  );
-}
-
-const PILL_TONE = {
-  good: "border-[var(--severity-success)]/40 bg-[var(--severity-success)]/10 text-[var(--severity-success)]",
-  bad: "border-critical/40 bg-critical/10 text-critical",
-  warn: "border-high/40 bg-high/10 text-high",
-  info: "border-sc-link/40 bg-sc-link/10 text-sc-link",
-} as const;
-
-function Pill({ label, tone }: { label: string; tone: keyof typeof PILL_TONE }) {
-  return (
-    <span className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", PILL_TONE[tone])}>
-      {label}
-    </span>
   );
 }
 
