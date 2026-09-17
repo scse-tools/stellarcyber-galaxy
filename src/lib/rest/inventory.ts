@@ -96,22 +96,28 @@ function humanizeTimestamps(value: unknown, key: string | undefined, seen: numbe
  */
 export function enrichSensorRows(rows: InventoryRow[]): InventoryRow[] {
   return rows.map((row) => {
+    const out: InventoryRow = { ...row };
+    // Present the customer/tenant column under the same name connectors use.
+    if ("cust_name" in out) {
+      out.tenant_name = out.cust_name;
+      delete out.cust_name;
+    }
     const raw = row.feedback;
     let parsed: unknown;
     if (typeof raw === "string" && raw.trim()) {
       try {
         parsed = JSON.parse(raw);
       } catch {
-        return row;
+        return out;
       }
     } else if (isRecord(raw)) {
       parsed = raw;
     } else {
-      return row;
+      return out;
     }
     const seen: number[] = [];
     const humanized = humanizeTimestamps(parsed, undefined, seen);
-    const out: InventoryRow = { ...row, feedback: JSON.stringify(humanized, null, 2) };
+    out.feedback = JSON.stringify(humanized, null, 2);
     if (seen.length) out["oldest timestamp"] = formatTimestamp(Math.min(...seen));
     return out;
   });
@@ -129,9 +135,15 @@ function connectorTenantId(row: InventoryRow): string | null {
   return null;
 }
 
+/** Connector fields whose numeric value is an epoch timestamp, shown as readable dates. */
+const CONNECTOR_TS_FIELDS = [
+  "created_at", "modified_at", "last_activity", "last_data_received", "status_status_time",
+];
+
 /**
- * Adds a `tenant_name` (mapped from the connector's tenant id) and flattens the nested `status`
- * object into individual `status_<field>` pairs, so both surface as real table columns.
+ * Adds a `tenant_name` (mapped from the connector's tenant id), flattens the nested `status`
+ * object into individual `status_<field>` pairs, and rewrites epoch timestamp fields as readable
+ * date strings — so all three surface as real, human-legible table columns.
  */
 export function enrichConnectorRows(
   rows: InventoryRow[],
@@ -144,6 +156,10 @@ export function enrichConnectorRows(
     if (isRecord(row.status)) {
       delete out.status;
       for (const [key, value] of Object.entries(row.status)) out[`status_${key}`] = value;
+    }
+    for (const field of CONNECTOR_TS_FIELDS) {
+      const ms = epochToMs(Number(out[field]));
+      if (ms !== null) out[field] = formatTimestamp(ms);
     }
     return out;
   });

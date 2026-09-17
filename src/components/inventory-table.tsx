@@ -10,6 +10,23 @@ import { InventoryTableHead } from "@/components/inventory-table-head";
 
 export type SortState = { col: string; dir: "asc" | "desc" } | null;
 
+/** Columns rendered as an inline 0–100 usage bar (still sorted/filtered by their real value). */
+const USAGE_COLUMNS = new Set(["cpu_usage", "disk_usage"]);
+const usageTone = (pct: number) =>
+  pct >= 90 ? "bg-critical" : pct >= 75 ? "bg-high" : "bg-[var(--severity-success)]";
+
+/** A compact usage meter for a table cell: a coloured 0–100 bar plus the percentage. */
+function UsageMeter({ value }: { value: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-sc-raised">
+        <div className={cn("h-full rounded-full", usageTone(value))} style={{ width: `${value}%` }} />
+      </div>
+      <span className="font-mono tabular-nums text-sc-text">{value}%</span>
+    </div>
+  );
+}
+
 interface InventoryTableProps {
   loading: boolean;
   error: string | null;
@@ -113,6 +130,14 @@ export function InventoryTable({
                         </button>
                       </td>
                       {columns.map((column) => {
+                        const meter = USAGE_COLUMNS.has(column) ? Number(row[column]) : NaN;
+                        if (Number.isFinite(meter)) {
+                          return (
+                            <td key={column} className="border-b border-sc-border-soft px-2 py-1">
+                              <UsageMeter value={Math.max(0, Math.min(100, meter))} />
+                            </td>
+                          );
+                        }
                         const text = displayCell(column, row[column]);
                         const tone = cellTone(column, row[column], row);
                         return (
