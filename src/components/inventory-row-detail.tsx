@@ -2,8 +2,8 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cellText, type Row } from "@/lib/table-export";
-import { cellTone, TONE_TEXT, type ColumnSection } from "@/lib/inventory-columns";
+import type { Row } from "@/lib/table-export";
+import { cellTone, displayCell, TONE_TEXT, type ColumnSection } from "@/lib/inventory-columns";
 
 interface InventoryRowDetailProps {
   row: Row;
@@ -26,7 +26,7 @@ export function InventoryRowDetail({ row, sections, isVisible, onToggleColumn }:
           </p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-x-4 gap-y-1">
             {section.columns.map((column) => {
-              const text = cellText(row[column]);
+              const text = displayCell(column, row[column]);
               const tone = cellTone(column, row[column], row);
               const shown = isVisible(column);
               const multiline = text.includes("\n");

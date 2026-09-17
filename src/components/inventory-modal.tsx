@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
-import { cellText, downloadCsv, printTable, toCsv, type Row } from "@/lib/table-export";
-import { compareCells, matchesStatus, sectionize } from "@/lib/inventory-columns";
+import { downloadCsv, printTable, toCsv, type Row } from "@/lib/table-export";
+import { compareByColumn, displayCell, matchesStatus, sectionize } from "@/lib/inventory-columns";
 import type { ColumnSection, StatusFilter } from "@/lib/inventory-columns";
 import { InventoryTable } from "@/components/inventory-table";
 import { InventoryToolbar, type InventoryTab } from "@/components/inventory-toolbar";
+import { SensorDetailModal } from "@/components/sensor-detail-modal";
 import { useColumnControls } from "@/lib/use-column-controls";
 import type { InstanceSummary } from "@/lib/types";
 
@@ -48,11 +49,13 @@ export function InventoryModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter | null>(initialStatus ?? null);
+  const [detailSensor, setDetailSensor] = useState<Row | null>(null);
   const { isVisible, toggleColumn, resetColumns, sort, cycleSort, colFilters, setColFilter } =
     useColumnControls(tab, instance?.id);
 
   useEffect(() => setTab(initialTab), [initialTab, instance?.id]);
   useEffect(() => setStatus(initialStatus ?? null), [initialStatus, initialTab, instance?.id]);
+  useEffect(() => setDetailSensor(null), [tab, instance?.id]);
 
   useEffect(() => {
     if (!instance) return;
@@ -96,10 +99,10 @@ export function InventoryModal({
     for (const column of columns) {
       const set = new Set<string>();
       for (const row of allRows) {
-        const text = cellText(row[column]);
+        const text = displayCell(column, row[column]);
         if (text) set.add(text);
       }
-      map[column] = [...set].sort(compareCells).slice(0, 500);
+      map[column] = [...set].sort((a, b) => compareByColumn(column, a, b)).slice(0, 500);
     }
     return map;
   }, [columns, allRows]);
@@ -108,15 +111,15 @@ export function InventoryModal({
     let filtered = status ? allRows.filter((r) => matchesStatus(tab, status.key, r)) : allRows;
     for (const [column, term] of Object.entries(colFilters)) {
       const needle = term.trim().toLowerCase();
-      if (needle) filtered = filtered.filter((r) => cellText(r[column]).toLowerCase().includes(needle));
+      if (needle) filtered = filtered.filter((r) => displayCell(column, r[column]).toLowerCase().includes(needle));
     }
     const sortKey = sort?.col ?? groupField;
     const dir = sort?.dir ?? "asc";
     const secondKey = tab === "sensors" ? "hostname" : "name";
     return [...filtered].sort((a, b) => {
-      const primary = compareCells(cellText(a[sortKey]), cellText(b[sortKey]));
+      const primary = compareByColumn(sortKey, a[sortKey], b[sortKey]);
       const ordered = dir === "asc" ? primary : -primary;
-      return ordered || compareCells(cellText(a[secondKey]), cellText(b[secondKey]));
+      return ordered || compareByColumn(secondKey, a[secondKey], b[secondKey]);
     });
   }, [allRows, status, colFilters, sort, groupField, tab]);
 
@@ -176,7 +179,9 @@ export function InventoryModal({
         allSections={allSections}
         isVisible={isVisible}
         onToggleColumn={toggleColumn}
+        onRowClick={tab === "sensors" ? setDetailSensor : undefined}
       />
+      <SensorDetailModal sensor={detailSensor} onClose={() => setDetailSensor(null)} />
     </Modal>
   );
 }
