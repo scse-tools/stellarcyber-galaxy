@@ -1,4 +1,23 @@
 import { cellText, type Row } from "@/lib/table-export";
+import { formatBytes } from "@/lib/utils";
+
+/** Columns whose raw byte value is shown human-readably (KB/MB/GB) but sorted by real value. */
+const BYTE_COLUMNS = new Set(["inbytes_total", "outbytes_total"]);
+
+/** Text to display for a cell: byte columns become KB/MB/GB, everything else is plain. */
+export function displayCell(column: string, value: unknown): string {
+  if (BYTE_COLUMNS.has(column)) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return formatBytes(n);
+  }
+  return cellText(value);
+}
+
+/** Column-aware comparator: byte columns sort by their real numeric value, others by display text. */
+export function compareByColumn(column: string, a: unknown, b: unknown): number {
+  if (BYTE_COLUMNS.has(column)) return (Number(a) || 0) - (Number(b) || 0);
+  return compareCells(cellText(a), cellText(b));
+}
 
 export interface ColumnSection {
   label: string;

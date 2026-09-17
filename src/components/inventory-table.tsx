@@ -1,11 +1,12 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cellText, type Row } from "@/lib/table-export";
-import { cellTone, TONE_TEXT, type ColumnSection } from "@/lib/inventory-columns";
+import type { Row } from "@/lib/table-export";
+import { cellTone, displayCell, TONE_TEXT, type ColumnSection } from "@/lib/inventory-columns";
 import { InventoryRowDetail } from "@/components/inventory-row-detail";
+import { InventoryTableHead } from "@/components/inventory-table-head";
 
 export type SortState = { col: string; dir: "asc" | "desc" } | null;
 
@@ -26,10 +27,9 @@ interface InventoryTableProps {
   allSections: ColumnSection[];
   isVisible: (column: string) => boolean;
   onToggleColumn: (column: string) => void;
+  /** When set, clicking a row (outside the expander) invokes this — used for the sensor detail modal. */
+  onRowClick?: (row: Row) => void;
 }
-
-/** A DOM-id-safe datalist id for a column's distinct-value suggestions. */
-const valuesListId = (column: string) => `vals-${column.replace(/[^\w-]/g, "_")}`;
 
 /** The scrollable, section-headered records table with per-column sort/filter and row expanders. */
 export function InventoryTable({
@@ -47,6 +47,7 @@ export function InventoryTable({
   allSections,
   isVisible,
   onToggleColumn,
+  onRowClick,
 }: InventoryTableProps) {
   const [expanded, setExpanded] = useState<Set<Row>>(new Set());
   const toggleRow = (row: Row) =>
@@ -69,66 +70,15 @@ export function InventoryTable({
         <p className="px-3 py-6 text-xs text-critical">{error}</p>
       ) : (
         <table className="w-full border-collapse text-[11px]">
-          <thead className="sticky top-0 z-10">
-            <tr>
-              <th
-                rowSpan={2}
-                className="w-8 border-b border-sc-border bg-sc-raised px-1"
-                aria-label="Expand row"
-              />
-              {sections.map((section) => (
-                <th
-                  key={section.label}
-                  colSpan={section.columns.length}
-                  className="whitespace-nowrap border-b border-sc-border px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wide"
-                  style={{ color: `hsl(${section.hue})`, backgroundColor: `hsl(${section.hue} / 0.12)` }}
-                >
-                  {section.label}
-                </th>
-              ))}
-            </tr>
-            <tr className="bg-sc-raised">
-              {columns.map((column) => {
-                const active = sort?.col === column;
-                return (
-                  <th
-                    key={column}
-                    className="border-b border-sc-border-soft px-2 py-1.5 text-left align-top font-medium text-sc-muted"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onSort(column)}
-                      className="flex w-full items-center gap-1 whitespace-nowrap text-left hover:text-sc-text"
-                      title={`Sort by ${column}`}
-                    >
-                      <span className="truncate">{column}</span>
-                      {active ? (
-                        sort!.dir === "asc" ? (
-                          <ArrowUp size={11} className="text-sc-link" />
-                        ) : (
-                          <ArrowDown size={11} className="text-sc-link" />
-                        )
-                      ) : (
-                        <ChevronsUpDown size={11} className="text-sc-faint/60" />
-                      )}
-                    </button>
-                    <input
-                      value={colFilters[column] ?? ""}
-                      onChange={(event) => onColFilter(column, event.target.value)}
-                      placeholder="Filter…"
-                      list={valuesListId(column)}
-                      className="mt-1 w-full min-w-[70px] rounded border border-sc-border-soft bg-sc-surface px-1.5 py-0.5 text-[10px] font-normal text-sc-text placeholder:text-sc-faint/70 focus:border-sc-link focus:outline-none"
-                    />
-                    <datalist id={valuesListId(column)}>
-                      {(columnValues[column] ?? []).map((value) => (
-                        <option key={value} value={value} />
-                      ))}
-                    </datalist>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
+          <InventoryTableHead
+            sections={sections}
+            columns={columns}
+            sort={sort}
+            onSort={onSort}
+            colFilters={colFilters}
+            onColFilter={onColFilter}
+            columnValues={columnValues}
+          />
           <tbody>
             {rows.length === 0 ? (
               <tr>
@@ -141,11 +91,20 @@ export function InventoryTable({
                 const open = expanded.has(row);
                 return (
                   <Fragment key={index}>
-                    <tr className={cn(!open && "odd:bg-sc-surface/40")}>
+                    <tr
+                      className={cn(
+                        !open && "odd:bg-sc-surface/40",
+                        onRowClick && "cursor-pointer hover:bg-sc-active",
+                      )}
+                      onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    >
                       <td className="border-b border-sc-border-soft px-1 text-center align-middle">
                         <button
                           type="button"
-                          onClick={() => toggleRow(row)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleRow(row);
+                          }}
                           className="text-sc-faint hover:text-sc-text"
                           title={open ? "Collapse" : "Show all fields"}
                           aria-expanded={open}
@@ -154,7 +113,7 @@ export function InventoryTable({
                         </button>
                       </td>
                       {columns.map((column) => {
-                        const text = cellText(row[column]);
+                        const text = displayCell(column, row[column]);
                         const tone = cellTone(column, row[column], row);
                         return (
                           <td
