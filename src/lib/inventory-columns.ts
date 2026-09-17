@@ -188,9 +188,13 @@ export const DEFAULT_VISIBLE: Record<"sensors" | "connectors", string[]> = {
   sensors: [
     "hostname", "local_ip_address", "nat_ip_address", "tenant_name",
     "connection_status", "feature", "cpu_usage", "disk_usage",
+    "inbytes_total", "outbytes_total", "service_status", "sensor_profile_name",
     "sw_version", "need_upgrade", "oldest timestamp",
   ],
-  connectors: ["name", "tenant_name", "category", "type", "active", "is_collect", "status_code", "version"],
+  connectors: [
+    "name", "tenant_name", "category", "type", "active", "is_collect",
+    "status_code", "status_message", "last_activity", "version",
+  ],
 };
 
 /** Numeric-aware comparison of two already-stringified cell values. */
