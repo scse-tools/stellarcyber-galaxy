@@ -78,7 +78,7 @@ export function InventoryTable({
   const span = columns.length + 1;
 
   return (
-    <div className="mt-2 max-h-[62vh] overflow-auto rounded-lg border border-sc-border-soft">
+    <div className="mt-2 min-h-0 flex-1 overflow-auto rounded-lg border border-sc-border-soft">
       {loading ? (
         <p className="flex items-center gap-2 px-3 py-6 text-xs text-sc-faint">
           <Loader2 size={14} className="animate-spin" /> Loading inventory…

@@ -51,8 +51,9 @@ export function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center p-4",
-        overlay ? "bg-black/20" : "bg-black/60 backdrop-blur-sm",
+        "fixed inset-0 z-50 flex justify-center p-4",
+        // Overlay opens tall and pinned near the top; a blocking modal stays centered.
+        overlay ? "items-start bg-black/20" : "items-center bg-black/60 backdrop-blur-sm",
       )}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -65,12 +66,13 @@ export function Modal({
         aria-label={title}
         tabIndex={-1}
         className={cn(
-          "max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-xl border border-sc-border",
+          "w-full max-w-lg rounded-xl border border-sc-border",
           "bg-sc-surface shadow-2xl shadow-black/50 outline-none",
+          overlay ? "flex h-full flex-col overflow-hidden" : "max-h-[88vh] overflow-y-auto",
           className,
         )}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-sc-border-soft px-5 py-4">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-sc-border-soft px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-sc-text">{title}</h2>
             {description ? <p className="mt-1 text-xs text-sc-faint">{description}</p> : null}
@@ -84,7 +86,9 @@ export function Modal({
             <X size={16} />
           </button>
         </header>
-        <div className="px-5 py-4">{children}</div>
+        <div className={cn(overlay ? "flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4" : "px-5 py-4")}>
+          {children}
+        </div>
       </div>
     </div>
   );
