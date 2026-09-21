@@ -47,6 +47,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const removeInstance = useGalaxyStore((state) => state.removeInstance);
   const cloneInstance = useGalaxyStore((state) => state.cloneInstance);
   const highlightedInstanceId = useGalaxyStore((state) => state.highlightedInstanceId);
+  const pinnedIds = useGalaxyStore((state) => state.pinnedIds);
+  const togglePin = useGalaxyStore((state) => state.togglePin);
   const setRange = useGalaxyStore((state) => state.setRange);
   const setViewMode = useGalaxyStore((state) => state.setViewMode);
   const setLayout = useGalaxyStore((state) => state.setLayout);
@@ -107,29 +109,36 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   }, [sensors, connectors]);
 
   // Tiles flow left-to-right, top-to-bottom, ranked by Critical, then High, then total open cases.
+  // Pinned tiles always sort ahead of the rest, keeping their relative rank order (stable sort).
   const sortedInstances = useMemo(() => {
-    if (viewMode === "health") {
-      // Most trouble first: unreachable health counts high so it surfaces for attention.
-      const trouble = (id: string) => {
-        const s = sensors[id];
-        const c = connectors[id];
-        let score = 0;
-        score += !s || s.status !== "ok" ? 1000 : s.connection.disconnected + s.connection.other + s.noOutput;
-        score += !c || c.status !== "ok" ? 1000 : c.issues;
-        return score;
-      };
-      return [...instances].sort((a, b) => trouble(b.id) - trouble(a.id));
-    }
-    const rank = (s?: InstanceStats) =>
-      s && s.status === "ok"
-        ? { c: s.counts.critical, h: s.counts.high, t: s.total }
-        : { c: -1, h: -1, t: -1 };
-    return [...instances].sort((a, b) => {
-      const ra = rank(stats[a.id]);
-      const rb = rank(stats[b.id]);
-      return rb.c - ra.c || rb.h - ra.h || rb.t - ra.t;
-    });
-  }, [instances, stats, sensors, connectors, viewMode]);
+    const pinned = new Set(pinnedIds);
+    const ranked =
+      viewMode === "health"
+        ? (() => {
+            // Most trouble first: unreachable health counts high so it surfaces for attention.
+            const trouble = (id: string) => {
+              const s = sensors[id];
+              const c = connectors[id];
+              let score = 0;
+              score += !s || s.status !== "ok" ? 1000 : s.connection.disconnected + s.connection.other + s.noOutput;
+              score += !c || c.status !== "ok" ? 1000 : c.issues;
+              return score;
+            };
+            return [...instances].sort((a, b) => trouble(b.id) - trouble(a.id));
+          })()
+        : (() => {
+            const rank = (s?: InstanceStats) =>
+              s && s.status === "ok"
+                ? { c: s.counts.critical, h: s.counts.high, t: s.total }
+                : { c: -1, h: -1, t: -1 };
+            return [...instances].sort((a, b) => {
+              const ra = rank(stats[a.id]);
+              const rb = rank(stats[b.id]);
+              return rb.c - ra.c || rb.h - ra.h || rb.t - ra.t;
+            });
+          })();
+    return ranked.sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)));
+  }, [instances, stats, sensors, connectors, viewMode, pinnedIds]);
 
   const onlineCount = Object.values(stats).filter((stat) => stat.status === "ok").length;
   const anyRefreshing = Object.values(refreshing).some(Boolean);
@@ -209,6 +218,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
           selectedTenant={selectedTenant}
           viewMode={viewMode}
           highlightedInstanceId={highlightedInstanceId}
+          pinnedIds={pinnedIds}
+          onTogglePin={togglePin}
           isAdmin={isAdmin}
           onOpenSettings={openConfigure}
           onOpenInventory={(target, tab, status) => setInventory({ instance: target, tab, status })}
@@ -226,6 +237,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               refreshing={refreshing[instance.id]}
               highlighted={highlightedInstanceId === instance.id}
               mode={viewMode}
+              pinned={pinnedIds.includes(instance.id)}
+              onTogglePin={() => togglePin(instance.id)}
               onOpenSettings={isAdmin ? openConfigure : undefined}
               tenants={tenants[instance.id]}
               selectedTenant={selectedTenant[instance.id] ?? null}

@@ -1,19 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Settings, Table2 } from "lucide-react";
+import { Pin, Settings, Table2 } from "lucide-react";
 import { SEVERITY_META } from "@/lib/severity";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CaseCells, HealthCells, Th } from "@/components/instances-table-cells";
 import { cn, hostOf } from "@/lib/utils";
 import { SEVERITIES } from "@/lib/types";
-import type {
-  ConnectorStatus,
-  InstanceStats,
-  InstanceSummary,
-  SensorStatus,
-  Tenant,
-  ViewMode,
-} from "@/lib/types";
+import type { ConnectorStatus, InstanceStats, InstanceSummary, SensorStatus, Tenant, ViewMode } from "@/lib/types";
 import type { InventoryTab } from "@/components/inventory-modal";
 import type { StatusFilter } from "@/lib/inventory-columns";
 
@@ -26,6 +20,8 @@ interface InstancesTableProps {
   selectedTenant: Record<string, string | null>;
   viewMode: ViewMode;
   highlightedInstanceId: string | null;
+  pinnedIds: string[];
+  onTogglePin: (instanceId: string) => void;
   isAdmin: boolean;
   onOpenSettings: (instance: InstanceSummary) => void;
   onOpenInventory: (instance: InstanceSummary, tab: InventoryTab, status?: StatusFilter) => void;
@@ -96,26 +92,7 @@ export function InstancesTable(props: InstancesTableProps) {
                 <HealthCells sensors={props.sensors[instance.id]} connectors={props.connectors[instance.id]} />
               )}
               <td className="px-3 py-2 text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <button
-                    type="button"
-                    onClick={() => props.onOpenInventory(instance, "sensors")}
-                    title="Open inventory table"
-                    className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-text"
-                  >
-                    <Table2 size={14} />
-                  </button>
-                  {props.isAdmin ? (
-                    <button
-                      type="button"
-                      onClick={() => props.onOpenSettings(instance)}
-                      title="Instance settings"
-                      className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-text"
-                    >
-                      <Settings size={14} />
-                    </button>
-                  ) : null}
-                </div>
+                <RowActions {...props} instance={instance} pinned={props.pinnedIds.includes(instance.id)} />
               </td>
             </tr>
           ))}
@@ -125,80 +102,44 @@ export function InstancesTable(props: InstancesTableProps) {
   );
 }
 
-function Th({
-  children,
-  className,
-  style,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
+function RowActions({
+  instance,
+  pinned,
+  onTogglePin,
+  isAdmin,
+  onOpenInventory,
+  onOpenSettings,
+}: InstancesTableProps & { instance: InstanceSummary; pinned: boolean }) {
   return (
-    <th
-      style={style}
-      className={cn(
-        "whitespace-nowrap border-b border-sc-border px-3 py-2 font-medium uppercase tracking-wide text-[10px] text-sc-faint",
-        className,
-      )}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Num({
-  value,
-  className,
-  color,
-}: {
-  value: number | null;
-  className?: string;
-  color?: string;
-}) {
-  return (
-    <td
-      style={color && value !== null ? { color } : undefined}
-      className={cn(
-        "px-3 py-2 text-right font-mono tabular-nums",
-        className ?? (color ? "text-sc-faint" : "text-sc-text"),
-      )}
-    >
-      {value === null ? "—" : value.toLocaleString()}
-    </td>
-  );
-}
-
-function CaseCells({ stats }: { stats?: InstanceStats }) {
-  const ok = stats?.status === "ok";
-  return (
-    <>
-      <Num value={ok ? stats!.total : null} className="text-sc-text font-semibold" />
-      {SEVERITIES.map((severity) => (
-        <Num
-          key={severity}
-          value={ok ? stats!.counts[severity] : null}
-          color={SEVERITY_META[severity].token}
-        />
-      ))}
-    </>
-  );
-}
-
-function HealthCells({ sensors, connectors }: { sensors?: SensorStatus; connectors?: ConnectorStatus }) {
-  const s = sensors?.status === "ok" ? sensors : null;
-  const c = connectors?.status === "ok" ? connectors : null;
-  const down = s ? s.connection.disconnected + s.connection.other : null;
-  return (
-    <>
-      <Num value={s ? s.total : null} />
-      <Num value={s ? s.connection.connected : null} className="text-[var(--severity-success)]" />
-      <Num value={down} className={down && down > 0 ? "text-critical" : "text-sc-text"} />
-      <Num value={s ? s.noOutput : null} className={s && s.noOutput > 0 ? "text-high" : "text-[var(--severity-success)]"} />
-      <Num value={c ? c.active : null} />
-      <Num value={c ? c.healthy : null} className="text-[var(--severity-success)]" />
-      <Num value={c ? c.issues : null} className={c && c.issues > 0 ? "text-critical" : "text-sc-text"} />
-    </>
+    <div className="flex items-center justify-end gap-1">
+      <button
+        type="button"
+        onClick={() => onTogglePin(instance.id)}
+        aria-pressed={pinned}
+        title={pinned ? "Unpin from top" : "Pin to top"}
+        className={cn("rounded p-1 hover:bg-sc-active", pinned ? "text-sc-accent" : "text-sc-faint hover:text-sc-text")}
+      >
+        <Pin size={14} className={cn(pinned && "fill-current")} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpenInventory(instance, "sensors")}
+        title="Open inventory table"
+        className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-text"
+      >
+        <Table2 size={14} />
+      </button>
+      {isAdmin ? (
+        <button
+          type="button"
+          onClick={() => onOpenSettings(instance)}
+          title="Instance settings"
+          className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-text"
+        >
+          <Settings size={14} />
+        </button>
+      ) : null}
+    </div>
   );
 }
 

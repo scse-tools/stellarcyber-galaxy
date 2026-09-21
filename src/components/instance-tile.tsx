@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Settings, Table2 } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Pin, Settings, Table2 } from "lucide-react";
 import { SeverityRows } from "@/components/severity-bar";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SensorStatusBlock } from "@/components/sensor-status";
@@ -27,6 +27,9 @@ interface InstanceTileProps {
   refreshing?: boolean;
   highlighted?: boolean;
   mode?: ViewMode;
+  /** Whether this tile is pinned to the top of the order. */
+  pinned?: boolean;
+  onTogglePin?: () => void;
   onOpenSettings?: (instance: InstanceSummary) => void;
   onOpenInventory?: (instance: InstanceSummary, tab: InventoryTab, status?: StatusFilter) => void;
   /** Tenants visible to this instance's API key. Omitted or empty hides the tenant picker. */
@@ -44,6 +47,8 @@ export function InstanceTile({
   refreshing,
   highlighted,
   mode = "cases",
+  pinned,
+  onTogglePin,
   onOpenSettings,
   onOpenInventory,
   tenants,
@@ -107,6 +112,26 @@ export function InstanceTile({
             </span>
           ) : null}
           <StatusDot failed={failed} pending={Boolean(pending)} />
+          {onTogglePin ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onTogglePin();
+              }}
+              aria-label={pinned ? `Unpin ${instance.name}` : `Pin ${instance.name} to top`}
+              aria-pressed={pinned}
+              title={pinned ? "Unpin from top" : "Pin to top"}
+              className={cn(
+                "rounded p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
+                pinned
+                  ? "text-sc-accent hover:bg-sc-active"
+                  : "text-sc-faint hover:bg-sc-active hover:text-sc-text",
+              )}
+            >
+              <Pin size={14} className={cn(pinned && "fill-current")} />
+            </button>
+          ) : null}
           {onOpenSettings ? (
             <button
               type="button"

@@ -18,6 +18,7 @@ const RANGE_STORAGE_KEY = "galaxy.timeRange";
 const TOAST_SECONDS_KEY = "galaxy.toastSeconds";
 const VIEW_MODE_KEY = "galaxy.viewMode";
 const LAYOUT_KEY = "galaxy.layout";
+const PINNED_KEY = "galaxy.pinnedIds";
 const DEFAULT_TOAST_SECONDS = 5;
 const HIGHLIGHT_MS = 2600;
 /** Notifications are session-only; cap the backlog so a long-running tab doesn't grow it forever. */
@@ -75,6 +76,26 @@ function storedLayout(): LayoutMode {
   }
 }
 
+/** Pinned instance ids survive a reload; a corrupt value falls back to none pinned. */
+function storedPinned(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PINNED_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistPinned(ids: string[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PINNED_KEY, JSON.stringify(ids));
+  } catch {
+    /* private browsing - pins still apply for this session */
+  }
+}
+
 // A single timer clears the tile highlight; module-scoped so a new highlight resets it.
 let highlightTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -120,6 +141,8 @@ interface GalaxyState {
   layout: LayoutMode;
   /** The instance whose tile is momentarily highlighted after a toast/notification click. */
   highlightedInstanceId: string | null;
+  /** Instance ids pinned to the top of the tile/table order; persisted across sessions. */
+  pinnedIds: string[];
   setRange: (range: TimeRangeSelection) => Promise<void>;
   loadInstances: () => Promise<void>;
   refreshStats: (id?: string) => Promise<void>;
@@ -129,6 +152,7 @@ interface GalaxyState {
   setToastSeconds: (seconds: number) => void;
   setViewMode: (mode: ViewMode) => void;
   setLayout: (layout: LayoutMode) => void;
+  togglePin: (instanceId: string) => void;
   highlightInstance: (instanceId: string) => void;
   saveInstance: (input: InstanceInput | InstanceUpdate, id?: string) => Promise<void>;
   cloneInstance: (id: string) => Promise<InstanceSummary>;
@@ -151,6 +175,7 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   viewMode: storedViewMode(),
   layout: storedLayout(),
   highlightedInstanceId: null,
+  pinnedIds: storedPinned(),
 
   async setRange(range) {
     persistRange(range);
@@ -316,6 +341,14 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       }
     }
     set({ layout });
+  },
+
+  togglePin(instanceId) {
+    const pinnedIds = get().pinnedIds.includes(instanceId)
+      ? get().pinnedIds.filter((id) => id !== instanceId)
+      : [...get().pinnedIds, instanceId];
+    persistPinned(pinnedIds);
+    set({ pinnedIds });
   },
 
   highlightInstance(instanceId) {
