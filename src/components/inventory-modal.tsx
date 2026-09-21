@@ -112,7 +112,15 @@ export function InventoryModal({
     let filtered = status ? allRows.filter((r) => matchesStatus(tab, status.key, r)) : allRows;
     for (const [column, term] of Object.entries(colFilters)) {
       const needle = term.trim().toLowerCase();
-      if (needle) filtered = filtered.filter((r) => displayCell(column, r[column]).toLowerCase().includes(needle));
+      if (!needle) continue;
+      // A term that exactly matches a distinct value (e.g. picked from the dropdown) filters by
+      // equality — otherwise "connected" would also match "disconnected" as a substring. Free
+      // partial text still matches as a substring.
+      const isExact = (columnValues[column] ?? []).some((v) => v.toLowerCase() === needle);
+      filtered = filtered.filter((r) => {
+        const cell = displayCell(column, r[column]).toLowerCase();
+        return isExact ? cell === needle : cell.includes(needle);
+      });
     }
     const sortKey = sort?.col ?? groupField;
     const dir = sort?.dir ?? "asc";
@@ -122,7 +130,7 @@ export function InventoryModal({
       const ordered = dir === "asc" ? primary : -primary;
       return ordered || compareByColumn(secondKey, a[secondKey], b[secondKey]);
     });
-  }, [allRows, status, colFilters, sort, groupField, tab]);
+  }, [allRows, status, colFilters, sort, groupField, tab, columnValues]);
 
   const suffix = status?.label ?? "";
   const baseName = `${instance?.name ?? "instance"}-${tab}${suffix ? `-${suffix}` : ""}`.replace(/\s+/g, "_");

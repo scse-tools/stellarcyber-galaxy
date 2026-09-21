@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, X } from "lucide-react";
 import type { ColumnSection } from "@/lib/inventory-columns";
 import type { SortState } from "@/components/inventory-table";
 
@@ -71,18 +71,31 @@ export function InventoryTableHead({
                   <ChevronsUpDown size={11} className="text-sc-faint/60" />
                 )}
               </button>
-              <input
-                value={colFilters[column] ?? ""}
-                onChange={(event) => onColFilter(column, event.target.value)}
-                placeholder="Filter…"
-                list={valuesListId(column)}
-                className="mt-1 w-full min-w-[70px] rounded border border-sc-border-soft bg-sc-surface px-1.5 py-0.5 text-[10px] font-normal text-sc-text placeholder:text-sc-faint/70 focus:border-sc-link focus:outline-none"
-              />
-              <datalist id={valuesListId(column)}>
-                {(columnValues[column] ?? []).map((value) => (
-                  <option key={value} value={value} />
-                ))}
-              </datalist>
+              <div className="relative mt-1">
+                <input
+                  value={colFilters[column] ?? ""}
+                  onChange={(event) => onColFilter(column, event.target.value)}
+                  placeholder="Filter…"
+                  list={valuesListId(column)}
+                  className="w-full min-w-[70px] rounded border border-sc-border-soft bg-sc-surface py-0.5 pl-1.5 pr-5 text-[10px] font-normal text-sc-text placeholder:text-sc-faint/70 focus:border-sc-link focus:outline-none"
+                />
+                {colFilters[column] ? (
+                  <button
+                    type="button"
+                    onClick={() => onColFilter(column, "")}
+                    aria-label={`Clear ${column} filter`}
+                    title="Clear filter"
+                    className="absolute inset-y-0 right-0 flex items-center px-1 text-sc-faint hover:text-sc-text"
+                  >
+                    <X size={11} />
+                  </button>
+                ) : null}
+                <datalist id={valuesListId(column)}>
+                  {(columnValues[column] ?? []).map((value) => (
+                    <option key={value} value={value} />
+                  ))}
+                </datalist>
+              </div>
             </th>
           );
         })}
