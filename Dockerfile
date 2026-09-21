@@ -34,6 +34,8 @@ ENV NODE_ENV=production \
 
 COPY --from=proddeps /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
+# Static assets (logo, favicons, …) are served from /public by the Next request handler.
+COPY --from=builder /app/public ./public
 COPY next.config.mjs server.mjs package.json ./
 
 # Persistent, encrypted database + TLS certificate live here (mount a volume).

@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "2.0.7";
+export const APP_VERSION = "2.0.8";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,11 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "2.0.8",
+    date: "2026-09-21",
+    notes: ["Fixed the Stellar Cyber logo (and other /public assets) missing in the Docker image — the runtime stage now copies public/."],
+  },
   {
     version: "2.0.7",
     date: "2026-09-21",
