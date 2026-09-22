@@ -3,6 +3,7 @@ import { getInstanceRow } from "@/lib/instance-repo";
 import { fetchConnectorStatus } from "@/lib/rest/connectors";
 import { errorResponse } from "@/lib/api-error";
 import { requireUser, isGuardFailure } from "@/lib/auth/session";
+import { cached, isOk, STATS_CACHE_TTL_MS } from "@/lib/rest/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,9 @@ export async function GET(request: Request, { params }: Context) {
     const tenantOverride = searchParams.has("tenantId")
       ? searchParams.get("tenantId") || null
       : undefined;
-    return NextResponse.json({ connectors: await fetchConnectorStatus(row, tenantOverride) });
+    const key = `connectors:${id}:${tenantOverride ?? "default"}`;
+    const connectors = await cached(key, STATS_CACHE_TTL_MS, () => fetchConnectorStatus(row, tenantOverride), isOk);
+    return NextResponse.json({ connectors });
   } catch (error) {
     return errorResponse(error);
   }

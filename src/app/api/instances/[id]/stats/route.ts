@@ -4,6 +4,7 @@ import { fetchCaseStats } from "@/lib/mcp/stats";
 import { errorResponse } from "@/lib/api-error";
 import { requireUser, isGuardFailure } from "@/lib/auth/session";
 import { rangeFromParams } from "@/lib/mcp/range-params";
+import { cached, isOk, STATS_CACHE_TTL_MS } from "@/lib/rest/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export async function GET(request: Request, { params }: Context) {
     const tenantOverride = searchParams.has("tenantId")
       ? searchParams.get("tenantId") || null
       : undefined;
-    return NextResponse.json({ stats: await fetchCaseStats(row, range, tenantOverride) });
+    const key = `stats:${id}:${tenantOverride ?? "default"}:${range.from}-${range.to}`;
+    const stats = await cached(key, STATS_CACHE_TTL_MS, () => fetchCaseStats(row, range, tenantOverride), isOk);
+    return NextResponse.json({ stats });
   } catch (error) {
     return errorResponse(error);
   }

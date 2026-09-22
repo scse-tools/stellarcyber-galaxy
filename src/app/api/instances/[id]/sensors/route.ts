@@ -3,6 +3,7 @@ import { getInstanceRow } from "@/lib/instance-repo";
 import { fetchSensorStatus } from "@/lib/rest/sensors";
 import { errorResponse } from "@/lib/api-error";
 import { requireUser, isGuardFailure } from "@/lib/auth/session";
+import { cached, isOk, STATS_CACHE_TTL_MS } from "@/lib/rest/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,9 @@ export async function GET(request: Request, { params }: Context) {
     const tenantOverride = searchParams.has("tenantId")
       ? searchParams.get("tenantId") || null
       : undefined;
-    return NextResponse.json({ sensors: await fetchSensorStatus(row, tenantOverride) });
+    const key = `sensors:${id}:${tenantOverride ?? "default"}`;
+    const sensors = await cached(key, STATS_CACHE_TTL_MS, () => fetchSensorStatus(row, tenantOverride), isOk);
+    return NextResponse.json({ sensors });
   } catch (error) {
     return errorResponse(error);
   }
