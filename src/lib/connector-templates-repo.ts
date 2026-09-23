@@ -59,6 +59,25 @@ export function createTemplate(input: ConnectorTemplateInput): ConnectorTemplate
   return { id, createdAt, ...input };
 }
 
+export function getTemplate(id: string): ConnectorTemplate | null {
+  const row = getDb()
+    .prepare("SELECT * FROM connector_templates WHERE id = ?")
+    .get(id) as unknown as TemplateRow | undefined;
+  return row ? toTemplate(row) : null;
+}
+
+/** Updates an existing template's name and mutable-field selection; returns it, or null if absent. */
+export function updateTemplate(
+  id: string,
+  patch: { name: string; mutableFields: string[] },
+): ConnectorTemplate | null {
+  const result = getDb()
+    .prepare("UPDATE connector_templates SET name = ?, mutable_json = ? WHERE id = ?")
+    .run(patch.name, JSON.stringify(patch.mutableFields), id);
+  if (!result.changes) return null;
+  return getTemplate(id);
+}
+
 export function deleteTemplate(id: string): void {
   getDb().prepare("DELETE FROM connector_templates WHERE id = ?").run(id);
 }

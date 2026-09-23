@@ -15,6 +15,8 @@ interface TemplateModalProps {
   connector: Row | null;
   instanceId: string;
   instanceName: string;
+  /** When set, the modal edits this existing template instead of creating a new one. */
+  existing?: ConnectorTemplate | null;
   onClose: () => void;
   onSaved: (template: ConnectorTemplate) => void;
 }
@@ -23,7 +25,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 /** Names a template and marks which fields are mutable — the top-level three plus config subfields. */
-export function TemplateModal({ connector, instanceId, instanceName, onClose, onSaved }: TemplateModalProps) {
+export function TemplateModal({ connector, instanceId, instanceName, existing, onClose, onSaved }: TemplateModalProps) {
+  const editing = Boolean(existing);
   const configEntries = useMemo<[string, unknown][]>(() => {
     const raw = connector?.configuration;
     let parsed: unknown = raw;
@@ -37,13 +40,16 @@ export function TemplateModal({ connector, instanceId, instanceName, onClose, on
     return isRecord(parsed) ? Object.entries(parsed).sort((a, b) => a[0].localeCompare(b[0])) : [];
   }, [connector]);
 
-  const [name, setName] = useState("");
-  const [mutable, setMutable] = useState<Record<string, boolean>>({});
+  const [name, setName] = useState(existing?.name ?? "");
+  // In edit mode start from the saved selection exactly; in create mode fall back to the heuristic.
+  const [mutable, setMutable] = useState<Record<string, boolean>>(() =>
+    existing ? Object.fromEntries(existing.mutableFields.map((key) => [key, true])) : {},
+  );
   const [configOpen, setConfigOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isMutable = (key: string, hintFrom = key) => mutable[key] ?? defaultMutable(hintFrom);
+  const isMutable = (key: string, hintFrom = key) => mutable[key] ?? (editing ? false : defaultMutable(hintFrom));
   const toggle = (key: string, hintFrom = key) =>
     setMutable((prev) => ({ ...prev, [key]: !isMutable(key, hintFrom) }));
 
@@ -60,19 +66,26 @@ export function TemplateModal({ connector, instanceId, instanceName, onClose, on
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/connector-templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          instanceId,
-          instanceName,
-          connectorType: String(connector.type ?? ""),
-          connectorName: String(connector.name ?? ""),
-          fields: connector,
-          mutableFields: selected,
-        }),
-      });
+      const response = await fetch(
+        existing ? `/api/connector-templates/${existing.id}` : "/api/connector-templates",
+        {
+          method: existing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            existing
+              ? { name: name.trim(), mutableFields: selected }
+              : {
+                  name: name.trim(),
+                  instanceId,
+                  instanceName,
+                  connectorType: String(connector.type ?? ""),
+                  connectorName: String(connector.name ?? ""),
+                  fields: connector,
+                  mutableFields: selected,
+                },
+          ),
+        },
+      );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "Could not save template.");
       onSaved(body.template as ConnectorTemplate);
@@ -87,7 +100,7 @@ export function TemplateModal({ connector, instanceId, instanceName, onClose, on
   return (
     <Modal
       open
-      title="Select as template"
+      title={editing ? "Edit template" : "Select as template"}
       description={`From ${String(connector.name ?? "connector")} · ${String(connector.type ?? "")}`}
       onClose={onClose}
       className="max-w-[min(94vw,760px)]"
@@ -151,7 +164,7 @@ export function TemplateModal({ connector, instanceId, instanceName, onClose, on
         <Button onClick={onClose}>Cancel</Button>
         <Button variant="primary" onClick={save} disabled={saving || !name.trim() || selected.length === 0}>
           {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-          Save template
+          {editing ? "Save changes" : "Save template"}
         </Button>
       </div>
     </Modal>

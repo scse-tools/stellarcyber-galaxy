@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Trash2 } from "lucide-react";
+import { Download, Pencil, Trash2 } from "lucide-react";
 import { downloadCsv } from "@/lib/table-export";
 import { formatRelativeTime } from "@/lib/utils";
 import { templateCsv, type ConnectorTemplate } from "@/lib/connector-templates";
@@ -8,11 +8,12 @@ import { templateCsv, type ConnectorTemplate } from "@/lib/connector-templates";
 interface StudioTemplatesTableProps {
   templates: ConnectorTemplate[];
   canManage: boolean;
+  onEdit: (template: ConnectorTemplate) => void;
   onDelete: (template: ConnectorTemplate) => void;
 }
 
 /** Saved connector templates, with a per-row clone-CSV download and delete. */
-export function StudioTemplatesTable({ templates, canManage, onDelete }: StudioTemplatesTableProps) {
+export function StudioTemplatesTable({ templates, canManage, onEdit, onDelete }: StudioTemplatesTableProps) {
   if (templates.length === 0) return null;
 
   const download = (template: ConnectorTemplate) => {
@@ -57,14 +58,24 @@ export function StudioTemplatesTable({ templates, canManage, onDelete }: StudioT
                     <Download size={14} /> CSV
                   </button>
                   {canManage ? (
-                    <button
-                      type="button"
-                      onClick={() => onDelete(template)}
-                      title="Delete template"
-                      className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-critical"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onEdit(template)}
+                        title="Edit template"
+                        className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-text"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(template)}
+                        title="Delete template"
+                        className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-critical"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </>
                   ) : null}
                 </div>
               </td>

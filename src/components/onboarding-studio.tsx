@@ -23,8 +23,16 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
   const [error, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
   const [templating, setTemplating] = useState(false);
+  const [editing, setEditing] = useState<ConnectorTemplate | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
   const [templates, setTemplates] = useState<ConnectorTemplate[]>([]);
+
+  const upsertTemplate = (template: ConnectorTemplate) =>
+    setTemplates((prev) =>
+      prev.some((t) => t.id === template.id)
+        ? prev.map((t) => (t.id === template.id ? template : t))
+        : [template, ...prev],
+    );
 
   const options = useMemo(
     () =>
@@ -106,7 +114,12 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         </div>
       </div>
 
-      <StudioTemplatesTable templates={templates} canManage={isAdmin} onDelete={deleteTemplate} />
+      <StudioTemplatesTable
+        templates={templates}
+        canManage={isAdmin}
+        onEdit={setEditing}
+        onDelete={deleteTemplate}
+      />
 
       {!selectedId ? (
         <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-12 text-center text-sm text-sc-faint">
@@ -130,9 +143,20 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
           instanceName={selectedInstance?.name ?? ""}
           onClose={() => setTemplating(false)}
           onSaved={(template) => {
-            setTemplates((prev) => [template, ...prev]);
+            upsertTemplate(template);
             setSelectedRow(null);
           }}
+        />
+      ) : null}
+
+      {editing ? (
+        <TemplateModal
+          connector={editing.fields}
+          instanceId={editing.instanceId}
+          instanceName={editing.instanceName}
+          existing={editing}
+          onClose={() => setEditing(null)}
+          onSaved={upsertTemplate}
         />
       ) : null}
 
