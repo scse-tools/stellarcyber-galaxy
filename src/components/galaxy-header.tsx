@@ -86,42 +86,46 @@ export function GalaxyHeader({
             </button>
           </div>
           <p className="mt-1.5 text-xs text-sc-faint">
-            {instanceCount} instance{instanceCount === 1 ? "" : "s"} · {onlineCount} reachable ·{" "}
-            {viewMode === "health"
-              ? `${healthTotals.sensorsDisconnected} sensor${healthTotals.sensorsDisconnected === 1 ? "" : "s"} down · ${healthTotals.connectorsIssues} connector issue${healthTotals.connectorsIssues === 1 ? "" : "s"}`
-              : `${total.toLocaleString()} open case${total === 1 ? "" : "s"} in window`}
+            {instanceCount} instance{instanceCount === 1 ? "" : "s"} · {onlineCount} reachable
+            {viewMode === "studio"
+              ? " · Connector Studio"
+              : viewMode === "health"
+                ? ` · ${healthTotals.sensorsDisconnected} sensor${healthTotals.sensorsDisconnected === 1 ? "" : "s"} down · ${healthTotals.connectorsIssues} connector issue${healthTotals.connectorsIssues === 1 ? "" : "s"}`
+                : ` · ${total.toLocaleString()} open case${total === 1 ? "" : "s"} in window`}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div
-            role="group"
-            aria-label="Layout"
-            className="flex items-center gap-1 rounded-lg border border-sc-border bg-sc-surface/70 p-1"
-          >
-            {(
-              [
-                { id: "grid", label: "Grid view", Icon: LayoutGrid },
-                { id: "table", label: "Table view", Icon: Rows3 },
-              ] as const
-            ).map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onLayoutChange(id)}
-                aria-pressed={layout === id}
-                title={label}
-                className={cn(
-                  "inline-flex items-center rounded-md p-1.5 transition-colors",
-                  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
-                  layout === id
-                    ? "bg-sc-primary text-white"
-                    : "text-sc-muted hover:bg-sc-active hover:text-sc-text",
-                )}
-              >
-                <Icon size={15} />
-              </button>
-            ))}
-          </div>
+          {viewMode === "studio" ? null : (
+            <div
+              role="group"
+              aria-label="Layout"
+              className="flex items-center gap-1 rounded-lg border border-sc-border bg-sc-surface/70 p-1"
+            >
+              {(
+                [
+                  { id: "grid", label: "Grid view", Icon: LayoutGrid },
+                  { id: "table", label: "Table view", Icon: Rows3 },
+                ] as const
+              ).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onLayoutChange(id)}
+                  aria-pressed={layout === id}
+                  title={label}
+                  className={cn(
+                    "inline-flex items-center rounded-md p-1.5 transition-colors",
+                    "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
+                    layout === id
+                      ? "bg-sc-primary text-white"
+                      : "text-sc-muted hover:bg-sc-active hover:text-sc-text",
+                  )}
+                >
+                  <Icon size={15} />
+                </button>
+              ))}
+            </div>
+          )}
           <Button onClick={onRefresh} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? "animate-spin" : undefined} />
             Refresh
@@ -160,6 +164,7 @@ export function GalaxyHeader({
         </div>
       </div>
 
+      {viewMode === "studio" ? null : (
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-3">
         {viewMode === "health" ? (
           <p className="text-[11px] text-sc-faint">
@@ -212,6 +217,7 @@ export function GalaxyHeader({
         </dl>
         )}
       </div>
+      )}
 
       <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </header>

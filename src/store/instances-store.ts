@@ -61,7 +61,8 @@ function storedToastSeconds(): number {
 function storedViewMode(): ViewMode {
   if (typeof window === "undefined") return "cases";
   try {
-    return window.localStorage.getItem(VIEW_MODE_KEY) === "health" ? "health" : "cases";
+    const value = window.localStorage.getItem(VIEW_MODE_KEY);
+    return value === "health" || value === "studio" ? value : "cases";
   } catch {
     return "cases";
   }

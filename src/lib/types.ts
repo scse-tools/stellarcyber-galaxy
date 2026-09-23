@@ -117,7 +117,7 @@ export interface SensorMetrics {
 export const EMPTY_COUNTS: SeverityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
 
 /** One MSSP tenant/customer visible to an instance's API key. */
-export type ViewMode = "cases" | "health";
+export type ViewMode = "cases" | "health" | "studio";
 
 export type LayoutMode = "grid" | "table";
 

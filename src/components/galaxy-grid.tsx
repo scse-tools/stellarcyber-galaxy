@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GalaxyHeader } from "@/components/galaxy-header";
 import { SideNav } from "@/components/side-nav";
+import { ConnectorStudio } from "@/components/connector-studio";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
@@ -208,6 +209,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
 
       {loading ? (
         <p className="text-sm text-sc-faint">Loading constellation…</p>
+      ) : viewMode === "studio" ? (
+        <ConnectorStudio instances={instances} />
       ) : instances.length === 0 ? (
         <EmptyState onAdd={openAdd} />
       ) : layout === "table" ? (
