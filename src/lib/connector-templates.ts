@@ -26,6 +26,32 @@ export function defaultMutable(field: string): boolean {
   return MUTABLE_HINT.test(field);
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+/**
+ * Resolves a (possibly nested) template field. A `configuration.<sub>` key reads a sub-field of the
+ * connector's `configuration` JSON; any other key is read from the top-level snapshot.
+ */
+export function readTemplateField(fields: Record<string, unknown>, key: string): unknown {
+  const prefix = "configuration.";
+  if (key.startsWith(prefix)) {
+    const sub = key.slice(prefix.length);
+    const raw = fields.configuration;
+    const config = typeof raw === "string" ? safeParse(raw) : raw;
+    return isRecord(config) ? config[sub] : undefined;
+  }
+  return fields[key];
+}
+
+function safeParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Renders any field value as flat text for CSV/export (objects become compact JSON). */
 function asText(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -55,7 +81,7 @@ function csvField(text: string): string {
 export function templateCsv(template: ConnectorTemplate): string {
   const columns = templateColumns(template);
   const sample = columns.map((column) =>
-    column === "tenant_name" ? "" : asText(template.fields[column]),
+    column === "tenant_name" ? "" : asText(readTemplateField(template.fields, column)),
   );
   return [columns.map(csvField).join(","), sample.map(csvField).join(",")].join("\r\n");
 }
