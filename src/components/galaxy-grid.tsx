@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GalaxyHeader } from "@/components/galaxy-header";
+import { SideNav } from "@/components/side-nav";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
@@ -173,7 +174,9 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   );
 
   return (
-    <>
+    <div className="flex gap-4">
+      <SideNav viewMode={viewMode} onViewModeChange={setViewMode} />
+      <div className="min-w-0 flex-1">
       <GalaxyHeader
         totals={totals}
         instanceCount={instances.length}
@@ -182,7 +185,6 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         range={range}
         onRangeChange={(next) => void setRange(next)}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
         layout={layout}
         onLayoutChange={setLayout}
         healthTotals={healthTotals}
@@ -275,7 +277,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
           currentUserId={user.id}
         />
       ) : null}
-    </>
+      </div>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Bell, LayoutGrid, Plus, RefreshCw, Rows3, Settings2 } from "lucide-react";
+import { Bell, LayoutGrid, Plus, RefreshCw, Rows3, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { UserMenu } from "@/components/user-menu";
@@ -33,7 +33,6 @@ interface GalaxyHeaderProps {
   notificationsOpen: boolean;
   onToggleNotifications: () => void;
   onRangeChange: (range: TimeRangeSelection) => void;
-  onViewModeChange: (mode: ViewMode) => void;
   onLayoutChange: (layout: LayoutMode) => void;
   onRefresh: () => void;
   onAdd: () => void;
@@ -54,7 +53,6 @@ export function GalaxyHeader({
   notificationsOpen,
   onToggleNotifications,
   onRangeChange,
-  onViewModeChange,
   onLayoutChange,
   onRefresh,
   onAdd,
@@ -95,36 +93,6 @@ export function GalaxyHeader({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div
-            role="group"
-            aria-label="View mode"
-            className="flex items-center gap-1 rounded-lg border border-sc-border bg-sc-surface/70 p-1"
-          >
-            {(
-              [
-                { id: "cases", label: "Cases", Icon: LayoutGrid },
-                { id: "health", label: "Deployment health", Icon: Activity },
-              ] as const
-            ).map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onViewModeChange(id)}
-                aria-pressed={viewMode === id}
-                title={label}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link",
-                  viewMode === id
-                    ? "bg-sc-primary text-white"
-                    : "text-sc-muted hover:bg-sc-active hover:text-sc-text",
-                )}
-              >
-                <Icon size={13} />
-                {label}
-              </button>
-            ))}
-          </div>
           <div
             role="group"
             aria-label="Layout"
