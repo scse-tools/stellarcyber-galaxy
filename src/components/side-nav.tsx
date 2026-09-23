@@ -17,7 +17,7 @@ interface NavItem {
 const ITEMS: NavItem[] = [
   { id: "cases", label: "Cases", Icon: LayoutGrid },
   { id: "health", label: "Deployment health", Icon: Activity },
-  { id: "studio", label: "Connector Studio", Icon: Cable },
+  { id: "studio", label: "Onboarding Studio", Icon: Cable },
 ];
 
 interface SideNavProps {

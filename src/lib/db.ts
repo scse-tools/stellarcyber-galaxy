@@ -40,6 +40,19 @@ CREATE TABLE IF NOT EXISTS sessions (
   FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions (user_id);
+
+CREATE TABLE IF NOT EXISTS connector_templates (
+  id             TEXT PRIMARY KEY,
+  name           TEXT NOT NULL,
+  instance_id    TEXT NOT NULL,
+  instance_name  TEXT NOT NULL,
+  connector_type TEXT NOT NULL,
+  connector_name TEXT NOT NULL,
+  fields_json    TEXT NOT NULL,
+  mutable_json   TEXT NOT NULL,
+  created_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_connector_templates_created ON connector_templates (created_at);
 `;
 
 function databasePath(): string {
