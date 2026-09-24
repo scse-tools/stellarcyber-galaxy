@@ -1,37 +1,111 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Pause, Play, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { OnboardingImportTable, type RowStatus } from "@/components/onboarding-import-table";
 import { parseCsv } from "@/lib/csv";
+import type { ConnectorTemplate } from "@/lib/connector-templates";
 
 interface ParsedCsv {
   header: string[];
   rows: string[][];
 }
 
-/**
- * Uploads a filled onboarding CSV and mirrors it in a table with an (initially empty) Status column.
- * The row-by-row batch-create step will populate Status; the parsed rows are kept for that.
- */
-export function OnboardingImport() {
+/** Uploads a filled onboarding CSV, mirrors it, and creates connectors row-by-row from a template. */
+export function OnboardingImport({ templates }: { templates: ConnectorTemplate[] }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [templateId, setTemplateId] = useState("");
   const [data, setData] = useState<ParsedCsv | null>(null);
   const [fileName, setFileName] = useState("");
+  const [statuses, setStatuses] = useState<RowStatus[]>([]);
+  const [running, setRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const statusesRef = useRef<RowStatus[]>([]);
+  const pausedRef = useRef(false);
+  const rowsRef = useRef<string[][]>([]);
+
+  const templateOptions = useMemo(
+    () => templates.map((t) => ({ value: t.id, label: `${t.name} · ${t.instanceName}` })),
+    [templates],
+  );
+
+  const setStatus = (index: number, status: RowStatus) => {
+    statusesRef.current = statusesRef.current.map((existing, i) => (i === index ? status : existing));
+    setStatuses(statusesRef.current);
+  };
 
   const onFile = async (file: File) => {
     try {
       const table = parseCsv(await file.text());
       if (table.length < 1) throw new Error("The CSV is empty.");
       const [header, ...rows] = table;
+      rowsRef.current = rows;
+      statusesRef.current = rows.map(() => ({ state: "idle" as const }));
       setData({ header, rows });
+      setStatuses(statusesRef.current);
       setFileName(file.name);
       setError(null);
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : "Could not read the CSV.");
     }
   };
+
+  const editCell = (rowIndex: number, colIndex: number, value: string) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const rows = prev.rows.map((row, i) => (i === rowIndex ? row.map((cell, c) => (c === colIndex ? value : cell)) : row));
+      rowsRef.current = rows;
+      return { ...prev, rows };
+    });
+    // Editing a row clears its previous result so it can be re-run.
+    if (statusesRef.current[rowIndex]?.state !== "idle") setStatus(rowIndex, { state: "idle" });
+  };
+
+  const runRow = async (index: number) => {
+    if (!templateId || !data) return;
+    setStatus(index, { state: "running" });
+    const values = Object.fromEntries(data.header.map((column, i) => [column, rowsRef.current[index][i] ?? ""]));
+    try {
+      const response = await fetch(`/api/connector-templates/${templateId}/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok && body.ok) setStatus(index, { state: "success" });
+      else setStatus(index, { state: "failure", error: body.error ?? `HTTP ${response.status}` });
+    } catch (thrown) {
+      setStatus(index, { state: "failure", error: thrown instanceof Error ? thrown.message : "Request failed." });
+    }
+  };
+
+  const runAll = async () => {
+    if (!templateId || !data) return;
+    setRunning(true);
+    setPaused(false);
+    pausedRef.current = false;
+    for (let i = 0; i < rowsRef.current.length; i++) {
+      if (pausedRef.current) break;
+      if (statusesRef.current[i]?.state === "success") continue;
+      await runRow(i);
+    }
+    setRunning(false);
+    if (pausedRef.current) setPaused(true);
+  };
+
+  const pause = () => {
+    pausedRef.current = true;
+  };
+
+  const counts = useMemo(() => {
+    const success = statuses.filter((s) => s.state === "success").length;
+    const failure = statuses.filter((s) => s.state === "failure").length;
+    return { success, failure, pending: statuses.length - success };
+  }, [statuses]);
 
   return (
     <section className="space-y-2 border-t border-sc-border-soft pt-4">
@@ -40,11 +114,19 @@ export function OnboardingImport() {
           <h3 className="text-sm font-semibold text-sc-text">Onboarding batch</h3>
           {data ? (
             <span className="text-xs text-sc-faint">
-              {fileName} · {data.rows.length} row{data.rows.length === 1 ? "" : "s"}
+              {fileName} · {data.rows.length} rows · {counts.success} ok · {counts.failure} failed
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <SearchableSelect
+            value={templateId}
+            onChange={setTemplateId}
+            ariaLabel="Template"
+            title="The template this CSV was generated from"
+            className="w-56 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
+            options={[{ value: "", label: "Select template…" }, ...templateOptions]}
+          />
           <input
             ref={inputRef}
             type="file"
@@ -59,8 +141,18 @@ export function OnboardingImport() {
           <Button onClick={() => inputRef.current?.click()}>
             <Upload size={15} /> Upload CSV
           </Button>
+          {data && !running ? (
+            <Button variant="primary" onClick={() => void runAll()} disabled={!templateId || counts.pending === 0}>
+              <Play size={15} /> {paused ? "Continue" : "Create all"}
+            </Button>
+          ) : null}
+          {running ? (
+            <Button onClick={pause}>
+              <Pause size={15} /> Pause
+            </Button>
+          ) : null}
           {data ? (
-            <Button onClick={() => setData(null)}>
+            <Button onClick={() => { setData(null); statusesRef.current = []; setStatuses([]); }} disabled={running}>
               <X size={15} /> Clear
             </Button>
           ) : null}
@@ -68,47 +160,23 @@ export function OnboardingImport() {
       </div>
 
       {error ? <p className="text-xs text-critical">{error}</p> : null}
+      {data && !templateId ? (
+        <p className="text-[11px] text-high">Select the template this CSV was generated from to enable creation.</p>
+      ) : null}
 
       {!data ? (
         <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-8 text-center text-sm text-sc-faint">
-          Upload a filled clone CSV to preview the connectors to create. Batch creation comes next.
+          Upload a filled clone CSV to preview and create the connectors.
         </p>
       ) : (
-        <div className="max-h-[52vh] overflow-auto rounded-lg border border-sc-border-soft">
-          <table className="w-full border-collapse text-[11px]">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-sc-raised">
-                <th className="w-10 border-b border-sc-border bg-sc-raised px-2 py-2 text-left font-medium uppercase tracking-wide text-[10px] text-sc-faint">
-                  #
-                </th>
-                {data.header.map((column, index) => (
-                  <th
-                    key={`${column}-${index}`}
-                    className="whitespace-nowrap border-b border-sc-border bg-sc-raised px-2 py-2 text-left font-medium uppercase tracking-wide text-[10px] text-sc-faint"
-                  >
-                    {column}
-                  </th>
-                ))}
-                <th className="border-b border-sc-border bg-sc-raised px-2 py-2 text-left font-medium uppercase tracking-wide text-[10px] text-sc-faint">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-sc-border-soft odd:bg-sc-surface/40">
-                  <td className="px-2 py-1.5 text-sc-faint">{rowIndex + 1}</td>
-                  {data.header.map((_, colIndex) => (
-                    <td key={colIndex} className="max-w-[240px] truncate px-2 py-1.5 text-sc-text" title={row[colIndex] ?? ""}>
-                      {row[colIndex] ?? ""}
-                    </td>
-                  ))}
-                  <td className="px-2 py-1.5 text-sc-faint">—</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <OnboardingImportTable
+          header={data.header}
+          rows={data.rows}
+          statuses={statuses}
+          busy={running}
+          onEditCell={editCell}
+          onRunRow={(index) => void runRow(index)}
+        />
       )}
     </section>
   );

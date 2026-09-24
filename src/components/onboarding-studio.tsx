@@ -149,7 +149,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         />
       ) : null}
 
-      {isAdmin ? <OnboardingImport /> : null}
+      {isAdmin ? <OnboardingImport templates={templates} /> : null}
 
       {editing ? (
         <TemplateModal
