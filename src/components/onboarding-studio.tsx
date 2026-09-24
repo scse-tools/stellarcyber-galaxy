@@ -105,7 +105,9 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         onDelete={deleteTemplate}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      {isAdmin ? <OnboardingImport templates={templates} /> : null}
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-sc-border-soft pt-4">
         <SearchableSelect
           value={selectedId}
           onChange={setSelectedId}
@@ -148,8 +150,6 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
           }}
         />
       ) : null}
-
-      {isAdmin ? <OnboardingImport templates={templates} /> : null}
 
       {editing ? (
         <TemplateModal

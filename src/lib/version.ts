@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.0.11";
+export const APP_VERSION = "3.0.12";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.0.12",
+    date: "2026-09-24",
+    notes: [
+      "Template modal hides the log_type config field (not shown, not selectable).",
+      "Onboarding Studio layout: the onboarding batch table sits above the connector list; the server picker, Select as Template button and connector list are now at the bottom.",
+    ],
+  },
   {
     version: "3.0.11",
     date: "2026-09-24",

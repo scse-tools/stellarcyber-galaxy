@@ -9,6 +9,8 @@ import { defaultMutable, type ConnectorTemplate } from "@/lib/connector-template
 import type { Row } from "@/lib/table-export";
 
 const CONFIG_PREFIX = "configuration.";
+/** Config sub-fields never shown or selectable (managed by the connector, not cloned). */
+const HIDDEN_CONFIG_FIELDS = new Set(["log_type"]);
 
 interface TemplateModalProps {
   connector: Row | null;
@@ -37,7 +39,10 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
         parsed = null;
       }
     }
-    return isRecord(parsed) ? Object.entries(parsed).sort((a, b) => a[0].localeCompare(b[0])) : [];
+    if (!isRecord(parsed)) return [];
+    return Object.entries(parsed)
+      .filter(([key]) => !HIDDEN_CONFIG_FIELDS.has(key))
+      .sort((a, b) => a[0].localeCompare(b[0]));
   }, [connector]);
 
   const [name, setName] = useState(existing?.name ?? "");
