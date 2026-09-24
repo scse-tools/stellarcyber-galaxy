@@ -1,0 +1,6 @@
+
+need to remove from config
+
+conf
+    "log_type": "sentinelone",
+    "aella_tenantid": "63faa34eb3904d93bfd39f79e4617eb8",

@@ -87,31 +87,14 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Cable size={18} className="text-sc-accent" />
-          <h2 className="text-lg font-semibold text-sc-text">Onboarding Studio</h2>
-          {selectedId && !loading ? (
-            <span className="text-xs text-sc-faint">
-              {rows.length} connector{rows.length === 1 ? "" : "s"}
-            </span>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          {isAdmin ? (
-            <Button variant="primary" onClick={() => setTemplating(true)} disabled={!selectedRow}>
-              <FilePlus2 size={15} /> Select as Template
-            </Button>
-          ) : null}
-          <SearchableSelect
-            value={selectedId}
-            onChange={setSelectedId}
-            ariaLabel="Select a server"
-            title="Reuses the saved server and API key"
-            className="w-64 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
-            options={[{ value: "", label: "Select a server…" }, ...options]}
-          />
-        </div>
+      <div className="flex items-center gap-2">
+        <Cable size={18} className="text-sc-accent" />
+        <h2 className="text-lg font-semibold text-sc-text">Onboarding Studio</h2>
+        {selectedId && !loading ? (
+          <span className="text-xs text-sc-faint">
+            {rows.length} connector{rows.length === 1 ? "" : "s"}
+          </span>
+        ) : null}
       </div>
 
       <StudioTemplatesTable
@@ -120,6 +103,22 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         onEdit={setEditing}
         onDelete={deleteTemplate}
       />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchableSelect
+          value={selectedId}
+          onChange={setSelectedId}
+          ariaLabel="Select a server"
+          title="Reuses the saved server and API key"
+          className="w-64 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
+          options={[{ value: "", label: "Select a server…" }, ...options]}
+        />
+        {isAdmin ? (
+          <Button variant="primary" onClick={() => setTemplating(true)} disabled={!selectedRow}>
+            <FilePlus2 size={15} /> Select as Template
+          </Button>
+        ) : null}
+      </div>
 
       {!selectedId ? (
         <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-12 text-center text-sm text-sc-faint">

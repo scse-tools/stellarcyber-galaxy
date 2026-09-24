@@ -14,8 +14,6 @@ interface StudioTemplatesTableProps {
 
 /** Saved connector templates, with a per-row clone-CSV download and delete. */
 export function StudioTemplatesTable({ templates, canManage, onEdit, onDelete }: StudioTemplatesTableProps) {
-  if (templates.length === 0) return null;
-
   const download = (template: ConnectorTemplate) => {
     const file = `${template.name}-clone-template`.replace(/\s+/g, "_");
     downloadCsv(`${file}.csv`, templateCsv(template));
@@ -26,6 +24,11 @@ export function StudioTemplatesTable({ templates, canManage, onEdit, onDelete }:
       <div className="border-b border-sc-border-soft px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-sc-faint">
         Templates
       </div>
+      {templates.length === 0 ? (
+        <p className="px-3 py-6 text-center text-sm text-sc-faint">
+          Please create a template from an existing connector.
+        </p>
+      ) : (
       <table className="w-full border-collapse text-[11px]">
         <thead>
           <tr className="text-left text-[10px] uppercase tracking-wide text-sc-faint">
@@ -83,6 +86,7 @@ export function StudioTemplatesTable({ templates, canManage, onEdit, onDelete }:
           ))}
         </tbody>
       </table>
+      )}
     </div>
   );
 }

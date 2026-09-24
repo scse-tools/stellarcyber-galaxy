@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "2.0.16";
+export const APP_VERSION = "3.0.6";
 
 export interface ChangelogEntry {
   version: string;
@@ -11,26 +11,33 @@ export interface ChangelogEntry {
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "2.0.16",
+    version: "3.0.6",
+    date: "2026-09-24",
+    notes: [
+      "Onboarding Studio: the Templates table is always shown (with a prompt when empty), and the server picker now sits below it on the left with the Select as Template button beside it.",
+    ],
+  },
+  {
+    version: "3.0.5",
     date: "2026-09-23",
     notes: [
       "Onboarding Studio: each connector column header now has a searchable dropdown that filters the table to the chosen value; the Version column was removed.",
     ],
   },
   {
-    version: "2.0.15",
+    version: "3.0.4",
     date: "2026-09-23",
     notes: ["Saved templates are now editable — the Templates table has an edit action to rename and change the mutable fields."],
   },
   {
-    version: "2.0.14",
+    version: "3.0.3",
     date: "2026-09-23",
     notes: [
       "Template field selection is now scoped to filter_list, name and run_on, plus an expandable configuration section that lists every config sub-field as its own mutable option.",
     ],
   },
   {
-    version: "2.0.13",
+    version: "3.0.2",
     date: "2026-09-23",
     notes: [
       "Renamed Connector Studio to Onboarding Studio.",
@@ -39,7 +46,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: "2.0.12",
+    version: "3.0.1",
     date: "2026-09-23",
     notes: [
       "New Connector Studio mode (left-nav item): pick a server from the top-right dropdown (reusing its saved settings/API key) to list all its connectors, sorted by type, tenant, then name. Click a row for the connector detail view.",
