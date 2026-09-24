@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { cellText, type Row } from "@/lib/table-export";
+import { TemplateFieldPicker, SELECTABLE_TOP } from "@/components/template-field-picker";
 import { defaultMutable, type ConnectorTemplate } from "@/lib/connector-templates";
+import type { Row } from "@/lib/table-export";
 
-/** Top-level connector fields that may be marked mutable (everything else is fixed per clone). */
-const SELECTABLE_TOP = ["filter_list", "name", "run_on"];
+const CONFIG_PREFIX = "configuration.";
 
 interface TemplateModalProps {
   connector: Row | null;
@@ -27,6 +26,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** Names a template and marks which fields are mutable — the top-level three plus config subfields. */
 export function TemplateModal({ connector, instanceId, instanceName, existing, onClose, onSaved }: TemplateModalProps) {
   const editing = Boolean(existing);
+
   const configEntries = useMemo<[string, unknown][]>(() => {
     const raw = connector?.configuration;
     let parsed: unknown = raw;
@@ -45,20 +45,44 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
   const [mutable, setMutable] = useState<Record<string, boolean>>(() =>
     existing ? Object.fromEntries(existing.mutableFields.map((key) => [key, true])) : {},
   );
+  // Custom config fields (not on the source connector) — seeded from an edited template's extras.
+  const [added, setAdded] = useState<string[]>(() => {
+    if (!existing) return [];
+    const known = new Set(configEntries.map(([sub]) => sub));
+    return existing.mutableFields
+      .filter((key) => key.startsWith(CONFIG_PREFIX))
+      .map((key) => key.slice(CONFIG_PREFIX.length))
+      .filter((sub) => !known.has(sub));
+  });
   const [configOpen, setConfigOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isMutable = (key: string, hintFrom = key) => mutable[key] ?? (editing ? false : defaultMutable(hintFrom));
-  const toggle = (key: string, hintFrom = key) =>
-    setMutable((prev) => ({ ...prev, [key]: !isMutable(key, hintFrom) }));
+  const toggle = (key: string, hintFrom = key) => setMutable((prev) => ({ ...prev, [key]: !isMutable(key, hintFrom) }));
+
+  const addField = (sub: string) => {
+    if (configEntries.some(([key]) => key === sub) || added.includes(sub)) return;
+    setAdded((prev) => [...prev, sub]);
+    setMutable((prev) => ({ ...prev, [`${CONFIG_PREFIX}${sub}`]: true }));
+  };
+  const removeField = (sub: string) => {
+    setAdded((prev) => prev.filter((key) => key !== sub));
+    setMutable((prev) => {
+      const next = { ...prev };
+      delete next[`${CONFIG_PREFIX}${sub}`];
+      return next;
+    });
+  };
 
   const selected = useMemo(() => {
-    const top = SELECTABLE_TOP.filter((key) => isMutable(key));
-    const config = configEntries.filter(([sub]) => isMutable(`configuration.${sub}`, sub)).map(([sub]) => `configuration.${sub}`);
-    return [...top, ...config];
+    const keys = new Set<string>();
+    for (const key of SELECTABLE_TOP) if (isMutable(key)) keys.add(key);
+    for (const [sub] of configEntries) if (isMutable(`${CONFIG_PREFIX}${sub}`, sub)) keys.add(`${CONFIG_PREFIX}${sub}`);
+    for (const sub of added) if (isMutable(`${CONFIG_PREFIX}${sub}`, sub)) keys.add(`${CONFIG_PREFIX}${sub}`);
+    return [...keys];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mutable, configEntries]);
+  }, [mutable, configEntries, added]);
 
   if (!connector) return null;
 
@@ -116,47 +140,21 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
       </label>
 
       <div className="mt-4 flex items-center justify-between">
-        <p className="text-[11px] text-sc-faint">Tick each field a clone should be able to change per tenant.</p>
+        <p className="text-[11px] text-sc-faint">Tick each field a clone should change; add missing config fields (api_key, secrets, …).</p>
         <span className="text-[11px] text-sc-muted">{selected.length} mutable</span>
       </div>
 
-      <div className="mt-2 max-h-[48vh] overflow-y-auto rounded-lg border border-sc-border-soft">
-        {SELECTABLE_TOP.map((key) => (
-          <FieldRow
-            key={key}
-            label={key}
-            value={cellText(connector[key])}
-            checked={isMutable(key)}
-            onToggle={() => toggle(key)}
-          />
-        ))}
-
-        {configEntries.length > 0 ? (
-          <div className="border-t border-sc-border-soft">
-            <button
-              type="button"
-              onClick={() => setConfigOpen((open) => !open)}
-              className="flex w-full items-center gap-1.5 bg-sc-raised/40 px-3 py-1.5 text-left text-[11px] font-medium text-sc-muted hover:text-sc-text"
-            >
-              {configOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              configuration
-              <span className="text-sc-faint">({configEntries.length} fields)</span>
-            </button>
-            {configOpen
-              ? configEntries.map(([sub, value]) => (
-                  <FieldRow
-                    key={sub}
-                    label={sub}
-                    value={cellText(value)}
-                    checked={isMutable(`configuration.${sub}`, sub)}
-                    onToggle={() => toggle(`configuration.${sub}`, sub)}
-                    indent
-                  />
-                ))
-              : null}
-          </div>
-        ) : null}
-      </div>
+      <TemplateFieldPicker
+        connector={connector}
+        configEntries={configEntries}
+        added={added}
+        isMutable={isMutable}
+        onToggle={toggle}
+        onAddField={addField}
+        onRemoveField={removeField}
+        open={configOpen}
+        onToggleOpen={() => setConfigOpen((open) => !open)}
+      />
 
       {error ? <p className="mt-3 text-xs text-critical">{error}</p> : null}
 
@@ -168,29 +166,5 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
         </Button>
       </div>
     </Modal>
-  );
-}
-
-function FieldRow({
-  label,
-  value,
-  checked,
-  onToggle,
-  indent,
-}: {
-  label: string;
-  value: string;
-  checked: boolean;
-  onToggle: () => void;
-  indent?: boolean;
-}) {
-  return (
-    <label className={cn("flex cursor-pointer items-center gap-3 px-3 py-1.5 text-[11px] hover:bg-sc-active/50", indent && "pl-8")}>
-      <input type="checkbox" checked={checked} onChange={onToggle} className="accent-sc-primary" />
-      <span className="w-44 shrink-0 truncate text-sc-muted">{label}</span>
-      <span className="min-w-0 flex-1 truncate text-right text-sc-text" title={value}>
-        {value || "—"}
-      </span>
-    </label>
   );
 }
