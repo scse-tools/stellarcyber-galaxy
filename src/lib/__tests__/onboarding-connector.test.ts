@@ -44,17 +44,26 @@ describe("buildConnectorPayload", () => {
     expect(payload.run_on).toBe("dp");
     expect(payload.filter_list).toEqual([]);
     expect(payload.advanced_setting).toBe(false);
+    // Only the config fields present in the CSV are sent — untemplated fields are excluded.
     expect(payload.conf).toEqual({
       host: "https://sharks.sentinelone.net",
-      hosts: true,
       api_key: "SECRET123",
     });
   });
 
-  it("keeps base values when a row leaves a mutable field blank", () => {
+  it("only includes config fields that are columns in the row (drops untemplated ones)", () => {
+    const payload = buildConnectorPayload(
+      template,
+      { tenant_name: "Main", "configuration.host": "https://x" },
+      "cust-1",
+    );
+    // hosts/log_type from the source config must NOT appear.
+    expect(payload.conf).toEqual({ host: "https://x" });
+  });
+
+  it("keeps base values when a top-level mutable field is left blank", () => {
     const payload = buildConnectorPayload(template, { tenant_name: "Main", name: "" }, "cust-1");
     expect(payload.name).toBe("SentinelOne Connector");
-    expect((payload.conf as Record<string, unknown>).host).toBe("https://old.example");
   });
 
   it("coerces config values to the base field's type", () => {

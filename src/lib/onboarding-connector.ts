@@ -55,11 +55,14 @@ export function buildConnectorPayload(
   custId: string,
 ): Record<string, unknown> {
   const base = template.fields;
-  const conf = parseConf(base.configuration);
+  // conf carries ONLY the configuration.* fields the template exposes (the CSV columns) — never the
+  // source connector's full config, so untemplated fields (e.g. log_type) aren't sent to the API.
+  const baseConf = parseConf(base.configuration);
+  const conf: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(values)) {
     if (key.startsWith(CONFIG_PREFIX)) {
       const sub = key.slice(CONFIG_PREFIX.length);
-      conf[sub] = coerce(value, conf[sub]);
+      conf[sub] = coerce(value, baseConf[sub]);
     }
   }
 
