@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Pause, Play, Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import { OnboardingImportTable, type RowStatus } from "@/components/onboarding-import-table";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { OnboardingImportTable } from "@/components/onboarding-import-table";
+import { OnboardingImportToolbar } from "@/components/onboarding-import-toolbar";
 import { parseCsv } from "@/lib/csv";
+import { loadBatch, saveBatch, type RowStatus } from "@/lib/onboarding-batch-store";
 import type { ConnectorTemplate } from "@/lib/connector-templates";
 
 interface ParsedCsv {
@@ -15,18 +14,25 @@ interface ParsedCsv {
 
 /** Uploads a filled onboarding CSV, mirrors it, and creates connectors row-by-row from a template. */
 export function OnboardingImport({ templates }: { templates: ConnectorTemplate[] }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [templateId, setTemplateId] = useState("");
-  const [data, setData] = useState<ParsedCsv | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [statuses, setStatuses] = useState<RowStatus[]>([]);
+  const [initial] = useState(loadBatch);
+  const [templateId, setTemplateId] = useState(initial.templateId);
+  const [data, setData] = useState<ParsedCsv | null>(
+    initial.header.length ? { header: initial.header, rows: initial.rows } : null,
+  );
+  const [fileName, setFileName] = useState(initial.fileName);
+  const [statuses, setStatuses] = useState<RowStatus[]>(initial.statuses);
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const statusesRef = useRef<RowStatus[]>([]);
+  const statusesRef = useRef<RowStatus[]>(initial.statuses);
   const pausedRef = useRef(false);
-  const rowsRef = useRef<string[][]>([]);
+  const rowsRef = useRef<string[][]>(initial.rows);
+
+  // Persist the batch (template, file, rows and statuses) so it survives a reload.
+  useEffect(() => {
+    saveBatch({ templateId, fileName, header: data?.header ?? [], rows: data?.rows ?? [], statuses });
+  }, [templateId, fileName, data, statuses]);
 
   const templateOptions = useMemo(
     () => templates.map((t) => ({ value: t.id, label: `${t.name} · ${t.instanceName}` })),
@@ -63,6 +69,25 @@ export function OnboardingImport({ templates }: { templates: ConnectorTemplate[]
     });
     // Editing a row clears its previous result so it can be re-run.
     if (statusesRef.current[rowIndex]?.state !== "idle") setStatus(rowIndex, { state: "idle" });
+  };
+
+  const deleteRow = (rowIndex: number) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const rows = prev.rows.filter((_, i) => i !== rowIndex);
+      rowsRef.current = rows;
+      return rows.length ? { ...prev, rows } : null;
+    });
+    statusesRef.current = statusesRef.current.filter((_, i) => i !== rowIndex);
+    setStatuses(statusesRef.current);
+  };
+
+  const deleteBatch = () => {
+    setData(null);
+    setFileName("");
+    rowsRef.current = [];
+    statusesRef.current = [];
+    setStatuses([]);
   };
 
   const runRow = async (index: number) => {
@@ -118,45 +143,19 @@ export function OnboardingImport({ templates }: { templates: ConnectorTemplate[]
             </span>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchableSelect
-            value={templateId}
-            onChange={setTemplateId}
-            ariaLabel="Template"
-            title="The template this CSV was generated from"
-            className="w-56 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
-            options={[{ value: "", label: "Select template…" }, ...templateOptions]}
-          />
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void onFile(file);
-              event.target.value = "";
-            }}
-          />
-          <Button onClick={() => inputRef.current?.click()}>
-            <Upload size={15} /> Upload CSV
-          </Button>
-          {data && !running ? (
-            <Button variant="primary" onClick={() => void runAll()} disabled={!templateId || counts.pending === 0}>
-              <Play size={15} /> {paused ? "Continue" : "Create all"}
-            </Button>
-          ) : null}
-          {running ? (
-            <Button onClick={pause}>
-              <Pause size={15} /> Pause
-            </Button>
-          ) : null}
-          {data ? (
-            <Button onClick={() => { setData(null); statusesRef.current = []; setStatuses([]); }} disabled={running}>
-              <X size={15} /> Clear
-            </Button>
-          ) : null}
-        </div>
+        <OnboardingImportToolbar
+          templateId={templateId}
+          templateOptions={templateOptions}
+          onTemplateChange={setTemplateId}
+          onFile={(file) => void onFile(file)}
+          hasData={Boolean(data)}
+          running={running}
+          paused={paused}
+          createDisabled={!templateId || counts.pending === 0}
+          onCreateAll={() => void runAll()}
+          onPause={pause}
+          onDeleteBatch={deleteBatch}
+        />
       </div>
 
       {error ? <p className="text-xs text-critical">{error}</p> : null}
@@ -176,6 +175,7 @@ export function OnboardingImport({ templates }: { templates: ConnectorTemplate[]
           busy={running}
           onEditCell={editCell}
           onRunRow={(index) => void runRow(index)}
+          onDeleteRow={deleteRow}
         />
       )}
     </section>

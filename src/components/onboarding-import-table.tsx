@@ -1,12 +1,8 @@
 "use client";
 
-import { Loader2, Play } from "lucide-react";
+import { Loader2, Play, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export interface RowStatus {
-  state: "idle" | "running" | "success" | "failure";
-  error?: string;
-}
+import type { RowStatus } from "@/lib/onboarding-batch-store";
 
 interface OnboardingImportTableProps {
   header: string[];
@@ -15,9 +11,18 @@ interface OnboardingImportTableProps {
   busy: boolean;
   onEditCell: (row: number, col: number, value: string) => void;
   onRunRow: (row: number) => void;
+  onDeleteRow: (row: number) => void;
 }
 
-export function OnboardingImportTable({ header, rows, statuses, busy, onEditCell, onRunRow }: OnboardingImportTableProps) {
+export function OnboardingImportTable({
+  header,
+  rows,
+  statuses,
+  busy,
+  onEditCell,
+  onRunRow,
+  onDeleteRow,
+}: OnboardingImportTableProps) {
   return (
     <div className="max-h-[52vh] overflow-auto rounded-lg border border-sc-border-soft">
       <table className="w-full border-collapse text-[11px]">
@@ -28,7 +33,7 @@ export function OnboardingImportTable({ header, rows, statuses, busy, onEditCell
               <Th key={`${column}-${index}`}>{column}</Th>
             ))}
             <Th className="w-40">Status</Th>
-            <Th className="w-16 text-right">Run</Th>
+            <Th className="w-20 text-right">Actions</Th>
           </tr>
         </thead>
         <tbody>
@@ -47,16 +52,27 @@ export function OnboardingImportTable({ header, rows, statuses, busy, onEditCell
                   </td>
                 ))}
                 <td className="px-2 py-1"><StatusCell status={status} /></td>
-                <td className="px-2 py-1 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onRunRow(rowIndex)}
-                    disabled={busy || status.state === "running"}
-                    title="Create this connector"
-                    className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-link disabled:opacity-40"
-                  >
-                    <Play size={14} />
-                  </button>
+                <td className="px-2 py-1">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onRunRow(rowIndex)}
+                      disabled={busy || status.state === "running"}
+                      title="Create this connector"
+                      className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-link disabled:opacity-40"
+                    >
+                      <Play size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteRow(rowIndex)}
+                      disabled={busy}
+                      title="Delete this row"
+                      className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-critical disabled:opacity-40"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
