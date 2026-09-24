@@ -8,6 +8,7 @@ import { ConnectorDetailModal } from "@/components/connector-detail-modal";
 import { TemplateModal } from "@/components/template-modal";
 import { StudioTemplatesTable } from "@/components/studio-templates-table";
 import { StudioConnectorTable } from "@/components/studio-connector-table";
+import { OnboardingImport } from "@/components/onboarding-import";
 import { compareByColumn } from "@/lib/inventory-columns";
 import type { Row } from "@/lib/table-export";
 import type { ConnectorTemplate } from "@/lib/connector-templates";
@@ -147,6 +148,8 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
           }}
         />
       ) : null}
+
+      {isAdmin ? <OnboardingImport /> : null}
 
       {editing ? (
         <TemplateModal
