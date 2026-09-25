@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInstanceRow } from "@/lib/instance-repo";
-import { fetchTenants } from "@/lib/rest/tenants";
+import { fetchTenants, fetchTenantRecords } from "@/lib/rest/tenants";
 import { createTenant } from "@/lib/rest/tenant-admin";
 import { buildTenantPayload } from "@/lib/tenant-fields";
 import { errorResponse } from "@/lib/api-error";
@@ -18,6 +18,9 @@ export async function GET(request: Request, { params }: Context) {
     const { id } = await params;
     const row = getInstanceRow(id);
     if (!row) return NextResponse.json({ error: "Instance not found." }, { status: 404 });
+    if (new URL(request.url).searchParams.get("full") === "1") {
+      return NextResponse.json({ records: await fetchTenantRecords(row) });
+    }
     return NextResponse.json({ tenants: await fetchTenants(row) });
   } catch (error) {
     return errorResponse(error);

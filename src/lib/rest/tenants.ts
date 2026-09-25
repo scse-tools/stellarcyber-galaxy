@@ -51,9 +51,9 @@ function normalize(rows: Record<string, unknown>[]): Tenant[] {
  * Lists the tenants/customers visible to an instance's API key. Not every instance is an MSSP
  * parent, so a 404 or empty response is treated as "no tenants" rather than an error.
  */
-export async function fetchTenantsWith(config: RestAuthConfig): Promise<Tenant[]> {
+/** Raw tenant records straight from the API (all fields), for the tenants table. */
+export async function fetchTenantRecordsWith(config: RestAuthConfig): Promise<Record<string, unknown>[]> {
   const origin = new URL(config.consoleUrl).origin;
-
   try {
     const request = async () => {
       const token = await getRestAccessTokenWith(config);
@@ -62,24 +62,32 @@ export async function fetchTenantsWith(config: RestAuthConfig): Promise<Tenant[]
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     };
-
     let response = await request();
     if (response.status === 401) {
       forgetRestAccessToken(config.id);
       response = await request();
     }
     if (!response.ok) return [];
-
-    return normalize(readTenants(await response.json().catch(() => null)));
+    return readTenants(await response.json().catch(() => null));
   } catch {
     return [];
   }
 }
 
+export async function fetchTenantsWith(config: RestAuthConfig): Promise<Tenant[]> {
+  return normalize(await fetchTenantRecordsWith(config));
+}
+
+const authConfig = (row: InstanceRow): RestAuthConfig => ({
+  id: row.id,
+  consoleUrl: row.consoleUrl,
+  apiKey: readCredentials(row).apiKey,
+});
+
 export async function fetchTenants(row: InstanceRow): Promise<Tenant[]> {
-  return fetchTenantsWith({
-    id: row.id,
-    consoleUrl: row.consoleUrl,
-    apiKey: readCredentials(row).apiKey,
-  });
+  return fetchTenantsWith(authConfig(row));
+}
+
+export async function fetchTenantRecords(row: InstanceRow): Promise<Record<string, unknown>[]> {
+  return fetchTenantRecordsWith(authConfig(row));
 }
