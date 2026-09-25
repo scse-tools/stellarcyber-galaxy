@@ -10,6 +10,7 @@ import { TemplateModal } from "@/components/template-modal";
 import { StudioTemplatesTable } from "@/components/studio-templates-table";
 import { StudioConnectorTable } from "@/components/studio-connector-table";
 import { OnboardingImport } from "@/components/onboarding-import";
+import { TenantsStudio } from "@/components/tenants-studio";
 import { compareByColumn } from "@/lib/inventory-columns";
 import type { Row } from "@/lib/table-export";
 import type { ConnectorTemplate } from "@/lib/connector-templates";
@@ -103,9 +104,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
       </div>
 
       {mode === "tenants" ? (
-        <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-16 text-center text-sm text-sc-faint">
-          Tenant onboarding is coming soon.
-        </p>
+        <TenantsStudio instances={instances} isAdmin={isAdmin} />
       ) : (
       <>
       <StudioTemplatesTable

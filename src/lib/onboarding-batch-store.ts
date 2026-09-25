@@ -4,24 +4,22 @@ export interface RowStatus {
 }
 
 export interface StoredBatch {
-  templateId: string;
   fileName: string;
   header: string[];
   rows: string[][];
   statuses: RowStatus[];
 }
 
-const KEY = "galaxy.onboardingBatch";
-const EMPTY: StoredBatch = { templateId: "", fileName: "", header: [], rows: [], statuses: [] };
+const EMPTY: StoredBatch = { fileName: "", header: [], rows: [], statuses: [] };
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 
-/** Restores the last uploaded batch; any in-flight "running" rows are reset to idle. */
-export function loadBatch(): StoredBatch {
+/** Restores a saved batch for `key`; any in-flight "running" rows are reset to idle. */
+export function loadBatch(key: string): StoredBatch {
   if (typeof window === "undefined") return EMPTY;
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<StoredBatch>;
     const header = isStringArray(parsed.header) ? parsed.header : [];
@@ -36,7 +34,6 @@ export function loadBatch(): StoredBatch {
         )
       : [];
     return {
-      templateId: typeof parsed.templateId === "string" ? parsed.templateId : "",
       fileName: typeof parsed.fileName === "string" ? parsed.fileName : "",
       header,
       rows,
@@ -47,10 +44,10 @@ export function loadBatch(): StoredBatch {
   }
 }
 
-export function saveBatch(batch: StoredBatch): void {
+export function saveBatch(key: string, batch: StoredBatch): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(batch));
+    window.localStorage.setItem(key, JSON.stringify(batch));
   } catch {
     /* quota or private browsing - the batch still works for this session */
   }
