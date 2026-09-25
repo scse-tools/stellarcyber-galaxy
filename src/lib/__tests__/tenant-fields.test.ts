@@ -1,4 +1,4 @@
-import { buildTenantPayload } from "@/lib/tenant-fields";
+import { buildTenantPayload, sampleTenantValues } from "@/lib/tenant-fields";
 
 describe("buildTenantPayload", () => {
   it("keeps known fields, coerces types, and drops empties/unknowns", () => {
@@ -29,5 +29,21 @@ describe("buildTenantPayload", () => {
   it("drops a non-numeric ingestion_limit", () => {
     const payload = buildTenantPayload({ cust_name: "X", ingestion_limit: "abc" });
     expect(payload).toEqual({ cust_name: "X" });
+  });
+});
+
+describe("sampleTenantValues", () => {
+  it("uses generic placeholders and borrows numeric structure from an existing tenant", () => {
+    const sample = sampleTenantValues([{ cust_name: "Real Corp", ingestion_limit: 500, session_timeout: 1800 }]);
+    expect(sample.cust_name).toBe("Example Tenant");
+    expect(sample.contact_email).toBe("jane.doe@example.com");
+    expect(sample.ingestion_limit).toBe("500");
+    expect(sample.session_timeout).toBe("1800");
+  });
+
+  it("falls back to defaults with no existing tenants", () => {
+    const sample = sampleTenantValues([]);
+    expect(sample.ingestion_limit).toBe("100");
+    expect(sample.mfa_enabled).toBe("false");
   });
 });

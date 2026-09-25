@@ -70,6 +70,19 @@ export function useBatchRunner(
     if (statusesRef.current[rowIndex]?.state !== "idle") setStatus(rowIndex, { state: "idle" });
   };
 
+  /** Appends a blank row; when the table is empty, seeds the header from `defaultHeader`. */
+  const addRow = (defaultHeader?: string[]) => {
+    setData((prev) => {
+      const header = prev?.header ?? defaultHeader ?? [];
+      if (header.length === 0) return prev;
+      const rows = [...(prev?.rows ?? []), header.map(() => "")];
+      rowsRef.current = rows;
+      return { header, rows };
+    });
+    statusesRef.current = [...statusesRef.current, { state: "idle" }];
+    setStatuses(statusesRef.current);
+  };
+
   const deleteRow = (rowIndex: number) => {
     setData((prev) => {
       if (!prev) return prev;
@@ -125,5 +138,5 @@ export function useBatchRunner(
     return { success, failure, pending: statuses.length - success };
   }, [statuses]);
 
-  return { data, fileName, statuses, running, paused, error, counts, onFile, editCell, deleteRow, deleteBatch, runRow, runAll, pause };
+  return { data, fileName, statuses, running, paused, error, counts, onFile, addRow, editCell, deleteRow, deleteBatch, runRow, runAll, pause };
 }

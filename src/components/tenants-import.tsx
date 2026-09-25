@@ -1,16 +1,21 @@
 "use client";
 
 import { useRef } from "react";
-import { Pause, Play, Trash2, Upload } from "lucide-react";
+import { Download, Pause, Play, Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OnboardingImportTable } from "@/components/onboarding-import-table";
 import { useBatchRunner } from "@/lib/use-batch-runner";
+import { downloadCsv, toCsv } from "@/lib/table-export";
+import { TENANT_FIELDS } from "@/lib/tenant-fields";
 
 const BATCH_KEY = "galaxy.tenantBatch";
+const TENANT_COLUMNS = TENANT_FIELDS.map((field) => field.key);
 
 /** Uploads a tenants CSV and creates tenants row-by-row on the selected server. */
-export function TenantsImport({ instanceId }: { instanceId: string }) {
+export function TenantsImport({ instanceId, sampleValues }: { instanceId: string; sampleValues: Record<string, string> }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const downloadTemplate = () =>
+    downloadCsv("tenant-onboarding-template.csv", toCsv(TENANT_COLUMNS, [sampleValues]));
   const batch = useBatchRunner(BATCH_KEY, async (values) => {
     if (!instanceId) return { ok: false, error: "Select a server first." };
     const response = await fetch(`/api/instances/${instanceId}/tenants`, {
@@ -45,8 +50,14 @@ export function TenantsImport({ instanceId }: { instanceId: string }) {
               event.target.value = "";
             }}
           />
+          <Button onClick={downloadTemplate}>
+            <Download size={15} /> Template
+          </Button>
           <Button onClick={() => inputRef.current?.click()}>
             <Upload size={15} /> Upload CSV
+          </Button>
+          <Button onClick={() => batch.addRow(TENANT_COLUMNS)} disabled={batch.running}>
+            <Plus size={15} /> Add row
           </Button>
           {batch.data && !batch.running ? (
             <Button variant="primary" onClick={() => void batch.runAll()} disabled={!instanceId || batch.counts.pending === 0}>
@@ -73,7 +84,7 @@ export function TenantsImport({ instanceId }: { instanceId: string }) {
 
       {!batch.data ? (
         <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-8 text-center text-sm text-sc-faint">
-          Upload a tenants CSV (a cust_name column is required) to preview and create tenants.
+          Download the template, upload a filled CSV, or add a row manually. A cust_name value is required per row.
         </p>
       ) : (
         <OnboardingImportTable

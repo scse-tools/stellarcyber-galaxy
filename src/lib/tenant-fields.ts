@@ -20,6 +20,31 @@ export const TENANT_FIELDS: TenantFieldDef[] = [
   { key: "tenant_session_override", label: "Session override", type: "boolean" },
 ];
 
+/**
+ * A sanitized sample row for the tenant CSV template: generic contact/PII placeholders, with
+ * numeric structural values (ingestion limit, session timeout) taken from an existing tenant.
+ */
+export function sampleTenantValues(records: Record<string, unknown>[]): Record<string, string> {
+  const base = records[0] ?? {};
+  const num = (key: string, fallback: number) => {
+    const value = Number(base[key]);
+    return String(Number.isFinite(value) && value > 0 ? value : fallback);
+  };
+  return {
+    cust_name: "Example Tenant",
+    contact: "Jane Doe",
+    contact_email: "jane.doe@example.com",
+    contact_phone: "+1-555-0100",
+    address: "123 Example Ave",
+    info: "Onboarding sample",
+    retention_group: typeof base.retention_group === "string" ? base.retention_group : "",
+    ingestion_limit: num("ingestion_limit", 100),
+    session_timeout: num("session_timeout", 3600),
+    mfa_enabled: "false",
+    tenant_session_override: "false",
+  };
+}
+
 type FieldValue = string | number | boolean | undefined;
 
 /** Builds the /tenants request body from a values map: known fields only, typed, empties dropped. */

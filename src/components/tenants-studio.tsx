@@ -9,6 +9,7 @@ import { TenantModal } from "@/components/tenant-modal";
 import { TenantsTable } from "@/components/tenants-table";
 import { TenantsImport } from "@/components/tenants-import";
 import { sectionize } from "@/lib/inventory-columns";
+import { sampleTenantValues } from "@/lib/tenant-fields";
 import type { Row } from "@/lib/table-export";
 import type { InstanceSummary } from "@/lib/types";
 
@@ -146,7 +147,9 @@ export function TenantsStudio({ instances, isAdmin }: { instances: InstanceSumma
             columns={columns}
             onEdit={isAdmin ? (row) => { setEditingTenant(row); setModalOpen(true); } : undefined}
           />
-          {isAdmin ? <TenantsImport instanceId={selectedId} /> : null}
+          {isAdmin ? (
+            <TenantsImport instanceId={selectedId} sampleValues={sampleTenantValues(records)} />
+          ) : null}
         </>
       )}
 
