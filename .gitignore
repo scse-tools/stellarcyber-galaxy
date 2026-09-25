@@ -11,3 +11,4 @@ next-env.d.ts
 coverage/
 .DS_Store
 swagger.json
+data/tls/
