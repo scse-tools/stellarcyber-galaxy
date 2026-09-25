@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Cable, FilePlus2 } from "lucide-react";
+import { FilePlus2 } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StudioModeTabs, type StudioMode } from "@/components/studio-mode-tabs";
 import { Button } from "@/components/ui/button";
 import { ConnectorDetailModal } from "@/components/connector-detail-modal";
 import { TemplateModal } from "@/components/template-modal";
@@ -18,6 +19,7 @@ import type { InstanceSummary } from "@/lib/types";
 const SORT_KEYS = ["type", "tenant_name", "name"];
 
 export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSummary[]; isAdmin: boolean }) {
+  const [mode, setMode] = useState<StudioMode>("connectors");
   const [selectedId, setSelectedId] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -88,16 +90,24 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Cable size={18} className="text-sc-accent" />
-        <h2 className="text-lg font-semibold text-sc-text">Onboarding Studio</h2>
-        {selectedId && !loading ? (
-          <span className="text-xs text-sc-faint">
-            {rows.length} connector{rows.length === 1 ? "" : "s"}
-          </span>
-        ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-sc-text">Onboarding Studio</h2>
+          {mode === "connectors" && selectedId && !loading ? (
+            <span className="text-xs text-sc-faint">
+              {rows.length} connector{rows.length === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </div>
+        <StudioModeTabs mode={mode} onMode={setMode} />
       </div>
 
+      {mode === "tenants" ? (
+        <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-16 text-center text-sm text-sc-faint">
+          Tenant onboarding is coming soon.
+        </p>
+      ) : (
+      <>
       <StudioTemplatesTable
         templates={templates}
         canManage={isAdmin}
@@ -163,6 +173,8 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
       ) : null}
 
       <ConnectorDetailModal connector={detail} onClose={() => setDetail(null)} />
+      </>
+      )}
     </section>
   );
 }
