@@ -10,6 +10,8 @@ export interface ConnectorTemplate {
   fields: Record<string, unknown>;
   /** Field keys the operator marked mutable — the columns a clone CSV will carry. */
   mutableFields: string[];
+  /** When true (catalog templates), every config field's default is sent, not just mutable ones. */
+  includeAllConfig: boolean;
   createdAt: string;
 }
 

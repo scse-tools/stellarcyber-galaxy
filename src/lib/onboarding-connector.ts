@@ -18,15 +18,25 @@ function parseConf(raw: unknown): Record<string, unknown> {
   return isRecord(raw) ? raw : {};
 }
 
-/** Coerces a CSV string to match the base value's type (boolean/number), else keeps the string. */
+/** Coerces a CSV string to match the base value's type (boolean/number/object), else keeps it. */
 function coerce(value: string, baseValue: unknown): unknown {
   if (typeof baseValue === "boolean") return value.trim().toLowerCase() === "true";
   if (typeof baseValue === "number") {
     const n = Number(value);
     return Number.isFinite(n) ? n : value;
   }
+  if (baseValue !== null && typeof baseValue === "object") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
   return value;
 }
+
+const bool = (value: unknown, fallback: boolean): boolean =>
+  typeof value === "string" && value.trim() !== "" ? value.trim().toLowerCase() === "true" : fallback;
 
 /** Parses a filter_list cell: a JSON array, or a comma-separated list, or empty. */
 function parseFilterList(value: unknown): unknown[] {
@@ -55,10 +65,10 @@ export function buildConnectorPayload(
   custId: string,
 ): Record<string, unknown> {
   const base = template.fields;
-  // conf carries ONLY the configuration.* fields the template exposes (the CSV columns) — never the
-  // source connector's full config, so untemplated fields (e.g. log_type) aren't sent to the API.
+  // Catalog templates keep every config default (includeAllConfig); legacy templates carry only the
+  // mutable config fields, so untemplated fields (e.g. log_type) aren't sent to the API.
   const baseConf = parseConf(base.configuration);
-  const conf: Record<string, unknown> = {};
+  const conf: Record<string, unknown> = template.includeAllConfig ? { ...baseConf } : {};
   for (const [key, value] of Object.entries(values)) {
     if (key.startsWith(CONFIG_PREFIX)) {
       const sub = key.slice(CONFIG_PREFIX.length);
@@ -72,13 +82,13 @@ export function buildConnectorPayload(
   return {
     cust_id: custId,
     name: pick("name", base.name ?? ""),
-    type: base.type ?? "",
-    category: base.category ?? "",
-    is_collect: base.is_collect === true,
-    is_respond: base.is_respond === true,
+    type: pick("type", base.type ?? ""),
+    category: pick("category", base.category ?? ""),
+    is_collect: bool(values.is_collect, base.is_collect === true),
+    is_respond: bool(values.is_respond, base.is_respond === true),
     run_on: pick("run_on", base.run_on ?? "dp"),
     conf,
     filter_list: parseFilterList(values.filter_list ?? base.filter_list),
-    advanced_setting: base.advanced_setting === true,
+    advanced_setting: bool(values.advanced_setting, base.advanced_setting === true),
   };
 }

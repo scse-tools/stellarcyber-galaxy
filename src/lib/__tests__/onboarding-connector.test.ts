@@ -20,6 +20,7 @@ const template: ConnectorTemplate = {
     configuration: JSON.stringify({ host: "https://old.example", hosts: true, api_key: "" }),
   },
   mutableFields: ["name", "configuration.host", "configuration.api_key"],
+  includeAllConfig: false,
   createdAt: "2026-09-24T00:00:00.000Z",
 };
 
@@ -73,5 +74,23 @@ describe("buildConnectorPayload", () => {
       "cust-1",
     );
     expect((payload.conf as Record<string, unknown>).hosts).toBe(false);
+  });
+
+  it("keeps all config defaults when includeAllConfig is set (catalog templates)", () => {
+    const catalogTemplate = { ...template, includeAllConfig: true };
+    const payload = buildConnectorPayload(catalogTemplate, { tenant_name: "Main", "configuration.host": "https://new" }, "c");
+    // host overridden by CSV; hosts/api_key defaults retained even though not in the row.
+    expect(payload.conf).toEqual({ host: "https://new", hosts: true, api_key: "" });
+  });
+
+  it("applies top-level overrides (is_collect, type) from the row", () => {
+    const payload = buildConnectorPayload(
+      template,
+      { tenant_name: "Main", is_collect: "false", type: "sentinelone_v2" },
+      "c",
+    );
+    expect(payload.is_collect).toBe(false);
+    expect(payload.type).toBe("sentinelone_v2");
+    expect(payload.is_respond).toBe(true); // untouched -> base
   });
 });

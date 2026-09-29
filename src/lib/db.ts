@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS connector_templates (
   connector_name TEXT NOT NULL,
   fields_json    TEXT NOT NULL,
   mutable_json   TEXT NOT NULL,
+  include_all_config INTEGER NOT NULL DEFAULT 0,
   created_at     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_connector_templates_created ON connector_templates (created_at);
@@ -72,10 +73,15 @@ function open(): DatabaseSync {
 
 /** Adds columns introduced after a database was first created. */
 function migrate(db: DatabaseSync): void {
-  const columns = db.prepare("PRAGMA table_info(instances)").all() as unknown as Array<{ name: string }>;
-  const has = (name: string) => columns.some((column) => column.name === name);
-  if (!has("console_build_hash")) {
+  const instanceCols = db.prepare("PRAGMA table_info(instances)").all() as unknown as Array<{ name: string }>;
+  if (!instanceCols.some((c) => c.name === "console_build_hash")) {
     db.exec("ALTER TABLE instances ADD COLUMN console_build_hash TEXT");
+  }
+  const templateCols = db
+    .prepare("PRAGMA table_info(connector_templates)")
+    .all() as unknown as Array<{ name: string }>;
+  if (templateCols.length && !templateCols.some((c) => c.name === "include_all_config")) {
+    db.exec("ALTER TABLE connector_templates ADD COLUMN include_all_config INTEGER NOT NULL DEFAULT 0");
   }
 }
 

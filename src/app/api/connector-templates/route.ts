@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       connectorName: String(body.connectorName ?? ""),
       fields: body.fields,
       mutableFields,
+      includeAllConfig: body.includeAllConfig === true,
     });
     return NextResponse.json({ template }, { status: 201 });
   } catch (error) {

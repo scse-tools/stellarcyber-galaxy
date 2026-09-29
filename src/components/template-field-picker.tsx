@@ -5,8 +5,20 @@ import { ChevronDown, ChevronRight, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { cellText, type Row } from "@/lib/table-export";
 
-/** Top-level connector fields that may be marked mutable. */
-export const SELECTABLE_TOP = ["filter_list", "name", "run_on"];
+/**
+ * Top-level connector fields that may be marked mutable. (The tenant is set per clone by the
+ * required tenant_name column, which resolves to cust_id — so it isn't listed here.)
+ */
+export const SELECTABLE_TOP = [
+  "name",
+  "type",
+  "category",
+  "is_collect",
+  "is_respond",
+  "run_on",
+  "filter_list",
+  "advanced_setting",
+];
 
 interface TemplateFieldPickerProps {
   connector: Row;

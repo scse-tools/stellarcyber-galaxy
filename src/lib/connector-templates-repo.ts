@@ -11,6 +11,7 @@ interface TemplateRow {
   connector_name: string;
   fields_json: string;
   mutable_json: string;
+  include_all_config: number;
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ function toTemplate(row: TemplateRow): ConnectorTemplate {
     connectorName: row.connector_name,
     fields: JSON.parse(row.fields_json) as Record<string, unknown>,
     mutableFields: JSON.parse(row.mutable_json) as string[],
+    includeAllConfig: row.include_all_config === 1,
     createdAt: row.created_at,
   };
 }
@@ -42,8 +44,8 @@ export function createTemplate(input: ConnectorTemplateInput): ConnectorTemplate
   getDb()
     .prepare(
       `INSERT INTO connector_templates
-        (id, name, instance_id, instance_name, connector_type, connector_name, fields_json, mutable_json, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, name, instance_id, instance_name, connector_type, connector_name, fields_json, mutable_json, include_all_config, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -54,6 +56,7 @@ export function createTemplate(input: ConnectorTemplateInput): ConnectorTemplate
       input.connectorName,
       JSON.stringify(input.fields),
       JSON.stringify(input.mutableFields),
+      input.includeAllConfig ? 1 : 0,
       createdAt,
     );
   return { id, createdAt, ...input };

@@ -120,6 +120,7 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, c
                   connectorName: String(connector.name ?? ""),
                   fields: connector,
                   mutableFields: selected,
+                  includeAllConfig: catalog === true,
                 },
           ),
         },
@@ -153,7 +154,10 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, c
         />
       </label>
 
-      <div className="mt-4 flex items-center justify-between">
+      <p className="mt-3 text-[11px] text-sc-faint">
+        The tenant is set per clone by the required <span className="font-mono">tenant_name</span> column (resolved to cust_id).
+      </p>
+      <div className="mt-2 flex items-center justify-between">
         <p className="text-[11px] text-sc-faint">
           {catalog
             ? "All fields are selected; untick any a clone should not change per tenant."
