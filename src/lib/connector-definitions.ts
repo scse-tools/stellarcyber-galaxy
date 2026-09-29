@@ -13,6 +13,7 @@ interface RawField {
   desc?: string;
   list?: { label?: unknown; value?: unknown }[];
   "available value"?: unknown[];
+  children?: RawField[];
 }
 interface RawDef {
   type?: string;
@@ -20,7 +21,18 @@ interface RawDef {
   display_name?: string;
   is_collect?: boolean;
   is_respond?: boolean;
+  common_fields?: RawField[];
   collect_fields?: RawField[];
+}
+
+/** Flattens fields and their nested children into a single ordered list of named fields. */
+function flattenFields(list: RawField[] | undefined): RawField[] {
+  const out: RawField[] = [];
+  for (const field of list ?? []) {
+    if (typeof field.field_name === "string") out.push(field);
+    if (Array.isArray(field.children)) out.push(...flattenFields(field.children));
+  }
+  return out;
 }
 
 const data = (catalogJson as { data: Record<string, Record<string, RawDef>> }).data;
@@ -61,8 +73,16 @@ export function listConnectorDefinitions(): DefinitionSummary[] {
 export function getConnectorDefinition(category: string, type: string): ConnectorDefinition | null {
   const def = data[category]?.[type];
   if (!def) return null;
-  const fields: DefinitionField[] = (def.collect_fields ?? [])
-    .filter((field): field is RawField & { field_name: string } => typeof field.field_name === "string")
+  // Connection/secret fields (common_fields — host, api_key, …) come first, then the collect fields
+  // with any nested children flattened in.
+  const rawFields = [...flattenFields(def.common_fields), ...flattenFields(def.collect_fields)];
+  const seen = new Set<string>();
+  const fields: DefinitionField[] = rawFields
+    .filter((field): field is RawField & { field_name: string } => {
+      if (typeof field.field_name !== "string" || seen.has(field.field_name)) return false;
+      seen.add(field.field_name);
+      return true;
+    })
     .map((field) => {
       const type = field.type ?? "text";
       const description = field.tooltip || field.desc || undefined;

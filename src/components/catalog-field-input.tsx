@@ -19,10 +19,14 @@ export function FieldInput({
 }) {
   if (field.type === "boolean") {
     return (
-      <label className="flex items-center gap-2 text-[11px] text-sc-muted">
-        <input type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} className="accent-sc-primary" />
-        {value === true ? "Enabled" : "Disabled"}
-      </label>
+      <select
+        value={value === true ? "true" : "false"}
+        onChange={(e) => onChange(e.target.value === "true")}
+        className={inputClass}
+      >
+        <option value="true">True</option>
+        <option value="false">False</option>
+      </select>
     );
   }
 

@@ -61,18 +61,10 @@ export function CatalogTemplateForm({
     for (const field of definition.fields) init[`${CONFIG_PREFIX}${field.fieldName}`] = initialValue(field);
     return init;
   });
-  const [mutable, setMutable] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {};
-    for (const field of top) init[field.fieldName] = true;
-    for (const field of definition.fields) init[`${CONFIG_PREFIX}${field.fieldName}`] = true;
-    return init;
-  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedCount = Object.values(mutable).filter(Boolean).length;
   const setValue = (key: string, value: FieldValue) => setValues((prev) => ({ ...prev, [key]: value }));
-  const toggle = (key: string) => setMutable((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const save = async () => {
     setSaving(true);
@@ -91,9 +83,10 @@ export function CatalogTemplateForm({
         advanced_setting: values.advanced_setting === true,
         configuration: JSON.stringify(conf),
       };
+      // Every field (except the type/category keys) is mutable — it becomes a clone-CSV column.
       const mutableFields = [
-        ...top.filter((f) => mutable[f.fieldName]).map((f) => f.fieldName),
-        ...definition.fields.filter((f) => mutable[`${CONFIG_PREFIX}${f.fieldName}`]).map((f) => `${CONFIG_PREFIX}${f.fieldName}`),
+        ...top.map((f) => f.fieldName),
+        ...definition.fields.map((f) => `${CONFIG_PREFIX}${f.fieldName}`),
       ];
       const response = await fetch("/api/connector-templates", {
         method: "POST",
@@ -139,12 +132,12 @@ export function CatalogTemplateForm({
       </label>
 
       <p className="mt-3 text-[11px] text-sc-faint">
-        Tick each field a clone may change per tenant; set the default values below. ({selectedCount} mutable)
+        Set the default value for each field below. Every field becomes a per-clone CSV column; only type and category are fixed.
       </p>
 
-      <div className="mt-2 max-h-[52vh] space-y-4 overflow-y-auto pr-1">
-        <CatalogTemplateSection title="Connector fields" fields={top} prefix="" values={values} mutable={mutable} onValue={setValue} onToggle={toggle} />
-        <CatalogTemplateSection title="Configuration" fields={definition.fields} prefix={CONFIG_PREFIX} values={values} mutable={mutable} onValue={setValue} onToggle={toggle} />
+      <div className="mt-2 max-h-[56vh] space-y-4 overflow-y-auto pr-1">
+        <CatalogTemplateSection title="Connector fields" fields={top} prefix="" values={values} onValue={setValue} />
+        <CatalogTemplateSection title="Configuration" fields={definition.fields} prefix={CONFIG_PREFIX} values={values} onValue={setValue} />
       </div>
 
       {error ? <p className="mt-3 text-xs text-critical">{error}</p> : null}
