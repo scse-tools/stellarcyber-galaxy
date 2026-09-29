@@ -23,14 +23,12 @@ interface StudioConnectorTableProps {
   rows: Row[];
   loading: boolean;
   error: string | null;
-  selected: Row | null;
-  onSelect: (row: Row) => void;
   onRowClick: (row: Row) => void;
 }
 
-export function StudioConnectorTable({ rows, loading, error, selected, onSelect, onRowClick }: StudioConnectorTableProps) {
+export function StudioConnectorTable({ rows, loading, error, onRowClick }: StudioConnectorTableProps) {
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const span = STUDIO_COLUMNS.length + 1;
+  const span = STUDIO_COLUMNS.length;
 
   // Distinct values per column, offered as searchable dropdown filters.
   const columnValues = useMemo(() => {
@@ -59,7 +57,6 @@ export function StudioConnectorTable({ rows, loading, error, selected, onSelect,
       <table className="w-full border-collapse text-[11px]">
         <thead className="sticky top-0 z-10">
           <tr className="bg-sc-raised">
-            <th className="w-8 border-b border-sc-border bg-sc-raised px-2 py-2 align-top" aria-label="Select" />
             {STUDIO_COLUMNS.map((column) => (
               <th
                 key={column.key}
@@ -100,22 +97,8 @@ export function StudioConnectorTable({ rows, loading, error, selected, onSelect,
               <tr
                 key={index}
                 onClick={() => onRowClick(row)}
-                className={cn(
-                  "cursor-pointer border-b border-sc-border-soft hover:bg-sc-active",
-                  selected === row ? "bg-sc-primary/15" : "odd:bg-sc-surface/40",
-                )}
+                className="cursor-pointer border-b border-sc-border-soft odd:bg-sc-surface/40 hover:bg-sc-active"
               >
-                <td className="px-2 py-1.5 text-center align-middle">
-                  <input
-                    type="radio"
-                    name="studio-template-row"
-                    checked={selected === row}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={() => onSelect(row)}
-                    aria-label={`Select ${String(row.name ?? "connector")}`}
-                    className="accent-sc-primary"
-                  />
-                </td>
                 {STUDIO_COLUMNS.map((column) => {
                   const text = displayCell(column.key, row[column.key]);
                   const tone = cellTone(column.key, row[column.key], row);

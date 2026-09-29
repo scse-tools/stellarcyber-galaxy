@@ -18,6 +18,8 @@ interface TemplateFieldPickerProps {
   onToggle: (key: string, hint?: string) => void;
   onAddField: (name: string) => void;
   onRemoveField: (sub: string) => void;
+  /** Whether custom configuration fields can be added (false in catalog mode). */
+  allowAddField?: boolean;
   open: boolean;
   onToggleOpen: () => void;
 }
@@ -31,6 +33,7 @@ export function TemplateFieldPicker({
   onToggle,
   onAddField,
   onRemoveField,
+  allowAddField = true,
   open,
   onToggleOpen,
 }: TemplateFieldPickerProps) {
@@ -81,23 +84,25 @@ export function TemplateFieldPicker({
                 indent
               />
             ))}
-            <div className="flex items-center gap-2 py-1.5 pl-8 pr-3">
-              <input
-                value={newField}
-                onChange={(event) => setNewField(event.target.value)}
-                onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addNow())}
-                placeholder="Add a configuration field (e.g. api_key)"
-                className="min-w-0 flex-1 rounded border border-sc-border-soft bg-sc-surface px-2 py-1 text-[11px] text-sc-text placeholder:text-sc-faint focus:border-sc-link focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={addNow}
-                disabled={!newField.trim()}
-                className="inline-flex items-center gap-1 rounded border border-sc-border bg-sc-raised px-2 py-1 text-[11px] font-medium text-sc-text hover:border-sc-link disabled:opacity-50"
-              >
-                <Plus size={12} /> Add
-              </button>
-            </div>
+            {allowAddField ? (
+              <div className="flex items-center gap-2 py-1.5 pl-8 pr-3">
+                <input
+                  value={newField}
+                  onChange={(event) => setNewField(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && (event.preventDefault(), addNow())}
+                  placeholder="Add a configuration field (e.g. api_key)"
+                  className="min-w-0 flex-1 rounded border border-sc-border-soft bg-sc-surface px-2 py-1 text-[11px] text-sc-text placeholder:text-sc-faint focus:border-sc-link focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={addNow}
+                  disabled={!newField.trim()}
+                  className="inline-flex items-center gap-1 rounded border border-sc-border bg-sc-raised px-2 py-1 text-[11px] font-medium text-sc-text hover:border-sc-link disabled:opacity-50"
+                >
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+            ) : null}
           </>
         ) : null}
       </div>

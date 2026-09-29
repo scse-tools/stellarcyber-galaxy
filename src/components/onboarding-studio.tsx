@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FilePlus2 } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { StudioModeTabs, type StudioMode } from "@/components/studio-mode-tabs";
-import { Button } from "@/components/ui/button";
 import { ConnectorDetailModal } from "@/components/connector-detail-modal";
 import { TemplateModal } from "@/components/template-modal";
 import { StudioTemplatesTable } from "@/components/studio-templates-table";
@@ -26,8 +24,6 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRow, setSelectedRow] = useState<Row | null>(null);
-  const [templating, setTemplating] = useState(false);
   const [editing, setEditing] = useState<ConnectorTemplate | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
   const [templates, setTemplates] = useState<ConnectorTemplate[]>([]);
@@ -46,8 +42,6 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         .map((instance) => ({ value: instance.id, label: instance.name })),
     [instances],
   );
-  const selectedInstance = instances.find((instance) => instance.id === selectedId);
-
   useEffect(() => {
     fetch("/api/connector-templates")
       .then((response) => response.json())
@@ -56,7 +50,6 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
   }, []);
 
   useEffect(() => {
-    setSelectedRow(null);
     if (!selectedId) {
       setRows([]);
       setError(null);
@@ -125,6 +118,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
       {isAdmin ? <OnboardingImport templates={templates} /> : null}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-sc-border-soft pt-4">
+        <span className="text-[11px] uppercase tracking-wide text-sc-faint">Existing connectors</span>
         <SearchableSelect
           value={selectedId}
           onChange={setSelectedId}
@@ -133,40 +127,15 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
           className="w-64 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
           options={[{ value: "", label: "Select a server…" }, ...options]}
         />
-        {isAdmin ? (
-          <Button variant="primary" onClick={() => setTemplating(true)} disabled={!selectedRow}>
-            <FilePlus2 size={15} /> Select as Template
-          </Button>
-        ) : null}
       </div>
 
       {!selectedId ? (
         <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-12 text-center text-sm text-sc-faint">
-          Choose a server to list its connectors, then pick one to save as a clone template.
+          Choose a server to browse its connectors for reference (click a row for details).
         </p>
       ) : (
-        <StudioConnectorTable
-          rows={rows}
-          loading={loading}
-          error={error}
-          selected={selectedRow}
-          onSelect={setSelectedRow}
-          onRowClick={setDetail}
-        />
+        <StudioConnectorTable rows={rows} loading={loading} error={error} onRowClick={setDetail} />
       )}
-
-      {templating && selectedRow ? (
-        <TemplateModal
-          connector={selectedRow}
-          instanceId={selectedId}
-          instanceName={selectedInstance?.name ?? ""}
-          onClose={() => setTemplating(false)}
-          onSaved={(template) => {
-            upsertTemplate(template);
-            setSelectedRow(null);
-          }}
-        />
-      ) : null}
 
       {editing ? (
         <TemplateModal

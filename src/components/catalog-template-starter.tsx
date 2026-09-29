@@ -132,6 +132,7 @@ export function CatalogTemplateStarter({ instances, onSaved }: CatalogTemplateSt
           connector={connector}
           instanceId={serverId}
           instanceName={serverName}
+          catalog
           onClose={reset}
           onSaved={(template) => {
             onSaved(template);

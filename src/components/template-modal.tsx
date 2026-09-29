@@ -18,6 +18,8 @@ interface TemplateModalProps {
   instanceName: string;
   /** When set, the modal edits this existing template instead of creating a new one. */
   existing?: ConnectorTemplate | null;
+  /** Catalog mode: every field starts selected and custom fields can't be added. */
+  catalog?: boolean;
   onClose: () => void;
   onSaved: (template: ConnectorTemplate) => void;
 }
@@ -26,7 +28,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 /** Names a template and marks which fields are mutable — the top-level three plus config subfields. */
-export function TemplateModal({ connector, instanceId, instanceName, existing, onClose, onSaved }: TemplateModalProps) {
+export function TemplateModal({ connector, instanceId, instanceName, existing, catalog, onClose, onSaved }: TemplateModalProps) {
   const editing = Boolean(existing);
 
   const configEntries = useMemo<[string, unknown][]>(() => {
@@ -46,10 +48,17 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
   }, [connector]);
 
   const [name, setName] = useState(existing?.name ?? "");
-  // In edit mode start from the saved selection exactly; in create mode fall back to the heuristic.
-  const [mutable, setMutable] = useState<Record<string, boolean>>(() =>
-    existing ? Object.fromEntries(existing.mutableFields.map((key) => [key, true])) : {},
-  );
+  // Edit: start from the saved selection. Catalog: select every field. Otherwise use the heuristic.
+  const [mutable, setMutable] = useState<Record<string, boolean>>(() => {
+    if (existing) return Object.fromEntries(existing.mutableFields.map((key) => [key, true]));
+    if (catalog) {
+      const all: Record<string, boolean> = {};
+      for (const key of SELECTABLE_TOP) all[key] = true;
+      for (const [sub] of configEntries) all[`${CONFIG_PREFIX}${sub}`] = true;
+      return all;
+    }
+    return {};
+  });
   // Custom config fields (not on the source connector) — seeded from an edited template's extras.
   const [added, setAdded] = useState<string[]>(() => {
     if (!existing) return [];
@@ -145,7 +154,11 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
       </label>
 
       <div className="mt-4 flex items-center justify-between">
-        <p className="text-[11px] text-sc-faint">Tick each field a clone should change; add missing config fields (api_key, secrets, …).</p>
+        <p className="text-[11px] text-sc-faint">
+          {catalog
+            ? "All fields are selected; untick any a clone should not change per tenant."
+            : "Tick each field a clone should change; add missing config fields (api_key, secrets, …)."}
+        </p>
         <span className="text-[11px] text-sc-muted">{selected.length} mutable</span>
       </div>
 
@@ -157,6 +170,7 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, o
         onToggle={toggle}
         onAddField={addField}
         onRemoveField={removeField}
+        allowAddField={!catalog}
         open={configOpen}
         onToggleOpen={() => setConfigOpen((open) => !open)}
       />
