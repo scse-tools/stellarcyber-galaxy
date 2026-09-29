@@ -3,12 +3,8 @@
 import { useRef } from "react";
 import { Pause, Play, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface OnboardingImportToolbarProps {
-  serverId: string;
-  serverOptions: { value: string; label: string }[];
-  onServerChange: (value: string) => void;
   onFile: (file: File) => void;
   hasData: boolean;
   running: boolean;
@@ -20,9 +16,6 @@ interface OnboardingImportToolbarProps {
 }
 
 export function OnboardingImportToolbar({
-  serverId,
-  serverOptions,
-  onServerChange,
   onFile,
   hasData,
   running,
@@ -36,14 +29,6 @@ export function OnboardingImportToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <SearchableSelect
-        value={serverId}
-        onChange={onServerChange}
-        ariaLabel="Target server"
-        title="The server the connectors are created on"
-        className="w-56 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
-        options={[{ value: "", label: "Select a server…" }, ...serverOptions]}
-      />
       <input
         ref={inputRef}
         type="file"

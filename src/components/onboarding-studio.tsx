@@ -124,8 +124,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
       ) : (
       <>
       {isAdmin ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] uppercase tracking-wide text-sc-faint">Templates</span>
+        <div className="flex flex-wrap items-center gap-2">
           <CatalogTemplateStarter onSaved={upsertTemplate} />
         </div>
       ) : null}

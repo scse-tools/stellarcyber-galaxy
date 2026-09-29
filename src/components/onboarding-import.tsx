@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { OnboardingImportTable } from "@/components/onboarding-import-table";
 import { OnboardingImportToolbar } from "@/components/onboarding-import-toolbar";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useBatchRunner } from "@/lib/use-batch-runner";
 import type { InstanceSummary } from "@/lib/types";
 
@@ -37,8 +38,16 @@ export function OnboardingImport({ instances }: { instances: InstanceSummary[] }
   return (
     <section className="space-y-2 border-t border-sc-border-soft pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-semibold text-sc-text">Onboarding batch</h3>
+          <SearchableSelect
+            value={serverId}
+            onChange={setServerId}
+            ariaLabel="Target server"
+            title="The server the connectors are created on"
+            className="w-56 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
+            options={[{ value: "", label: "Select a server…" }, ...serverOptions]}
+          />
           {batch.data ? (
             <span className="text-xs text-sc-faint">
               {batch.fileName} · {batch.data.rows.length} rows · {batch.counts.success} ok · {batch.counts.failure} failed
@@ -46,9 +55,6 @@ export function OnboardingImport({ instances }: { instances: InstanceSummary[] }
           ) : null}
         </div>
         <OnboardingImportToolbar
-          serverId={serverId}
-          serverOptions={serverOptions}
-          onServerChange={setServerId}
           onFile={(file) => void batch.onFile(file)}
           hasData={Boolean(batch.data)}
           running={batch.running}
