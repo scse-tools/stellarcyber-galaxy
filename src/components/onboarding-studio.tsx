@@ -10,6 +10,7 @@ import { TemplateModal } from "@/components/template-modal";
 import { StudioTemplatesTable } from "@/components/studio-templates-table";
 import { StudioConnectorTable } from "@/components/studio-connector-table";
 import { OnboardingImport } from "@/components/onboarding-import";
+import { CatalogTemplateStarter } from "@/components/catalog-template-starter";
 import { TenantsStudio } from "@/components/tenants-studio";
 import { compareByColumn } from "@/lib/inventory-columns";
 import type { Row } from "@/lib/table-export";
@@ -107,6 +108,13 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         <TenantsStudio instances={instances} isAdmin={isAdmin} />
       ) : (
       <>
+      {isAdmin ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] uppercase tracking-wide text-sc-faint">Templates</span>
+          <CatalogTemplateStarter instances={instances} onSaved={upsertTemplate} />
+        </div>
+      ) : null}
+
       <StudioTemplatesTable
         templates={templates}
         canManage={isAdmin}
