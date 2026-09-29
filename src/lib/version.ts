@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.1.3";
+export const APP_VERSION = "3.1.4";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,15 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.1.4",
+    date: "2026-09-29",
+    notes: [
+      "type and category are now immutable keys (shown in the template dialog, always included as CSV columns) used to identify the connector to build.",
+      "Creating a template from the catalog no longer asks for a server — templates are server-agnostic.",
+      "The onboarding batch no longer picks a template; each row's type/category identify the connector via the catalog, so you only choose the target server to install to.",
+    ],
+  },
   {
     version: "3.1.3",
     date: "2026-09-29",

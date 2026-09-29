@@ -104,7 +104,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
       {isAdmin ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[11px] uppercase tracking-wide text-sc-faint">Templates</span>
-          <CatalogTemplateStarter instances={instances} onSaved={upsertTemplate} />
+          <CatalogTemplateStarter onSaved={upsertTemplate} />
         </div>
       ) : null}
 
@@ -115,7 +115,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         onDelete={deleteTemplate}
       />
 
-      {isAdmin ? <OnboardingImport templates={templates} /> : null}
+      {isAdmin ? <OnboardingImport instances={instances} /> : null}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-sc-border-soft pt-4">
         <span className="text-[11px] uppercase tracking-wide text-sc-faint">Existing connectors</span>

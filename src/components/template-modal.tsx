@@ -155,7 +155,9 @@ export function TemplateModal({ connector, instanceId, instanceName, existing, c
       </label>
 
       <p className="mt-3 text-[11px] text-sc-faint">
-        The tenant is set per clone by the required <span className="font-mono">tenant_name</span> column (resolved to cust_id).
+        Keys (immutable): <span className="font-mono text-sc-muted">type={String(connector.type ?? "")}</span>{" "}
+        <span className="font-mono text-sc-muted">category={String(connector.category ?? "")}</span>. The tenant is set
+        per clone by the required <span className="font-mono">tenant_name</span> column (→ cust_id).
       </p>
       <div className="mt-2 flex items-center justify-between">
         <p className="text-[11px] text-sc-faint">

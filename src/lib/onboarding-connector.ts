@@ -1,5 +1,3 @@
-import type { ConnectorTemplate } from "@/lib/connector-templates";
-
 const CONFIG_PREFIX = "configuration.";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -55,20 +53,19 @@ function parseFilterList(value: unknown): unknown[] {
 }
 
 /**
- * Builds the POST /connect/api/v1/connectors body for one onboarding row: fixed fields come from
- * the template's source connector; the row's mutable values (name, run_on, filter_list and
- * configuration.* → conf) override them, and `custId` (resolved from tenant_name) becomes cust_id.
+ * Builds the POST /connect/api/v1/connectors body for one onboarding row. `base` is the connector's
+ * default fields (from the catalog definition); the row's values override them (`type`/`category`
+ * are the immutable keys), config defaults are kept when `includeAllConfig`, and `custId` (resolved
+ * from tenant_name) becomes cust_id.
  */
 export function buildConnectorPayload(
-  template: ConnectorTemplate,
+  base: Record<string, unknown>,
+  includeAllConfig: boolean,
   values: Record<string, string>,
   custId: string,
 ): Record<string, unknown> {
-  const base = template.fields;
-  // Catalog templates keep every config default (includeAllConfig); legacy templates carry only the
-  // mutable config fields, so untemplated fields (e.g. log_type) aren't sent to the API.
   const baseConf = parseConf(base.configuration);
-  const conf: Record<string, unknown> = template.includeAllConfig ? { ...baseConf } : {};
+  const conf: Record<string, unknown> = includeAllConfig ? { ...baseConf } : {};
   for (const [key, value] of Object.entries(values)) {
     if (key.startsWith(CONFIG_PREFIX)) {
       const sub = key.slice(CONFIG_PREFIX.length);
@@ -82,6 +79,7 @@ export function buildConnectorPayload(
   return {
     cust_id: custId,
     name: pick("name", base.name ?? ""),
+    // type/category are the immutable keys that identify the connector.
     type: pick("type", base.type ?? ""),
     category: pick("category", base.category ?? ""),
     is_collect: bool(values.is_collect, base.is_collect === true),

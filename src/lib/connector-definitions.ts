@@ -72,3 +72,20 @@ export function getConnectorDefinition(category: string, type: string): Connecto
     fields,
   };
 }
+
+/** The default connector fields for a definition — the base for building a create payload. */
+export function baseFieldsFromDefinition(def: ConnectorDefinition): Record<string, unknown> {
+  const conf: Record<string, unknown> = {};
+  for (const field of def.fields) conf[field.fieldName] = field.default;
+  return {
+    type: def.type,
+    category: def.category,
+    name: "",
+    is_collect: def.isCollect,
+    is_respond: def.isRespond,
+    run_on: "dp",
+    filter_list: [],
+    advanced_setting: false,
+    configuration: JSON.stringify(conf),
+  };
+}

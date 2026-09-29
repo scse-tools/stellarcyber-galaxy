@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface OnboardingImportToolbarProps {
-  templateId: string;
-  templateOptions: { value: string; label: string }[];
-  onTemplateChange: (value: string) => void;
+  serverId: string;
+  serverOptions: { value: string; label: string }[];
+  onServerChange: (value: string) => void;
   onFile: (file: File) => void;
   hasData: boolean;
   running: boolean;
@@ -20,9 +20,9 @@ interface OnboardingImportToolbarProps {
 }
 
 export function OnboardingImportToolbar({
-  templateId,
-  templateOptions,
-  onTemplateChange,
+  serverId,
+  serverOptions,
+  onServerChange,
   onFile,
   hasData,
   running,
@@ -37,12 +37,12 @@ export function OnboardingImportToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <SearchableSelect
-        value={templateId}
-        onChange={onTemplateChange}
-        ariaLabel="Template"
-        title="The template this CSV was generated from"
+        value={serverId}
+        onChange={onServerChange}
+        ariaLabel="Target server"
+        title="The server the connectors are created on"
         className="w-56 rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
-        options={[{ value: "", label: "Select template…" }, ...templateOptions]}
+        options={[{ value: "", label: "Select a server…" }, ...serverOptions]}
       />
       <input
         ref={inputRef}

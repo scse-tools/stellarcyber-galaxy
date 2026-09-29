@@ -1,34 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { OnboardingImportTable } from "@/components/onboarding-import-table";
 import { OnboardingImportToolbar } from "@/components/onboarding-import-toolbar";
 import { useBatchRunner } from "@/lib/use-batch-runner";
-import type { ConnectorTemplate } from "@/lib/connector-templates";
+import type { InstanceSummary } from "@/lib/types";
 
 const BATCH_KEY = "galaxy.onboardingBatch";
-const TEMPLATE_KEY = "galaxy.onboardingTemplateId";
 
-/** Uploads a filled onboarding CSV and creates connectors row-by-row from a template. */
-export function OnboardingImport({ templates }: { templates: ConnectorTemplate[] }) {
-  const [templateId, setTemplateId] = useState(() => {
-    try {
-      return window.localStorage.getItem(TEMPLATE_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  });
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(TEMPLATE_KEY, templateId);
-    } catch {
-      /* ignore */
-    }
-  }, [templateId]);
+/**
+ * Uploads a filled clone CSV and creates connectors row-by-row on the selected server. Each row
+ * carries its own type/category, so no template is chosen here — just the target server.
+ */
+export function OnboardingImport({ instances }: { instances: InstanceSummary[] }) {
+  const [serverId, setServerId] = useState("");
 
   const batch = useBatchRunner(BATCH_KEY, async (values) => {
-    if (!templateId) return { ok: false, error: "Select a template first." };
-    const response = await fetch(`/api/connector-templates/${templateId}/create`, {
+    if (!serverId) return { ok: false, error: "Select a server first." };
+    const response = await fetch(`/api/instances/${serverId}/connectors`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ values }),
@@ -37,9 +26,12 @@ export function OnboardingImport({ templates }: { templates: ConnectorTemplate[]
     return { ok: response.ok && body.ok, error: body.error ?? (response.ok ? undefined : `HTTP ${response.status}`) };
   });
 
-  const templateOptions = useMemo(
-    () => templates.map((t) => ({ value: t.id, label: `${t.name} · ${t.instanceName}` })),
-    [templates],
+  const serverOptions = useMemo(
+    () =>
+      [...instances]
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+        .map((instance) => ({ value: instance.id, label: instance.name })),
+    [instances],
   );
 
   return (
@@ -54,14 +46,14 @@ export function OnboardingImport({ templates }: { templates: ConnectorTemplate[]
           ) : null}
         </div>
         <OnboardingImportToolbar
-          templateId={templateId}
-          templateOptions={templateOptions}
-          onTemplateChange={setTemplateId}
+          serverId={serverId}
+          serverOptions={serverOptions}
+          onServerChange={setServerId}
           onFile={(file) => void batch.onFile(file)}
           hasData={Boolean(batch.data)}
           running={batch.running}
           paused={batch.paused}
-          createDisabled={!templateId || batch.counts.pending === 0}
+          createDisabled={!serverId || batch.counts.pending === 0}
           onCreateAll={() => void batch.runAll()}
           onPause={batch.pause}
           onDeleteBatch={batch.deleteBatch}
@@ -69,13 +61,13 @@ export function OnboardingImport({ templates }: { templates: ConnectorTemplate[]
       </div>
 
       {batch.error ? <p className="text-xs text-critical">{batch.error}</p> : null}
-      {batch.data && !templateId ? (
-        <p className="text-[11px] text-high">Select the template this CSV was generated from to enable creation.</p>
+      {batch.data && !serverId ? (
+        <p className="text-[11px] text-high">Select the target server to enable creation.</p>
       ) : null}
 
       {!batch.data ? (
         <p className="rounded-lg border border-dashed border-sc-border bg-sc-surface/50 px-4 py-8 text-center text-sm text-sc-faint">
-          Upload a filled clone CSV to preview and create the connectors.
+          Download a template CSV above, fill it, then upload it here and pick the target server.
         </p>
       ) : (
         <OnboardingImportTable

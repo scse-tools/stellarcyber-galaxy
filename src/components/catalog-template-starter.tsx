@@ -9,10 +9,8 @@ import { TemplateModal } from "@/components/template-modal";
 import type { ConnectorTemplate } from "@/lib/connector-templates";
 import type { DefinitionSummary, ConnectorDefinition } from "@/lib/connector-definitions";
 import type { Row } from "@/lib/table-export";
-import type { InstanceSummary } from "@/lib/types";
 
 interface CatalogTemplateStarterProps {
-  instances: InstanceSummary[];
   onSaved: (template: ConnectorTemplate) => void;
 }
 
@@ -34,11 +32,10 @@ function connectorFromDefinition(def: ConnectorDefinition): Row {
 }
 
 /** "New template from catalog": pick a connector type + server, then define the template. */
-export function CatalogTemplateStarter({ instances, onSaved }: CatalogTemplateStarterProps) {
+export function CatalogTemplateStarter({ onSaved }: CatalogTemplateStarterProps) {
   const [defs, setDefs] = useState<DefinitionSummary[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [defKey, setDefKey] = useState("");
-  const [serverId, setServerId] = useState("");
   const [connector, setConnector] = useState<Row | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,25 +51,16 @@ export function CatalogTemplateStarter({ instances, onSaved }: CatalogTemplateSt
     () => defs.map((d) => ({ value: `${d.category}/${d.type}`, label: `${d.displayName} · ${d.category}` })),
     [defs],
   );
-  const serverOptions = useMemo(
-    () =>
-      [...instances]
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-        .map((instance) => ({ value: instance.id, label: instance.name })),
-    [instances],
-  );
-  const serverName = instances.find((i) => i.id === serverId)?.name ?? "";
 
   const reset = () => {
     setConnector(null);
     setDefKey("");
-    setServerId("");
     setError(null);
   };
 
   const proceed = async () => {
     const [category, type] = defKey.split("/");
-    if (!category || !type || !serverId) return;
+    if (!category || !type) return;
     setLoading(true);
     setError(null);
     try {
@@ -95,7 +83,7 @@ export function CatalogTemplateStarter({ instances, onSaved }: CatalogTemplateSt
       </Button>
 
       {pickerOpen ? (
-        <Modal open title="New template from catalog" description="Pick a connector type and the target server." onClose={() => { setPickerOpen(false); reset(); }} className="max-w-[min(94vw,560px)]">
+        <Modal open title="New template from catalog" description="Pick a connector type to template." onClose={() => { setPickerOpen(false); reset(); }} className="max-w-[min(94vw,560px)]">
           <label className="block">
             <span className="text-[11px] font-medium uppercase tracking-wide text-sc-faint">Connector type</span>
             <SearchableSelect
@@ -106,20 +94,10 @@ export function CatalogTemplateStarter({ instances, onSaved }: CatalogTemplateSt
               options={[{ value: "", label: "Select a connector type…" }, ...typeOptions]}
             />
           </label>
-          <label className="mt-3 block">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-sc-faint">Target server</span>
-            <SearchableSelect
-              value={serverId}
-              onChange={setServerId}
-              ariaLabel="Target server"
-              className="mt-1 w-full rounded-md border border-sc-border bg-sc-surface px-2 py-1.5 text-sm text-sc-text hover:bg-sc-active"
-              options={[{ value: "", label: "Select a server…" }, ...serverOptions]}
-            />
-          </label>
           {error ? <p className="mt-3 text-xs text-critical">{error}</p> : null}
           <div className="mt-4 flex justify-end gap-2">
             <Button onClick={() => { setPickerOpen(false); reset(); }}>Cancel</Button>
-            <Button variant="primary" onClick={() => void proceed()} disabled={loading || !defKey || !serverId}>
+            <Button variant="primary" onClick={() => void proceed()} disabled={loading || !defKey}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : null}
               Continue
             </Button>
@@ -130,8 +108,8 @@ export function CatalogTemplateStarter({ instances, onSaved }: CatalogTemplateSt
       {connector ? (
         <TemplateModal
           connector={connector}
-          instanceId={serverId}
-          instanceName={serverName}
+          instanceId=""
+          instanceName=""
           catalog
           onClose={reset}
           onSaved={(template) => {

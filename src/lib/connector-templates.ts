@@ -67,9 +67,12 @@ function asText(value: unknown): string {
   return String(value);
 }
 
-/** Columns for a template's clone CSV: the required tenant name plus each mutable field. */
+/**
+ * Columns for a template's clone CSV: the required tenant name, the immutable type/category keys
+ * (used at create time to identify the connector), then each mutable field.
+ */
 export function templateColumns(template: ConnectorTemplate): string[] {
-  return ["tenant_name", ...template.mutableFields];
+  return [...new Set(["tenant_name", "type", "category", ...template.mutableFields])];
 }
 
 function csvField(text: string): string {

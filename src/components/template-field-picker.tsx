@@ -9,16 +9,7 @@ import { cellText, type Row } from "@/lib/table-export";
  * Top-level connector fields that may be marked mutable. (The tenant is set per clone by the
  * required tenant_name column, which resolves to cust_id — so it isn't listed here.)
  */
-export const SELECTABLE_TOP = [
-  "name",
-  "type",
-  "category",
-  "is_collect",
-  "is_respond",
-  "run_on",
-  "filter_list",
-  "advanced_setting",
-];
+export const SELECTABLE_TOP = ["name", "is_collect", "is_respond", "run_on", "filter_list", "advanced_setting"];
 
 interface TemplateFieldPickerProps {
   connector: Row;
