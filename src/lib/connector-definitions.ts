@@ -9,6 +9,10 @@ interface RawField {
   required?: boolean;
   default?: unknown;
   default_value?: unknown;
+  tooltip?: string;
+  desc?: string;
+  list?: { label?: unknown; value?: unknown }[];
+  "available value"?: unknown[];
 }
 interface RawDef {
   type?: string;
@@ -32,6 +36,9 @@ export interface DefinitionField {
   type: string;
   required: boolean;
   default: unknown;
+  description?: string;
+  /** Choices for select/radio/combobox fields. */
+  options?: { label: string; value: string }[];
 }
 export interface ConnectorDefinition extends DefinitionSummary {
   isCollect: boolean;
@@ -56,13 +63,25 @@ export function getConnectorDefinition(category: string, type: string): Connecto
   if (!def) return null;
   const fields: DefinitionField[] = (def.collect_fields ?? [])
     .filter((field): field is RawField & { field_name: string } => typeof field.field_name === "string")
-    .map((field) => ({
-      fieldName: field.field_name,
-      displayName: field.display_name ?? field.field_name,
-      type: field.type ?? "text",
-      required: field.required === true,
-      default: field.default ?? field.default_value ?? (field.type === "boolean" ? false : ""),
-    }));
+    .map((field) => {
+      const type = field.type ?? "text";
+      const description = field.tooltip || field.desc || undefined;
+      let options: { label: string; value: string }[] | undefined;
+      if (type === "radio" && Array.isArray(field.list)) {
+        options = field.list.map((o) => ({ label: String(o.label ?? o.value), value: String(o.value ?? o.label) }));
+      } else if ((type === "select" || type === "combobox") && Array.isArray(field["available value"])) {
+        options = field["available value"].map((v) => ({ label: String(v), value: String(v) }));
+      }
+      return {
+        fieldName: field.field_name,
+        displayName: field.display_name ?? field.field_name,
+        type,
+        required: field.required === true,
+        default: field.default ?? field.default_value ?? (type === "boolean" ? false : ""),
+        description,
+        options,
+      };
+    });
   return {
     category,
     type,

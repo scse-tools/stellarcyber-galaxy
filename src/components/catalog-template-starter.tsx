@@ -5,38 +5,20 @@ import { BookPlus, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { TemplateModal } from "@/components/template-modal";
+import { CatalogTemplateForm } from "@/components/catalog-template-form";
 import type { ConnectorTemplate } from "@/lib/connector-templates";
 import type { DefinitionSummary, ConnectorDefinition } from "@/lib/connector-definitions";
-import type { Row } from "@/lib/table-export";
 
 interface CatalogTemplateStarterProps {
   onSaved: (template: ConnectorTemplate) => void;
 }
 
-/** Builds a synthetic connector Row from a catalog definition, for the template modal. */
-function connectorFromDefinition(def: ConnectorDefinition): Row {
-  const conf: Record<string, unknown> = {};
-  for (const field of def.fields) conf[field.fieldName] = field.default;
-  return {
-    type: def.type,
-    category: def.category,
-    name: "",
-    is_collect: def.isCollect,
-    is_respond: def.isRespond,
-    run_on: "dp",
-    filter_list: [],
-    advanced_setting: false,
-    configuration: JSON.stringify(conf),
-  };
-}
-
-/** "New template from catalog": pick a connector type + server, then define the template. */
+/** "New template from catalog": pick a connector type, then fill in the template form. */
 export function CatalogTemplateStarter({ onSaved }: CatalogTemplateStarterProps) {
   const [defs, setDefs] = useState<DefinitionSummary[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [defKey, setDefKey] = useState("");
-  const [connector, setConnector] = useState<Row | null>(null);
+  const [definition, setDefinition] = useState<ConnectorDefinition | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +35,7 @@ export function CatalogTemplateStarter({ onSaved }: CatalogTemplateStarterProps)
   );
 
   const reset = () => {
-    setConnector(null);
+    setDefinition(null);
     setDefKey("");
     setError(null);
   };
@@ -67,7 +49,7 @@ export function CatalogTemplateStarter({ onSaved }: CatalogTemplateStarterProps)
       const response = await fetch(`/api/connector-definitions/${encodeURIComponent(category)}/${encodeURIComponent(type)}`);
       const body = await response.json();
       if (!response.ok || !body.definition) throw new Error(body.error ?? "Could not load the definition.");
-      setConnector(connectorFromDefinition(body.definition as ConnectorDefinition));
+      setDefinition(body.definition as ConnectorDefinition);
       setPickerOpen(false);
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : "Load failed.");
@@ -105,12 +87,9 @@ export function CatalogTemplateStarter({ onSaved }: CatalogTemplateStarterProps)
         </Modal>
       ) : null}
 
-      {connector ? (
-        <TemplateModal
-          connector={connector}
-          instanceId=""
-          instanceName=""
-          catalog
+      {definition ? (
+        <CatalogTemplateForm
+          definition={definition}
           onClose={reset}
           onSaved={(template) => {
             onSaved(template);
