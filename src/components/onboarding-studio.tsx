@@ -9,10 +9,12 @@ import { StudioTemplatesTable } from "@/components/studio-templates-table";
 import { StudioConnectorTable } from "@/components/studio-connector-table";
 import { OnboardingImport } from "@/components/onboarding-import";
 import { CatalogTemplateStarter } from "@/components/catalog-template-starter";
+import { CatalogTemplateForm } from "@/components/catalog-template-form";
 import { TenantsStudio } from "@/components/tenants-studio";
 import { compareByColumn } from "@/lib/inventory-columns";
 import type { Row } from "@/lib/table-export";
 import type { ConnectorTemplate } from "@/lib/connector-templates";
+import type { ConnectorDefinition } from "@/lib/connector-definitions";
 import type { InstanceSummary } from "@/lib/types";
 
 /** Connectors are listed by type, then tenant, then name. */
@@ -25,8 +27,28 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ConnectorTemplate | null>(null);
+  const [editDef, setEditDef] = useState<ConnectorDefinition | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
   const [templates, setTemplates] = useState<ConnectorTemplate[]>([]);
+
+  const startEdit = async (template: ConnectorTemplate) => {
+    setEditDef(null);
+    setEditing(template);
+    const category = String((template.fields as Record<string, unknown>)?.category ?? "");
+    try {
+      const response = await fetch(
+        `/api/connector-definitions/${encodeURIComponent(category)}/${encodeURIComponent(template.connectorType)}`,
+      );
+      const body = await response.json();
+      if (response.ok && body.definition) setEditDef(body.definition as ConnectorDefinition);
+    } catch {
+      /* fall back to the legacy edit modal */
+    }
+  };
+  const closeEdit = () => {
+    setEditing(null);
+    setEditDef(null);
+  };
 
   const upsertTemplate = (template: ConnectorTemplate) =>
     setTemplates((prev) =>
@@ -111,7 +133,7 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
       <StudioTemplatesTable
         templates={templates}
         canManage={isAdmin}
-        onEdit={setEditing}
+        onEdit={(template) => void startEdit(template)}
         onDelete={deleteTemplate}
       />
 
@@ -137,13 +159,23 @@ export function OnboardingStudio({ instances, isAdmin }: { instances: InstanceSu
         <StudioConnectorTable rows={rows} loading={loading} error={error} onRowClick={setDetail} />
       )}
 
-      {editing ? (
+      {editing && editDef ? (
+        <CatalogTemplateForm
+          definition={editDef}
+          existing={editing}
+          onClose={closeEdit}
+          onSaved={(template) => {
+            upsertTemplate(template);
+            closeEdit();
+          }}
+        />
+      ) : editing ? (
         <TemplateModal
           connector={editing.fields}
           instanceId={editing.instanceId}
           instanceName={editing.instanceName}
           existing={editing}
-          onClose={() => setEditing(null)}
+          onClose={closeEdit}
           onSaved={upsertTemplate}
         />
       ) : null}

@@ -14,7 +14,7 @@ export async function PATCH(request: Request, { params }: Context) {
     if (isGuardFailure(guard)) return guard;
     const { id } = await params;
     const body = (await request.json().catch(() => null)) as
-      | { name?: unknown; mutableFields?: unknown }
+      | { name?: unknown; mutableFields?: unknown; fields?: unknown }
       | null;
     const name = typeof body?.name === "string" ? body.name.trim() : "";
     if (!name) return NextResponse.json({ error: "A template name is required." }, { status: 400 });
@@ -24,7 +24,9 @@ export async function PATCH(request: Request, { params }: Context) {
     if (mutableFields.length === 0) {
       return NextResponse.json({ error: "Select at least one mutable field." }, { status: 400 });
     }
-    const template = updateTemplate(id, { name, mutableFields });
+    const fields =
+      body?.fields && typeof body.fields === "object" ? (body.fields as Record<string, unknown>) : undefined;
+    const template = updateTemplate(id, { name, mutableFields, fields });
     if (!template) return NextResponse.json({ error: "Template not found." }, { status: 404 });
     return NextResponse.json({ template });
   } catch (error) {

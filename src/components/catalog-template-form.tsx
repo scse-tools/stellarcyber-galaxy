@@ -42,23 +42,47 @@ function toTyped(field: DefinitionField, value: FieldValue): unknown {
   return String(value ?? "");
 }
 
-/** Full form to create a connector template from a catalog definition (defaults + descriptions). */
+/** Converts a stored field value back into an editable form value. */
+function toFieldValue(field: DefinitionField, raw: unknown): FieldValue {
+  if (field.type === "boolean") return raw === true;
+  if (raw !== null && typeof raw === "object") return JSON.stringify(raw);
+  return raw === undefined || raw === null ? "" : String(raw);
+}
+
+/** Full form to create/edit a connector template from a catalog definition (defaults + descriptions). */
 export function CatalogTemplateForm({
   definition,
+  existing,
   onClose,
   onSaved,
 }: {
   definition: ConnectorDefinition;
+  existing?: ConnectorTemplate | null;
   onClose: () => void;
   onSaved: (template: ConnectorTemplate) => void;
 }) {
+  const editing = Boolean(existing);
   const top = useMemo(() => TOP_FIELDS.map((f) => ({ ...f, default: f.fieldName === "is_collect" ? definition.isCollect : f.fieldName === "is_respond" ? definition.isRespond : f.default })), [definition]);
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(existing?.name ?? "");
   const [values, setValues] = useState<Record<string, FieldValue>>(() => {
+    const existingFields = (existing?.fields ?? {}) as Record<string, unknown>;
+    let existingConf: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(String(existingFields.configuration ?? "{}"));
+      if (parsed && typeof parsed === "object") existingConf = parsed;
+    } catch {
+      /* ignore */
+    }
     const init: Record<string, FieldValue> = {};
-    for (const field of top) init[field.fieldName] = initialValue(field);
-    for (const field of definition.fields) init[`${CONFIG_PREFIX}${field.fieldName}`] = initialValue(field);
+    for (const field of top) {
+      init[field.fieldName] =
+        field.fieldName in existingFields ? toFieldValue(field, existingFields[field.fieldName]) : initialValue(field);
+    }
+    for (const field of definition.fields) {
+      init[`${CONFIG_PREFIX}${field.fieldName}`] =
+        field.fieldName in existingConf ? toFieldValue(field, existingConf[field.fieldName]) : initialValue(field);
+    }
     return init;
   });
   const [saving, setSaving] = useState(false);
@@ -88,20 +112,27 @@ export function CatalogTemplateForm({
         ...top.map((f) => f.fieldName),
         ...definition.fields.map((f) => `${CONFIG_PREFIX}${f.fieldName}`),
       ];
-      const response = await fetch("/api/connector-templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          instanceId: "",
-          instanceName: "",
-          connectorType: definition.type,
-          connectorName: definition.displayName,
-          fields,
-          mutableFields,
-          includeAllConfig: true,
-        }),
-      });
+      const response = await fetch(
+        existing ? `/api/connector-templates/${existing.id}` : "/api/connector-templates",
+        {
+          method: existing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            existing
+              ? { name: name.trim(), mutableFields, fields }
+              : {
+                  name: name.trim(),
+                  instanceId: "",
+                  instanceName: "",
+                  connectorType: definition.type,
+                  connectorName: definition.displayName,
+                  fields,
+                  mutableFields,
+                  includeAllConfig: true,
+                },
+          ),
+        },
+      );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "Could not save template.");
       onSaved(body.template as ConnectorTemplate);
@@ -116,7 +147,7 @@ export function CatalogTemplateForm({
   return (
     <Modal
       open
-      title={`New template · ${definition.displayName}`}
+      title={`${editing ? "Edit template" : "New template"} · ${definition.displayName}`}
       description={`Keys: type=${definition.type} · category=${definition.category}. Tenant is set per clone by tenant_name (→ cust_id).`}
       onClose={onClose}
       className="max-w-[min(94vw,820px)]"
@@ -146,7 +177,7 @@ export function CatalogTemplateForm({
         <Button onClick={onClose}>Cancel</Button>
         <Button variant="primary" onClick={save} disabled={saving || !name.trim()}>
           {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-          Save template
+          {editing ? "Save changes" : "Save template"}
         </Button>
       </div>
     </Modal>

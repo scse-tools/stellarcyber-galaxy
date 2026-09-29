@@ -69,14 +69,18 @@ export function getTemplate(id: string): ConnectorTemplate | null {
   return row ? toTemplate(row) : null;
 }
 
-/** Updates an existing template's name and mutable-field selection; returns it, or null if absent. */
+/** Updates a template's name, mutable-field selection, and (optionally) default field values. */
 export function updateTemplate(
   id: string,
-  patch: { name: string; mutableFields: string[] },
+  patch: { name: string; mutableFields: string[]; fields?: Record<string, unknown> },
 ): ConnectorTemplate | null {
-  const result = getDb()
-    .prepare("UPDATE connector_templates SET name = ?, mutable_json = ? WHERE id = ?")
-    .run(patch.name, JSON.stringify(patch.mutableFields), id);
+  const result = patch.fields
+    ? getDb()
+        .prepare("UPDATE connector_templates SET name = ?, mutable_json = ?, fields_json = ? WHERE id = ?")
+        .run(patch.name, JSON.stringify(patch.mutableFields), JSON.stringify(patch.fields), id)
+    : getDb()
+        .prepare("UPDATE connector_templates SET name = ?, mutable_json = ? WHERE id = ?")
+        .run(patch.name, JSON.stringify(patch.mutableFields), id);
   if (!result.changes) return null;
   return getTemplate(id);
 }
