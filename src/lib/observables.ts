@@ -1,7 +1,8 @@
 import type { CaseAlert } from "@/lib/types";
 
 export type ObservableKind =
-  | "ip"
+  | "ip_public"
+  | "ip_private"
   | "domain"
   | "hostname"
   | "username"
@@ -9,6 +10,9 @@ export type ObservableKind =
   | "url"
   | "filename"
   | "hash";
+
+/** Internal accumulation kind: IPs are pooled together, then split into public/private on output. */
+type AccumKind = Exclude<ObservableKind, "ip_public" | "ip_private"> | "ip";
 
 export interface Observable {
   value: string;
@@ -23,7 +27,8 @@ export interface ObservableGroup {
 }
 
 const GROUP_LABELS: Record<ObservableKind, string> = {
-  ip: "IP addresses",
+  ip_public: "Public IP addresses",
+  ip_private: "Private IP addresses",
   domain: "Domains",
   hostname: "Hostnames",
   username: "Usernames",
@@ -33,7 +38,21 @@ const GROUP_LABELS: Record<ObservableKind, string> = {
   hash: "File hashes",
 };
 
+// Output group order (IPs first, public before private).
 const KIND_ORDER: ObservableKind[] = [
+  "ip_public",
+  "ip_private",
+  "domain",
+  "hostname",
+  "username",
+  "email",
+  "url",
+  "filename",
+  "hash",
+];
+
+// Accumulation order used while walking alerts (IPs pooled under a single "ip" bucket).
+const ACCUM_ORDER: AccumKind[] = [
   "ip",
   "domain",
   "hostname",
@@ -43,6 +62,26 @@ const KIND_ORDER: ObservableKind[] = [
   "filename",
   "hash",
 ];
+
+/** True for RFC1918 space plus loopback and link-local — the "internal" addresses. */
+export function isPrivateIp(ip: string): boolean {
+  const v4 = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const a = Number(v4[1]);
+    const b = Number(v4[2]);
+    if (a === 10) return true; // 10.0.0.0/8
+    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
+    if (a === 192 && b === 168) return true; // 192.168.0.0/16
+    if (a === 127) return true; // loopback
+    if (a === 169 && b === 254) return true; // link-local
+    return false;
+  }
+  const v6 = ip.toLowerCase();
+  if (v6 === "::1") return true; // loopback
+  if (v6.startsWith("fe80")) return true; // link-local
+  if (/^f[cd]/.test(v6)) return true; // unique local fc00::/7
+  return false;
+}
 
 const IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const IPV6 = /\b(?:[A-Fa-f0-9]{1,4}:){2,7}[A-Fa-f0-9]{1,4}\b/g;
@@ -81,7 +120,7 @@ function urlHost(url: string): string | null {
   }
 }
 
-type Sink = (kind: ObservableKind, value: string) => void;
+type Sink = (kind: AccumKind, value: string) => void;
 
 /** Recursively visit every scalar leaf, carrying its (nearest) key for key-based hints. */
 function walk(key: string, value: unknown, visit: (key: string, value: string) => void): void {
@@ -152,7 +191,7 @@ function classify(key: string, raw: string, sink: Sink): void {
  * every alert in a case. Each value is counted by how many alerts it appears in.
  */
 export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
-  const counts: Record<ObservableKind, Map<string, number>> = {
+  const emptyCounts = (): Record<AccumKind, Map<string, number>> => ({
     ip: new Map(),
     domain: new Map(),
     hostname: new Map(),
@@ -161,11 +200,12 @@ export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
     url: new Map(),
     filename: new Map(),
     hash: new Map(),
-  };
+  });
+  const counts = emptyCounts();
 
   for (const alert of alerts) {
     // Collect this alert's distinct observables first, so each value counts once per alert.
-    const perAlert: Record<ObservableKind, Set<string>> = {
+    const perAlert: Record<AccumKind, Set<string>> = {
       ip: new Set(),
       domain: new Set(),
       hostname: new Set(),
@@ -178,16 +218,31 @@ export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
     const sink: Sink = (kind, value) => perAlert[kind].add(value);
     for (const [key, value] of Object.entries(alert)) walk(key, value, (k, v) => classify(k, v, sink));
 
-    for (const kind of KIND_ORDER) {
+    for (const kind of ACCUM_ORDER) {
       for (const value of perAlert[kind]) counts[kind].set(value, (counts[kind].get(value) ?? 0) + 1);
     }
+  }
+
+  const toObservables = (map: Map<string, number>) =>
+    [...map.entries()]
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+
+  // Split the pooled IPs into public/private; everything else maps straight through.
+  const groups = new Map<ObservableKind, ObservableGroup["observables"]>();
+  const publicIps = new Map<string, number>();
+  const privateIps = new Map<string, number>();
+  for (const [value, count] of counts.ip) (isPrivateIp(value) ? privateIps : publicIps).set(value, count);
+  groups.set("ip_public", toObservables(publicIps));
+  groups.set("ip_private", toObservables(privateIps));
+  for (const kind of ACCUM_ORDER) {
+    if (kind === "ip") continue;
+    groups.set(kind, toObservables(counts[kind]));
   }
 
   return KIND_ORDER.map((kind) => ({
     kind,
     label: GROUP_LABELS[kind],
-    observables: [...counts[kind].entries()]
-      .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)),
+    observables: groups.get(kind) ?? [],
   })).filter((group) => group.observables.length > 0);
 }

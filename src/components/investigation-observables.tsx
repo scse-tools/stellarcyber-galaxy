@@ -8,6 +8,7 @@ import {
   Globe,
   Link2,
   Network,
+  Router,
   Server,
   User,
   type LucideIcon,
@@ -16,7 +17,8 @@ import { extractObservables, type ObservableKind } from "@/lib/observables";
 import type { CaseAlert } from "@/lib/types";
 
 const ICONS: Record<ObservableKind, LucideIcon> = {
-  ip: Network,
+  ip_public: Network,
+  ip_private: Router,
   domain: Globe,
   hostname: Server,
   username: User,
