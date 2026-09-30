@@ -135,6 +135,28 @@ export interface Tenant {
   name: string;
 }
 
+/** One case as shown in the Investigation Workspace's left-hand band. */
+export interface CaseSummary {
+  id: string;
+  ticketId: string;
+  name: string;
+  score: number;
+  severity: string;
+  status: string;
+  /** Number of alerts attached to the case. */
+  size: number;
+  assignee: string;
+  createdAt: string;
+  modifiedAt: string;
+  tenantName: string;
+}
+
+/** Full case record; shape varies by deployment, so it's an open map. */
+export type CaseDetail = Record<string, unknown>;
+
+/** An alert flattened from its Elasticsearch `_source`, with the doc `_id` kept. */
+export type CaseAlert = { _id: string } & Record<string, unknown>;
+
 /** Raised when a poll finds more critical/high cases on an instance than the previous poll. */
 export interface AlertNotification {
   id: string;

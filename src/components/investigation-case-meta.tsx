@@ -1,0 +1,99 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { cellText } from "@/lib/table-export";
+import { cn } from "@/lib/utils";
+import { SEVERITY_META, toSeverity } from "@/lib/severity";
+import type { CaseDetail } from "@/lib/types";
+
+// Fields surfaced as labelled metadata cards, in this order, when present.
+const META_FIELDS: { key: string; label: string }[] = [
+  { key: "status", label: "Status" },
+  { key: "severity", label: "Severity" },
+  { key: "size", label: "Alerts" },
+  { key: "assignee_name", label: "Assignee" },
+  { key: "tenant_name", label: "Tenant" },
+  { key: "ticket_id", label: "Ticket" },
+  { key: "created_at", label: "Created" },
+  { key: "modified_at", label: "Modified" },
+  { key: "created_by_name", label: "Created by" },
+  { key: "tags", label: "Tags" },
+];
+
+function formatValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (/_at$|timestamp|_time$/.test(key)) {
+    const date = new Date(typeof value === "number" && value < 1e12 ? value * 1000 : (value as string | number));
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString();
+  }
+  if (Array.isArray(value)) return value.length ? value.map((v) => cellText(v)).join(", ") : "—";
+  return cellText(value);
+}
+
+export function InvestigationCaseMeta({ detail }: { detail: CaseDetail }) {
+  const name = cellText(detail.name) || cellText(detail.ticket_id) || cellText(detail._id);
+  const score = Number(detail.score) || 0;
+  const severity = toSeverity(detail.severity) ?? (score >= 75 ? "critical" : score >= 50 ? "high" : score >= 25 ? "medium" : "low");
+  const summary = cellText(detail.description) || cellText(detail.summary);
+
+  return (
+    <section className="rounded-xl border border-sc-border-soft bg-sc-surface/50 p-4">
+      <div className="flex items-start gap-3">
+        <span
+          className="inline-flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg font-mono text-sm font-bold text-white"
+          style={{ backgroundColor: SEVERITY_META[severity].token }}
+          title="Case score"
+        >
+          {Math.round(score)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-semibold text-sc-text" title={name}>
+            {name}
+          </h3>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <Badge tone="severity" token={SEVERITY_META[severity].token}>
+              {SEVERITY_META[severity].label}
+            </Badge>
+            <Badge>{cellText(detail.status).replace(/_/g, " ") || "unknown"}</Badge>
+            {detail.acknowledged ? <Badge>acknowledged</Badge> : null}
+          </div>
+        </div>
+      </div>
+
+      {summary ? <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-sc-muted">{summary}</p> : null}
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+        {META_FIELDS.filter((f) => f.key in detail).map((f) => (
+          <div key={f.key} className="min-w-0">
+            <dt className="text-[10px] font-medium uppercase tracking-wide text-sc-faint">{f.label}</dt>
+            <dd className="mt-0.5 truncate text-xs text-sc-text" title={formatValue(f.key, detail[f.key])}>
+              {formatValue(f.key, detail[f.key])}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function Badge({
+  children,
+  tone,
+  token,
+}: {
+  children: ReactNode;
+  tone?: "severity";
+  token?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
+        tone === "severity" ? "text-white" : "bg-sc-active text-sc-muted",
+      )}
+      style={tone === "severity" ? { backgroundColor: token } : undefined}
+    >
+      {children}
+    </span>
+  );
+}
