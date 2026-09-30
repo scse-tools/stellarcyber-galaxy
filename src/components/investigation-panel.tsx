@@ -7,7 +7,7 @@ import { InvestigationEvidence } from "@/components/investigation-evidence";
 import { ThreatIntelSources } from "@/components/investigation-threat-intel";
 import { InvestigationSettingsModal } from "@/components/investigation-settings-modal";
 import { cn } from "@/lib/utils";
-import type { Evidence, Investigation, LlmProvider, Observable } from "@/lib/investigation/types";
+import { providerNeedsKey, type Evidence, type Investigation, type LlmProvider, type Observable } from "@/lib/investigation/types";
 
 type Tab = "investigate" | "evidence" | "sources";
 
@@ -145,11 +145,14 @@ export function InvestigationPanel({ instanceId, caseId, caseName, selected, isA
                 className="w-full rounded border border-sc-border bg-sc-surface px-2 py-1 text-xs text-sc-text focus:border-sc-primary focus:outline-none"
               >
                 {providers.length === 0 ? <option value="">No LLM providers — add one in settings</option> : null}
-                {providers.map((provider) => (
-                  <option key={provider.id} value={provider.id} disabled={!provider.hasKey}>
-                    {provider.name} ({provider.kind}){provider.hasKey ? "" : " — no key"}
-                  </option>
-                ))}
+                {providers.map((provider) => {
+                  const missingKey = providerNeedsKey(provider.kind) && !provider.hasKey;
+                  return (
+                    <option key={provider.id} value={provider.id} disabled={missingKey}>
+                      {provider.name} ({provider.kind}){missingKey ? " — no key" : ""}
+                    </option>
+                  );
+                })}
               </select>
               <button
                 type="button"

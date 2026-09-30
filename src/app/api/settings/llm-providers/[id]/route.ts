@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ id: string }> };
 
-const KINDS: ProviderKind[] = ["anthropic", "openai", "gemini", "custom"];
+const KINDS: ProviderKind[] = ["ollama", "anthropic", "openai", "gemini", "custom"];
 
 export async function PATCH(request: Request, { params }: Context) {
   try {

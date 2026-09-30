@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import type { ProviderKind } from "@/lib/investigation/types";
+import { providerNeedsKey, type ProviderKind } from "@/lib/investigation/types";
 
 export interface ProviderDraft {
   id?: string;
@@ -17,6 +17,7 @@ export interface ProviderDraft {
 
 // Sensible default model per provider, shown as a placeholder hint.
 const MODEL_HINT: Record<ProviderKind, string> = {
+  ollama: "llama3.1",
   anthropic: "claude-opus-4-8",
   openai: "gpt-4o",
   gemini: "gemini-1.5-pro",
@@ -43,6 +44,7 @@ export function ProviderForm({ draft, busy, error, onChange, onSave, onCancel }:
         </Field>
         <Field label="Provider">
           <Select value={draft.kind} onChange={(e) => set({ kind: e.target.value as ProviderKind })}>
+            <option value="ollama">Ollama (local, no key)</option>
             <option value="anthropic">Anthropic (Claude)</option>
             <option value="openai">OpenAI (ChatGPT)</option>
             <option value="gemini">Google (Gemini)</option>
@@ -52,16 +54,29 @@ export function ProviderForm({ draft, busy, error, onChange, onSave, onCancel }:
         <Field label="Model">
           <Input value={draft.model} onChange={(e) => set({ model: e.target.value })} placeholder={MODEL_HINT[draft.kind]} />
         </Field>
-        <Field label={draft.kind === "custom" ? "Base URL (required)" : "Base URL (optional)"}>
-          <Input value={draft.baseUrl} onChange={(e) => set({ baseUrl: e.target.value })} placeholder="https://…" />
+        <Field label="Base URL (optional)">
+          <Input
+            value={draft.baseUrl}
+            onChange={(e) => set({ baseUrl: e.target.value })}
+            placeholder={draft.kind === "ollama" ? "http://localhost:11434/v1" : "https://…"}
+          />
         </Field>
       </div>
-      <Field label={draft.hasKey ? "API key (leave blank to keep current)" : "API key"}>
+      <Field
+        label={
+          !providerNeedsKey(draft.kind)
+            ? "API key (not needed for local)"
+            : draft.hasKey
+              ? "API key (leave blank to keep current)"
+              : "API key"
+        }
+      >
         <Input
           type="password"
           value={draft.apiKey}
           onChange={(e) => set({ apiKey: e.target.value })}
-          placeholder="sk-…"
+          placeholder={providerNeedsKey(draft.kind) ? "sk-…" : "—"}
+          disabled={!providerNeedsKey(draft.kind)}
         />
       </Field>
       <label className="flex items-center gap-2 text-xs text-sc-text">

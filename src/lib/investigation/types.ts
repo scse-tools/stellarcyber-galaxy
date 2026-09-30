@@ -1,6 +1,11 @@
 import type { ObservableKind } from "@/lib/observables";
 
-export type ProviderKind = "anthropic" | "openai" | "gemini" | "custom";
+export type ProviderKind = "ollama" | "anthropic" | "openai" | "gemini" | "custom";
+
+/** Cloud providers need an API key; local runtimes (Ollama, custom endpoints) don't. */
+export function providerNeedsKey(kind: ProviderKind): boolean {
+  return kind === "anthropic" || kind === "openai" || kind === "gemini";
+}
 
 /** A configured LLM provider. `hasKey` replaces the secret when sent to the browser. */
 export interface LlmProvider {

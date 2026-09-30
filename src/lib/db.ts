@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -161,6 +162,23 @@ function migrate(db: DatabaseSync): void {
   if (templateCols.length && !templateCols.some((c) => c.name === "include_all_config")) {
     db.exec("ALTER TABLE connector_templates ADD COLUMN include_all_config INTEGER NOT NULL DEFAULT 0");
   }
+  seedDefaultProvider(db);
+}
+
+/**
+ * Ensures a keyless local Ollama provider exists as the out-of-the-box option. It is added only
+ * when no Ollama provider is present, and marked default only when it is the first provider — so an
+ * existing default choice is never overridden. Cloud providers can be added alongside it.
+ */
+function seedDefaultProvider(db: DatabaseSync): void {
+  const rows = db.prepare("SELECT kind FROM llm_providers").all() as unknown as Array<{ kind: string }>;
+  if (rows.some((row) => row.kind === "ollama")) return;
+  const isDefault = rows.length === 0 ? 1 : 0;
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO llm_providers (id, name, kind, model, base_url, api_key_enc, enabled, is_default, created_at, updated_at)
+     VALUES (?, ?, 'ollama', 'llama3.1', 'http://localhost:11434/v1', '', 1, ?, ?, ?)`,
+  ).run(randomUUID(), "Ollama (local)", isDefault, now, now);
 }
 
 // Next.js dev reloads modules on every edit; keep one handle on the global.

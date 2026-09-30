@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.4.0";
+export const APP_VERSION = "3.5.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.5.0",
+    date: "2026-09-30",
+    notes: [
+      "Added a keyless local Ollama LLM provider, seeded as the default so investigations work out of the box (with Ollama running locally).",
+      "Cloud providers (Claude, ChatGPT, Gemini) and custom OpenAI-compatible endpoints can still be added; only cloud providers require an API key.",
+    ],
+  },
   {
     version: "3.4.0",
     date: "2026-09-30",

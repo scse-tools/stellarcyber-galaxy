@@ -6,9 +6,9 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ProviderForm, type ProviderDraft } from "@/components/investigation-provider-form";
 import { InvestigationSourcesSettings } from "@/components/investigation-sources-settings";
-import type { CustomSourceInput, LlmProvider, TiSource } from "@/lib/investigation/types";
+import { providerNeedsKey, type CustomSourceInput, type LlmProvider, type TiSource } from "@/lib/investigation/types";
 
-const EMPTY: ProviderDraft = { name: "", kind: "anthropic", model: "", baseUrl: "", apiKey: "", isDefault: false };
+const EMPTY: ProviderDraft = { name: "", kind: "ollama", model: "", baseUrl: "", apiKey: "", isDefault: false };
 
 interface Props {
   open: boolean;
@@ -137,7 +137,9 @@ export function InvestigationSettingsModal({ open, isAdmin, onClose, onChanged }
                         <p className="truncate text-xs font-medium text-sc-text">
                           {provider.name}
                           {provider.isDefault ? <span className="ml-1.5 text-[10px] text-sc-accent">default</span> : null}
-                          {!provider.hasKey ? <span className="ml-1.5 text-[10px] text-high">no key</span> : null}
+                          {providerNeedsKey(provider.kind) && !provider.hasKey ? (
+                            <span className="ml-1.5 text-[10px] text-high">no key</span>
+                          ) : null}
                         </p>
                         <p className="text-[10px] text-sc-faint">
                           {provider.kind} · {provider.model}

@@ -7,7 +7,7 @@ import type { LlmProviderInput, ProviderKind } from "@/lib/investigation/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KINDS: ProviderKind[] = ["anthropic", "openai", "gemini", "custom"];
+const KINDS: ProviderKind[] = ["ollama", "anthropic", "openai", "gemini", "custom"];
 
 export async function GET(request: Request) {
   try {

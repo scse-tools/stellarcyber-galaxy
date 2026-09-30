@@ -3,7 +3,7 @@ import { listActiveSources, type ActiveSource } from "@/lib/investigation/source
 import { fetchFromSource } from "@/lib/investigation/ti-fetch";
 import { runLlm } from "@/lib/investigation/llm";
 import { getOrCreateInvestigation, saveRun, type NewRun } from "@/lib/investigation/investigations-repo";
-import type { Finding, InvestigationRun, Observable } from "@/lib/investigation/types";
+import { providerNeedsKey, type Finding, type InvestigationRun, type Observable } from "@/lib/investigation/types";
 import { getInvestigation } from "@/lib/investigation/investigations-repo";
 
 type RawFinding = Omit<Finding, "id" | "createdAt">;
@@ -82,7 +82,9 @@ export async function runInvestigation(params: {
   const provider = getProvider(params.providerId);
   if (!provider) throw new Error("Selected LLM provider was not found.");
   const apiKey = getProviderApiKey(params.providerId);
-  if (!apiKey) throw new Error("The selected LLM provider has no API key configured.");
+  if (providerNeedsKey(provider.kind) && !apiKey) {
+    throw new Error("The selected LLM provider has no API key configured.");
+  }
 
   const investigation = getOrCreateInvestigation(params.instanceId, params.caseId, params.caseName, params.userId);
   const active = listActiveSources();

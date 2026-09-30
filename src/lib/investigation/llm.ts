@@ -41,11 +41,11 @@ async function anthropic(provider: LlmProvider, apiKey: string, req: LlmRequest)
     .trim();
 }
 
-async function openaiCompatible(provider: LlmProvider, apiKey: string, req: LlmRequest, defaultBase: string): Promise<string> {
+async function openaiCompatible(provider: LlmProvider, apiKey: string | null, req: LlmRequest, defaultBase: string): Promise<string> {
   const base = provider.baseUrl || defaultBase;
   const body = await postJson(
     `${base.replace(/\/$/, "")}/chat/completions`,
-    { Authorization: `Bearer ${apiKey}` },
+    apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
     {
       model: provider.model,
       max_tokens: MAX_TOKENS,
@@ -72,14 +72,17 @@ async function gemini(provider: LlmProvider, apiKey: string, req: LlmRequest): P
 }
 
 /** Calls the configured provider and returns its text output. */
-export async function runLlm(provider: LlmProvider, apiKey: string, req: LlmRequest): Promise<string> {
+export async function runLlm(provider: LlmProvider, apiKey: string | null, req: LlmRequest): Promise<string> {
   switch (provider.kind) {
+    case "ollama":
+      // Ollama's OpenAI-compatible endpoint; no key required.
+      return openaiCompatible(provider, apiKey, req, "http://localhost:11434/v1");
     case "anthropic":
-      return anthropic(provider, apiKey, req);
+      return anthropic(provider, apiKey ?? "", req);
     case "openai":
       return openaiCompatible(provider, apiKey, req, "https://api.openai.com/v1");
     case "gemini":
-      return gemini(provider, apiKey, req);
+      return gemini(provider, apiKey ?? "", req);
     case "custom":
       return openaiCompatible(provider, apiKey, req, provider.baseUrl || "https://api.openai.com/v1");
     default:
