@@ -1,3 +1,4 @@
+import { resolve4 } from "node:dns/promises";
 import { proxiedFetch } from "@/lib/http";
 import type { ObservableKind } from "@/lib/observables";
 
@@ -59,12 +60,27 @@ async function rdap(kind: ObservableKind, value: string): Promise<SourceResult> 
   };
 }
 
-/** DNS over HTTPS (Google) — resolve a domain/hostname to A records, no key. */
+/**
+ * Resolve a domain/hostname to A records. Tries Google DNS-over-HTTPS first; if that HTTP call is
+ * blocked or fails, falls back to the host's own system resolver (works in restricted egress).
+ */
 async function dns(_kind: ObservableKind, value: string): Promise<SourceResult> {
-  const body = rec(await getJson(`https://dns.google/resolve?name=${encodeURIComponent(value)}&type=A`, {}));
-  const answers = Array.isArray(body.Answer) ? (body.Answer as unknown[]).map((a) => String(rec(a).data)) : [];
-  if (Number(body.Status) === 3) return { verdict: "info", summary: "No A record (NXDOMAIN)", raw: body };
-  return { verdict: "info", summary: answers.length ? `Resolves to ${answers.join(", ")}` : "No A records", raw: body };
+  try {
+    const body = rec(await getJson(`https://dns.google/resolve?name=${encodeURIComponent(value)}&type=A`, {}));
+    const answers = Array.isArray(body.Answer) ? (body.Answer as unknown[]).map((a) => String(rec(a).data)) : [];
+    if (Number(body.Status) === 3) return { verdict: "info", summary: "No A record (NXDOMAIN)", raw: body };
+    return { verdict: "info", summary: answers.length ? `Resolves to ${answers.join(", ")} (DoH)` : "No A records", raw: body };
+  } catch (dohError) {
+    // Fall back to the system resolver (UDP/53) when DoH over HTTPS isn't reachable.
+    const addresses = await resolve4(value).catch(() => {
+      throw dohError; // surface the original DoH failure if the system resolver also can't help
+    });
+    return {
+      verdict: "info",
+      summary: addresses.length ? `Resolves to ${addresses.join(", ")} (system resolver)` : "No A records",
+      raw: { A: addresses, resolver: "system" },
+    };
+  }
 }
 
 /** crt.sh — certificate transparency logs for a domain, no key. */
