@@ -26,13 +26,29 @@ export interface LlmProviderInput {
   isDefault?: boolean;
 }
 
-/** A configured threat-intel source (an API key toggles it from "AI-only" to "live"). */
+export type SourceTier = "keyless" | "premium" | "custom";
+
+/** A threat-intel source. Keyless sources run out of the box; premium/custom ones need a key. */
 export interface TiSource {
   key: string;
   name: string;
+  tier: SourceTier;
+  kinds: ObservableKind[];
   enabled: boolean;
   hasKey: boolean;
+  /** Custom sources only: the request template and auth header. */
+  urlTemplate?: string | null;
+  authHeader?: string | null;
   updatedAt: string | null;
+}
+
+export interface CustomSourceInput {
+  name: string;
+  kinds: ObservableKind[];
+  urlTemplate: string;
+  authHeader?: string | null;
+  apiKey?: string;
+  enabled?: boolean;
 }
 
 export interface Observable {

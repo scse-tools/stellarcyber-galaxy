@@ -1,6 +1,5 @@
 import { getProvider, getProviderApiKey } from "@/lib/investigation/providers-repo";
-import { listActiveSources } from "@/lib/investigation/sources-repo";
-import { sourcesForKind } from "@/lib/investigation/ti-catalog";
+import { listActiveSources, type ActiveSource } from "@/lib/investigation/sources-repo";
 import { fetchFromSource } from "@/lib/investigation/ti-fetch";
 import { runLlm } from "@/lib/investigation/llm";
 import { getOrCreateInvestigation, saveRun, type NewRun } from "@/lib/investigation/investigations-repo";
@@ -30,15 +29,12 @@ function parseJson(text: string): Record<string, unknown> | null {
   }
 }
 
-/** Runs live sources for one observable (hybrid enrichment). */
-async function liveFindings(
-  observable: Observable,
-  active: Map<string, string>,
-): Promise<RawFinding[]> {
-  const sources = sourcesForKind(observable.kind).filter((source) => active.has(source.key));
+/** Runs every active source that handles this observable's kind (hybrid enrichment). */
+async function liveFindings(observable: Observable, active: ActiveSource[]): Promise<RawFinding[]> {
+  const sources = active.filter((source) => source.kinds.includes(observable.kind));
   const results = await Promise.all(
     sources.map(async (source) => {
-      const result = await fetchFromSource(source.key, observable.kind, observable.value, active.get(source.key)!);
+      const result = await fetchFromSource(source.key, observable.kind, observable.value, source.apiKey, source.custom);
       return {
         observableKind: observable.kind,
         observableValue: observable.value,
@@ -89,7 +85,7 @@ export async function runInvestigation(params: {
   if (!apiKey) throw new Error("The selected LLM provider has no API key configured.");
 
   const investigation = getOrCreateInvestigation(params.instanceId, params.caseId, params.caseName, params.userId);
-  const active = new Map(listActiveSources().map((source) => [source.key, source.apiKey]));
+  const active = listActiveSources();
 
   // Hybrid step 1: gather live source findings for every observable.
   const sourceFindingGroups = await Promise.all(params.observables.map((observable) => liveFindings(observable, active)));

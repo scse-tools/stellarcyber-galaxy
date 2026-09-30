@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
 import { ProviderForm, type ProviderDraft } from "@/components/investigation-provider-form";
-import type { LlmProvider, TiSource } from "@/lib/investigation/types";
+import { InvestigationSourcesSettings } from "@/components/investigation-sources-settings";
+import type { CustomSourceInput, LlmProvider, TiSource } from "@/lib/investigation/types";
 
 const EMPTY: ProviderDraft = { name: "", kind: "anthropic", model: "", baseUrl: "", apiKey: "", isDefault: false };
 
@@ -83,6 +83,21 @@ export function InvestigationSettingsModal({ open, isAdmin, onClose, onChanged }
     await load();
   };
 
+  const createSource = async (input: CustomSourceInput) => {
+    await fetch("/api/settings/ti-sources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    await load();
+  };
+
+  const removeSource = async (key: string) => {
+    if (!window.confirm("Delete this custom source?")) return;
+    await fetch(`/api/settings/ti-sources?key=${encodeURIComponent(key)}`, { method: "DELETE" });
+    await load();
+  };
+
   return (
     <Modal open={open} title="Investigation settings" onClose={onClose} className="max-w-2xl">
       {!isAdmin ? (
@@ -151,56 +166,17 @@ export function InvestigationSettingsModal({ open, isAdmin, onClose, onChanged }
           <section>
             <h3 className="mb-2 text-sm font-semibold text-sc-text">Threat-intel sources</h3>
             <p className="mb-2 text-[11px] text-sc-faint">
-              Add an API key and enable a source to query it live; the AI agent covers everything else.
+              Keyless sources run automatically. Add a key to activate premium sources, or add your own.
             </p>
-            <ul className="space-y-1.5">
-              {sources.map((source) => (
-                <SourceRow key={source.key} source={source} onSave={saveSource} />
-              ))}
-            </ul>
+            <InvestigationSourcesSettings
+              sources={sources}
+              onSave={saveSource}
+              onCreate={createSource}
+              onDelete={removeSource}
+            />
           </section>
         </div>
       )}
     </Modal>
-  );
-}
-
-function SourceRow({
-  source,
-  onSave,
-}: {
-  source: TiSource;
-  onSave: (key: string, patch: { enabled?: boolean; apiKey?: string }) => Promise<void>;
-}) {
-  const [apiKey, setApiKey] = useState("");
-  return (
-    <li className="flex items-center gap-2 rounded-lg border border-sc-border-soft bg-sc-surface px-3 py-2">
-      <label className="flex flex-1 items-center gap-2 text-xs text-sc-text">
-        <input
-          type="checkbox"
-          checked={source.enabled}
-          onChange={(e) => void onSave(source.key, { enabled: e.target.checked })}
-          className="accent-sc-primary"
-        />
-        {source.name}
-        {source.hasKey ? <span className="text-[10px] text-[var(--severity-success)]">key set</span> : null}
-      </label>
-      <Input
-        type="password"
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-        placeholder={source.hasKey ? "replace key…" : "API key"}
-        className="w-40"
-      />
-      <Button
-        onClick={async () => {
-          if (!apiKey.trim()) return;
-          await onSave(source.key, { apiKey: apiKey.trim() });
-          setApiKey("");
-        }}
-      >
-        Save
-      </Button>
-    </li>
   );
 }

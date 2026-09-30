@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.3.0";
+export const APP_VERSION = "3.4.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,16 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.4.0",
+    date: "2026-09-30",
+    notes: [
+      "Threat-intel enrichment now runs keyless by default: IPWHOIS, RDAP, DNS-over-HTTPS and crt.sh query automatically with no API key.",
+      "Premium sources (VirusTotal, AbuseIPDB, GreyNoise, Shodan) stay optional — add an API key to activate them.",
+      "You can now add your own custom premium sources (URL template + optional auth header/key) that apply to the observable types you choose.",
+      "Settings group sources into Keyless, Premium and Custom.",
+    ],
+  },
   {
     version: "3.3.0",
     date: "2026-09-30",
