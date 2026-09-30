@@ -19,8 +19,8 @@ export async function GET(request: Request, { params }: Context) {
 
     const search = new URL(request.url).searchParams;
     const tenantId = search.get("tenantId");
-    const limit = Number(search.get("limit") ?? 200);
-    const cases = await fetchCases(row, tenantId, Number.isFinite(limit) ? limit : 200);
+    const limit = Number(search.get("limit") ?? 500);
+    const cases = await fetchCases(row, tenantId, Number.isFinite(limit) ? limit : 500);
     return NextResponse.json({ cases });
   } catch (error) {
     return errorResponse(error);

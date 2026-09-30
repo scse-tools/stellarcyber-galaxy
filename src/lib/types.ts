@@ -146,8 +146,9 @@ export interface CaseSummary {
   /** Number of alerts attached to the case. */
   size: number;
   assignee: string;
-  createdAt: string;
-  modifiedAt: string;
+  /** Epoch milliseconds; 0 when the console did not supply a timestamp. */
+  createdAt: number;
+  modifiedAt: number;
   tenantName: string;
 }
 

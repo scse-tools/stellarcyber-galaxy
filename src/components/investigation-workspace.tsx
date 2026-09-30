@@ -76,10 +76,7 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
   // Filter cases to those created within the selected window — same rule as the main case board.
   const visibleCases = useMemo(() => {
     const { from, to } = resolveTimeRange(range);
-    return cases.filter((c) => {
-      const created = Date.parse(c.createdAt);
-      return !Number.isNaN(created) && created >= from && created <= to;
-    });
+    return cases.filter((c) => c.createdAt >= from && c.createdAt <= to);
   }, [cases, range]);
 
   return (

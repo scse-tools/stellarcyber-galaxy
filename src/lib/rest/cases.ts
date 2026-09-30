@@ -45,11 +45,27 @@ function num(record: Record<string, unknown>, key: string): number {
   return 0;
 }
 
+/**
+ * Normalises a case timestamp to epoch milliseconds. Stellar Cyber sends these as numeric epochs
+ * (seconds or milliseconds); an ISO string is handled too. Returns 0 when it can't be read.
+ */
+function epochMs(record: Record<string, unknown>, key: string): number {
+  const value = record[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value < 1e12 ? value * 1000 : value;
+  if (typeof value === "string" && value.trim()) {
+    const asNumber = Number(value);
+    if (!Number.isNaN(asNumber)) return asNumber < 1e12 ? asNumber * 1000 : asNumber;
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
 /** Lists cases for a tile, trimmed to the fields the left-hand band needs. */
 export async function fetchCases(
   row: InstanceRow,
   tenantId?: string | null,
-  limit = 200,
+  limit = 500,
 ): Promise<CaseSummary[]> {
   const body = await getJson(row, `${CASES_PATH}?limit=${limit}`, tenantId);
   const cases = isRecord(body) && isRecord(body.data) && Array.isArray(body.data.cases) ? body.data.cases : [];
@@ -62,8 +78,8 @@ export async function fetchCases(
     status: str(c, "status"),
     size: num(c, "size"),
     assignee: str(c, "assignee_name") || str(c, "assignee"),
-    createdAt: str(c, "created_at"),
-    modifiedAt: str(c, "modified_at"),
+    createdAt: epochMs(c, "created_at"),
+    modifiedAt: epochMs(c, "modified_at"),
     tenantName: str(c, "tenant_name"),
   }));
 }
