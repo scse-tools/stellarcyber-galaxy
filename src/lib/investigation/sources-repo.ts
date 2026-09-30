@@ -113,6 +113,29 @@ export function listActiveSources(): ActiveSource[] {
   return active;
 }
 
+/** Server-only: resolve one source's runtime (config + key) for a connectivity test, ignoring enabled state. */
+export function getSourceRuntime(key: string): ActiveSource | null {
+  const row = allRows().get(key);
+  const def = SOURCE_CATALOG.find((source) => source.key === key);
+  if (def) {
+    return {
+      key: def.key,
+      name: def.name,
+      kinds: def.kinds,
+      apiKey: row?.api_key_enc ? decryptSecret(row.api_key_enc) : null,
+    };
+  }
+  const config = row ? isCustom(row) : null;
+  if (!config || !row) return null;
+  return {
+    key: row.key,
+    name: config.name,
+    kinds: config.kinds,
+    apiKey: row.api_key_enc ? decryptSecret(row.api_key_enc) : null,
+    custom: { urlTemplate: config.urlTemplate, authHeader: config.authHeader },
+  };
+}
+
 export interface SourceUpdate {
   enabled?: boolean;
   apiKey?: string;

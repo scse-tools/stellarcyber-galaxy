@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import type { CustomSourceInput, TiSource } from "@/lib/investigation/types";
@@ -56,6 +56,46 @@ export function InvestigationSourcesSettings({ sources, onSave, onCreate, onDele
   );
 }
 
+/** Fires a live connectivity check against one source and shows the result inline. */
+function SourceTest({ sourceKey }: { sourceKey: string }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const test = async () => {
+    setBusy(true);
+    setResult(null);
+    try {
+      const response = await fetch("/api/settings/ti-sources/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: sourceKey }),
+      });
+      const body = await response.json();
+      setResult({ ok: Boolean(body.ok), text: body.message ?? body.error ?? "Test failed." });
+    } catch (error) {
+      setResult({ ok: false, text: error instanceof Error ? error.message : "Test failed." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Button onClick={() => void test()} disabled={busy}>
+        {busy ? <Loader2 size={13} className="animate-spin" /> : "Test"}
+      </Button>
+      {result ? (
+        <span
+          className={`flex w-full items-start gap-1 text-[10px] ${result.ok ? "text-[var(--severity-success)]" : "text-critical"}`}
+        >
+          {result.ok ? <CheckCircle2 size={11} className="mt-0.5 shrink-0" /> : <XCircle size={11} className="mt-0.5 shrink-0" />}
+          <span className="break-words">{result.text}</span>
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function SourceGroup({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section>
@@ -68,7 +108,7 @@ function SourceGroup({ title, hint, children }: { title: string; hint?: string; 
 
 function KeylessRow({ source, onSave }: { source: TiSource; onSave: Props["onSave"] }) {
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-sc-border-soft bg-sc-surface px-3 py-2">
+    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-sc-border-soft bg-sc-surface px-3 py-2">
       <label className="flex flex-1 items-center gap-2 text-xs text-sc-text">
         <input
           type="checkbox"
@@ -79,6 +119,7 @@ function KeylessRow({ source, onSave }: { source: TiSource; onSave: Props["onSav
         {source.name}
       </label>
       <span className="text-[10px] text-[var(--severity-success)]">no key needed</span>
+      <SourceTest sourceKey={source.key} />
     </li>
   );
 }
@@ -94,7 +135,7 @@ function KeyedRow({
 }) {
   const [apiKey, setApiKey] = useState("");
   return (
-    <li className="flex items-center gap-2 rounded-lg border border-sc-border-soft bg-sc-surface px-3 py-2">
+    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-sc-border-soft bg-sc-surface px-3 py-2">
       <label className="flex flex-1 items-center gap-2 text-xs text-sc-text">
         <input
           type="checkbox"
@@ -121,6 +162,7 @@ function KeyedRow({
       >
         Save
       </Button>
+      <SourceTest sourceKey={source.key} />
       {onDelete ? (
         <button
           type="button"
