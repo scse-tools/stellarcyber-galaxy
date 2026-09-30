@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Globe } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 interface Source {
   name: string;
@@ -49,16 +49,11 @@ const GROUPS: Group[] = [
   },
 ];
 
-/** Right-hand panel: the major OSINT sources for threat-intel investigation. */
-export function InvestigationThreatIntel() {
+/** The major OSINT sources list, rendered inside the investigation panel's "Sources" tab. */
+export function ThreatIntelSources() {
   return (
-    <aside className="flex min-h-0 flex-col rounded-xl border border-sc-border-soft bg-sc-surface/50">
-      <div className="flex items-center gap-2 border-b border-sc-border-soft px-3 py-2">
-        <Globe size={14} className="text-sc-accent" />
-        <span className="text-[11px] font-medium uppercase tracking-wide text-sc-faint">Threat Intel</span>
-      </div>
-
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3">
+    <div className="flex min-h-0 flex-col">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
         {GROUPS.map((group) => (
           <div key={group.label}>
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-sc-faint">
@@ -86,9 +81,9 @@ export function InvestigationThreatIntel() {
         ))}
       </div>
 
-      <p className="border-t border-sc-border-soft px-3 py-2 text-[10px] leading-relaxed text-sc-faint">
-        Per-indicator deep links and custom sources are configurable in the next step.
+      <p className="mt-2 border-t border-sc-border-soft px-1 pt-2 text-[10px] leading-relaxed text-sc-faint">
+        Configure API keys under the settings gear to query these sources live during an investigation.
       </p>
-    </aside>
+    </div>
   );
 }

@@ -54,6 +54,84 @@ CREATE TABLE IF NOT EXISTS connector_templates (
   created_at     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_connector_templates_created ON connector_templates (created_at);
+
+CREATE TABLE IF NOT EXISTS llm_providers (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  model       TEXT NOT NULL,
+  base_url    TEXT,
+  api_key_enc TEXT NOT NULL,
+  enabled     INTEGER NOT NULL DEFAULT 1,
+  is_default  INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ti_sources (
+  key         TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  api_key_enc TEXT,
+  enabled     INTEGER NOT NULL DEFAULT 0,
+  config_json TEXT,
+  updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investigations (
+  id          TEXT PRIMARY KEY,
+  instance_id TEXT NOT NULL,
+  case_id     TEXT NOT NULL,
+  case_name   TEXT,
+  created_by  TEXT,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL,
+  UNIQUE (instance_id, case_id)
+);
+CREATE INDEX IF NOT EXISTS idx_investigations_case ON investigations (instance_id, case_id);
+
+CREATE TABLE IF NOT EXISTS investigation_runs (
+  id               TEXT PRIMARY KEY,
+  investigation_id TEXT NOT NULL,
+  provider_id      TEXT,
+  provider_label   TEXT,
+  model            TEXT,
+  observables_json TEXT NOT NULL,
+  status           TEXT NOT NULL,
+  summary          TEXT,
+  recommendation   TEXT,
+  verdict          TEXT,
+  error            TEXT,
+  created_by       TEXT,
+  created_at       TEXT NOT NULL,
+  FOREIGN KEY (investigation_id) REFERENCES investigations (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_runs_investigation ON investigation_runs (investigation_id, created_at);
+
+CREATE TABLE IF NOT EXISTS investigation_findings (
+  id               TEXT PRIMARY KEY,
+  run_id           TEXT NOT NULL,
+  observable_kind  TEXT NOT NULL,
+  observable_value TEXT NOT NULL,
+  source           TEXT NOT NULL,
+  verdict          TEXT,
+  summary          TEXT,
+  raw_json         TEXT,
+  created_at       TEXT NOT NULL,
+  FOREIGN KEY (run_id) REFERENCES investigation_runs (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_findings_run ON investigation_findings (run_id);
+
+CREATE TABLE IF NOT EXISTS investigation_evidence (
+  id               TEXT PRIMARY KEY,
+  investigation_id TEXT NOT NULL,
+  type             TEXT NOT NULL,
+  content          TEXT,
+  url              TEXT,
+  created_by       TEXT,
+  created_at       TEXT NOT NULL,
+  FOREIGN KEY (investigation_id) REFERENCES investigations (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_evidence_investigation ON investigation_evidence (investigation_id, created_at);
 `;
 
 function databasePath(): string {

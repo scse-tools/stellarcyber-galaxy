@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Microscope } from "lucide-react";
 import { InvestigationCaseBand } from "@/components/investigation-case-band";
 import { InvestigationCaseMeta } from "@/components/investigation-case-meta";
-import { InvestigationObservables } from "@/components/investigation-observables";
+import { InvestigationObservables, obsKey } from "@/components/investigation-observables";
 import { InvestigationAlertsTable } from "@/components/investigation-alerts-table";
-import { InvestigationThreatIntel } from "@/components/investigation-threat-intel";
+import { InvestigationPanel } from "@/components/investigation-panel";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { DEFAULT_SELECTION, describeRange, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
+import type { ObservableKind } from "@/lib/observables";
+import type { Observable } from "@/lib/investigation/types";
 import type { CaseAlert, CaseDetail, CaseSummary, InstanceSummary } from "@/lib/types";
 
 async function getJson<T>(url: string): Promise<T> {
@@ -19,18 +21,30 @@ async function getJson<T>(url: string): Promise<T> {
   return body as T;
 }
 
-export function InvestigationWorkspace({ instances }: { instances: InstanceSummary[]; isAdmin: boolean }) {
+export function InvestigationWorkspace({ instances, isAdmin }: { instances: InstanceSummary[]; isAdmin: boolean }) {
   const [instanceId, setInstanceId] = useState<string | null>(instances[0]?.id ?? null);
   const [range, setRange] = useState<TimeRangeSelection>(DEFAULT_SELECTION);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);
+  const [investigatedIds, setInvestigatedIds] = useState<Set<string>>(new Set());
 
   const [caseId, setCaseId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [alerts, setAlerts] = useState<CaseAlert[]>([]);
   const [caseLoading, setCaseLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const refreshInvestigated = useCallback(async () => {
+    if (!instanceId) return;
+    try {
+      const body = await getJson<{ caseIds: string[] }>(`/api/instances/${instanceId}/investigations`);
+      setInvestigatedIds(new Set(body.caseIds));
+    } catch {
+      /* non-fatal — insignia simply won't show */
+    }
+  }, [instanceId]);
 
   // Load the selected tile's cases; reset the case selection when the tile changes.
   useEffect(() => {
@@ -41,19 +55,17 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
     setCaseId(null);
     setDetail(null);
     setAlerts([]);
+    void refreshInvestigated();
     getJson<{ cases: CaseSummary[] }>(`/api/instances/${instanceId}/cases`)
-      .then((body) => {
-        if (cancelled) return;
-        setCases(body.cases);
-      })
+      .then((body) => !cancelled && setCases(body.cases))
       .catch((error) => !cancelled && setCasesError(error instanceof Error ? error.message : "Load failed."))
       .finally(() => !cancelled && setCasesLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [instanceId]);
+  }, [instanceId, refreshInvestigated]);
 
-  // Load the selected case's metadata and alerts in parallel.
+  // Load the selected case's metadata and alerts in parallel; clear observable selection.
   useEffect(() => {
     if (!instanceId || !caseId) return;
     let cancelled = false;
@@ -61,6 +73,7 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
     setAlertsError(null);
     setDetail(null);
     setAlerts([]);
+    setSelected(new Set());
     const base = `/api/instances/${instanceId}/cases/${encodeURIComponent(caseId)}`;
     Promise.all([
       getJson<{ detail: CaseDetail }>(base).then((b) => !cancelled && setDetail(b.detail)),
@@ -78,6 +91,42 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
     const { from, to } = resolveTimeRange(range);
     return cases.filter((c) => c.createdAt >= from && c.createdAt <= to);
   }, [cases, range]);
+
+  const toggleObservable = useCallback((kind: ObservableKind, value: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const key = obsKey(kind, value);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const toggleGroup = useCallback((kind: ObservableKind, values: string[], select: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const value of values) {
+        const key = obsKey(kind, value);
+        if (select) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectedObservables = useMemo<Observable[]>(
+    () =>
+      [...selected].map((key) => {
+        const index = key.indexOf("::");
+        return { kind: key.slice(0, index) as ObservableKind, value: key.slice(index + 2) };
+      }),
+    [selected],
+  );
+
+  const selectedCaseName = useMemo(
+    () => cases.find((c) => c.id === caseId)?.name ?? null,
+    [cases, caseId],
+  );
 
   return (
     <section className="flex h-[calc(100vh-11rem)] min-h-0 flex-col gap-3">
@@ -115,13 +164,14 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
         ) : null}
       </div>
 
-      {/* Left cases band · middle case detail + alerts · right threat intel. */}
-      <div className="grid min-h-0 flex-1 grid-cols-[16rem_minmax(0,1fr)_18rem] gap-3">
+      {/* Left cases band · middle case detail + alerts · right investigation panel. */}
+      <div className="grid min-h-0 flex-1 grid-cols-[16rem_minmax(0,1fr)_22rem] gap-3">
         <InvestigationCaseBand
           cases={visibleCases}
           loading={casesLoading}
           error={casesError}
           selectedId={caseId}
+          investigatedIds={investigatedIds}
           onSelect={setCaseId}
         />
 
@@ -136,7 +186,12 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
                 </div>
               )}
               <div className="max-h-64 shrink-0 overflow-y-auto">
-                <InvestigationObservables alerts={alerts} />
+                <InvestigationObservables
+                  alerts={alerts}
+                  selected={selected}
+                  onToggle={toggleObservable}
+                  onToggleGroup={toggleGroup}
+                />
               </div>
               <div className="min-h-0 flex-1">
                 <InvestigationAlertsTable alerts={alerts} loading={caseLoading} error={alertsError} />
@@ -149,7 +204,14 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
           )}
         </div>
 
-        <InvestigationThreatIntel />
+        <InvestigationPanel
+          instanceId={instanceId ?? ""}
+          caseId={caseId}
+          caseName={selectedCaseName}
+          selected={selectedObservables}
+          isAdmin={isAdmin}
+          onInvestigated={refreshInvestigated}
+        />
       </div>
     </section>
   );

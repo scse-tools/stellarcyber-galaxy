@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.2.4";
+export const APP_VERSION = "3.3.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.3.0",
+    date: "2026-09-30",
+    notes: [
+      "Investigation Workspace: observables can now be selected and sent to an AI agent for threat-intel investigation.",
+      "Hybrid enrichment — live source lookups (VirusTotal, AbuseIPDB, GreyNoise, Shodan) where an API key is configured, plus LLM synthesis with an overall verdict, summary and recommendation.",
+      "Choose the LLM provider: Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google) or a custom OpenAI-compatible endpoint; keys are stored encrypted.",
+      "Investigations are retained as artifacts; add evidence as notes, links and screenshots attached to the case's session.",
+      "Investigated cases show a shield insignia in the cases band and can be filtered (all / investigated / not).",
+    ],
+  },
   {
     version: "3.2.4",
     date: "2026-09-30",
