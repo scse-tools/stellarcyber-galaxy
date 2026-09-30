@@ -44,6 +44,18 @@ export function defaultVisibleColumns(all: string[]): string[] {
   return curated.length ? curated : all.slice(0, 10);
 }
 
+/** Columns rendered as a rounded integer even though the raw value is fractional. */
+const ROUNDED_COLUMNS = new Set(["fidelity"]);
+
+/** Display text for an alert cell: fidelity (and peers) round to an int; everything else is plain. */
+export function displayAlertCell(column: string, value: unknown): string {
+  if (ROUNDED_COLUMNS.has(column)) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return String(Math.round(n));
+  }
+  return cellText(value);
+}
+
 /** Sort comparator for an alert column (numeric-aware, via the shared cell comparator). */
 export function compareAlerts(column: string, a: CaseAlert, b: CaseAlert): number {
   return compareCells(cellText(a[column]), cellText(b[column]));

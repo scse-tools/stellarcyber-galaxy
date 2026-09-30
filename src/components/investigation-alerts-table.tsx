@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { cellText } from "@/lib/table-export";
-import { allAlertColumns, columnLabel, compareAlerts } from "@/lib/investigation-columns";
+import { allAlertColumns, columnLabel, compareAlerts, displayAlertCell } from "@/lib/investigation-columns";
 import { useAlertColumns } from "@/lib/use-alert-columns";
 import { InvestigationColumnMenu } from "@/components/investigation-column-menu";
 import { cn } from "@/lib/utils";
@@ -93,7 +92,7 @@ export function InvestigationAlertsTable({ alerts, loading, error }: Props) {
               {rows.map((alert, index) => (
                 <tr key={alert._id || index} className={cn(index % 2 ? "bg-sc-surface/40" : undefined, "hover:bg-sc-active/50")}>
                   {visibleColumns.map((column) => {
-                    const text = cellText(alert[column]);
+                    const text = displayAlertCell(column, alert[column]);
                     return (
                       <td
                         key={column}

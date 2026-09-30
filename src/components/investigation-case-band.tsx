@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
 import type { CaseSummary } from "@/lib/types";
@@ -19,11 +21,37 @@ interface Props {
 
 /** Narrow left-hand band listing a tile's cases: score, title, alert count, status. */
 export function InvestigationCaseBand({ cases, loading, error, selectedId, onSelect }: Props) {
+  const [query, setQuery] = useState("");
+
+  // Highest-scoring cases first; filter by title text as the user types.
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return cases
+      .filter((c) => !needle || `${c.name} ${c.ticketId}`.toLowerCase().includes(needle))
+      .sort((a, b) => b.score - a.score);
+  }, [cases, query]);
+
   return (
     <div className="flex min-h-0 flex-col rounded-xl border border-sc-border-soft bg-sc-surface/50">
       <div className="flex items-center justify-between border-b border-sc-border-soft px-3 py-2">
         <span className="text-[11px] font-medium uppercase tracking-wide text-sc-faint">Cases</span>
-        <span className="text-[11px] text-sc-faint">{cases.length}</span>
+        <span className="text-[11px] text-sc-faint">
+          {shown.length}
+          {shown.length !== cases.length ? ` / ${cases.length}` : ""}
+        </span>
+      </div>
+
+      <div className="border-b border-sc-border-soft p-2">
+        <div className="relative">
+          <Search size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sc-faint" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search case titles…"
+            className="w-full rounded-md border border-sc-border bg-sc-surface py-1.5 pl-7 pr-2 text-xs text-sc-text placeholder:text-sc-faint focus:border-sc-primary focus:outline-none"
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -32,9 +60,11 @@ export function InvestigationCaseBand({ cases, loading, error, selectedId, onSel
         <p className="px-3 py-6 text-center text-xs text-critical">{error}</p>
       ) : cases.length === 0 ? (
         <p className="px-3 py-6 text-center text-xs text-sc-faint">No cases for this server.</p>
+      ) : shown.length === 0 ? (
+        <p className="px-3 py-6 text-center text-xs text-sc-faint">No cases match “{query}”.</p>
       ) : (
         <ul className="min-h-0 flex-1 divide-y divide-sc-border-soft overflow-y-auto">
-          {cases.map((c) => {
+          {shown.map((c) => {
             const active = c.id === selectedId;
             return (
               <li key={c.id}>

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Microscope } from "lucide-react";
 import { InvestigationCaseBand } from "@/components/investigation-case-band";
 import { InvestigationCaseMeta } from "@/components/investigation-case-meta";
+import { InvestigationObservables } from "@/components/investigation-observables";
 import { InvestigationAlertsTable } from "@/components/investigation-alerts-table";
 import { InvestigationThreatIntel } from "@/components/investigation-threat-intel";
+import { TimeRangePicker } from "@/components/time-range-picker";
+import { DEFAULT_SELECTION, describeRange, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
 import type { CaseAlert, CaseDetail, CaseSummary, InstanceSummary } from "@/lib/types";
 
@@ -18,6 +21,7 @@ async function getJson<T>(url: string): Promise<T> {
 
 export function InvestigationWorkspace({ instances }: { instances: InstanceSummary[]; isAdmin: boolean }) {
   const [instanceId, setInstanceId] = useState<string | null>(instances[0]?.id ?? null);
+  const [range, setRange] = useState<TimeRangeSelection>(DEFAULT_SELECTION);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);
@@ -69,11 +73,26 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
     };
   }, [instanceId, caseId]);
 
+  // Filter cases to those created within the selected window — same rule as the main case board.
+  const visibleCases = useMemo(() => {
+    const { from, to } = resolveTimeRange(range);
+    return cases.filter((c) => {
+      const created = Date.parse(c.createdAt);
+      return !Number.isNaN(created) && created >= from && created <= to;
+    });
+  }, [cases, range]);
+
   return (
     <section className="flex h-[calc(100vh-11rem)] min-h-0 flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Microscope size={18} className="text-sc-accent" />
-        <h2 className="text-lg font-semibold text-sc-text">Investigation Workspace</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Microscope size={18} className="text-sc-accent" />
+          <h2 className="text-lg font-semibold text-sc-text">Investigation Workspace</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <TimeRangePicker value={range} onChange={setRange} />
+          <span className="text-[11px] text-sc-faint">Cases created · {describeRange(range)}</span>
+        </div>
       </div>
 
       {/* Chips — one per tile on the case board. */}
@@ -102,7 +121,7 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
       {/* Left cases band · middle case detail + alerts · right threat intel. */}
       <div className="grid min-h-0 flex-1 grid-cols-[16rem_minmax(0,1fr)_18rem] gap-3">
         <InvestigationCaseBand
-          cases={cases}
+          cases={visibleCases}
           loading={casesLoading}
           error={casesError}
           selectedId={caseId}
@@ -119,6 +138,9 @@ export function InvestigationWorkspace({ instances }: { instances: InstanceSumma
                   {caseLoading ? "Loading case…" : "Case metadata unavailable."}
                 </div>
               )}
+              <div className="max-h-64 shrink-0 overflow-y-auto">
+                <InvestigationObservables alerts={alerts} />
+              </div>
               <div className="min-h-0 flex-1">
                 <InvestigationAlertsTable alerts={alerts} loading={caseLoading} error={alertsError} />
               </div>
