@@ -1,7 +1,7 @@
 import { getProvider, getProviderApiKey } from "@/lib/investigation/providers-repo";
 import { listActiveSources, type ActiveSource } from "@/lib/investigation/sources-repo";
 import { fetchFromSource } from "@/lib/investigation/ti-fetch";
-import { runLlm } from "@/lib/investigation/llm";
+import { describeLlmError, runLlm } from "@/lib/investigation/llm";
 import { getOrCreateInvestigation, saveRun, type NewRun } from "@/lib/investigation/investigations-repo";
 import { providerNeedsKey, type Finding, type InvestigationRun, type Observable } from "@/lib/investigation/types";
 import { getInvestigation } from "@/lib/investigation/investigations-repo";
@@ -129,7 +129,7 @@ export async function runInvestigation(params: {
       }
     }
   } catch (thrown) {
-    error = thrown instanceof Error ? thrown.message : "LLM call failed.";
+    error = describeLlmError(thrown);
   }
 
   const newRun: NewRun = {

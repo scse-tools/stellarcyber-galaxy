@@ -177,7 +177,7 @@ function seedDefaultProvider(db: DatabaseSync): void {
   const now = new Date().toISOString();
   db.prepare(
     `INSERT INTO llm_providers (id, name, kind, model, base_url, api_key_enc, enabled, is_default, created_at, updated_at)
-     VALUES (?, ?, 'ollama', 'llama3.1', 'http://localhost:11434/v1', '', 1, ?, ?, ?)`,
+     VALUES (?, ?, 'ollama', 'llama3.2', 'http://localhost:11434/v1', '', 1, ?, ?, ?)`,
   ).run(randomUUID(), "Ollama (local)", isDefault, now, now);
 }
 

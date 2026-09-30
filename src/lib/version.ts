@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.5.0";
+export const APP_VERSION = "3.5.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,15 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.5.1",
+    date: "2026-09-30",
+    notes: [
+      "Added a Test button per LLM provider in settings — makes a tiny live call and shows success or the real error (e.g. connection refused, DNS, blocked host) instead of a bare \"fetch failed\".",
+      "Investigation run errors now surface the underlying network cause too.",
+      "Seeded Ollama default model is now llama3.2.",
+    ],
+  },
   {
     version: "3.5.0",
     date: "2026-09-30",

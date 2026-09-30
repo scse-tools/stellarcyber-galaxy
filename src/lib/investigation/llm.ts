@@ -11,6 +11,14 @@ export interface LlmRequest {
 
 const rec = (value: unknown): Record<string, unknown> => (typeof value === "object" && value ? (value as Record<string, unknown>) : {});
 
+/** Unwraps a fetch/Error into a readable message, surfacing the network cause behind "fetch failed". */
+export function describeLlmError(error: unknown): string {
+  if (!(error instanceof Error)) return "Unknown error";
+  const cause = (error as { cause?: { code?: string; message?: string } }).cause;
+  const detail = cause?.code || cause?.message;
+  return detail && detail !== error.message ? `${error.message} (${detail})` : error.message;
+}
+
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<Record<string, unknown>> {
   const response = await proxiedFetch(url, {
     method: "POST",

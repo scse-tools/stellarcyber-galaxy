@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { ProviderForm, type ProviderDraft } from "@/components/investigation-provider-form";
+import { ProviderRow } from "@/components/investigation-provider-row";
 import { InvestigationSourcesSettings } from "@/components/investigation-sources-settings";
-import { providerNeedsKey, type CustomSourceInput, type LlmProvider, type TiSource } from "@/lib/investigation/types";
+import type { CustomSourceInput, LlmProvider, TiSource } from "@/lib/investigation/types";
 
 const EMPTY: ProviderDraft = { name: "", kind: "ollama", model: "", baseUrl: "", apiKey: "", isDefault: false };
 
@@ -129,36 +129,12 @@ export function InvestigationSettingsModal({ open, isAdmin, onClose, onChanged }
                   <li className="text-xs text-sc-faint">No providers yet. Add Claude, ChatGPT, Gemini or a custom endpoint.</li>
                 ) : (
                   providers.map((provider) => (
-                    <li
+                    <ProviderRow
                       key={provider.id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-sc-border-soft bg-sc-surface px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-sc-text">
-                          {provider.name}
-                          {provider.isDefault ? <span className="ml-1.5 text-[10px] text-sc-accent">default</span> : null}
-                          {providerNeedsKey(provider.kind) && !provider.hasKey ? (
-                            <span className="ml-1.5 text-[10px] text-high">no key</span>
-                          ) : null}
-                        </p>
-                        <p className="text-[10px] text-sc-faint">
-                          {provider.kind} · {provider.model}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button onClick={() => setDraft({ ...provider, baseUrl: provider.baseUrl ?? "", apiKey: "" })}>
-                          Edit
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={() => void removeProvider(provider.id)}
-                          aria-label="Delete provider"
-                          className="rounded p-1.5 text-sc-faint hover:text-critical"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </li>
+                      provider={provider}
+                      onEdit={(p) => setDraft({ ...p, baseUrl: p.baseUrl ?? "", apiKey: "" })}
+                      onDelete={(pid) => void removeProvider(pid)}
+                    />
                   ))
                 )}
               </ul>
