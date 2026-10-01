@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.12.0";
+export const APP_VERSION = "3.12.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -11,10 +11,17 @@ export interface ChangelogEntry {
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.12.1",
+    date: "2026-10-01",
+    notes: [
+      "AI case summary is now read from Stellar Cyber's ai/cases/detail endpoint (the aiSummary section) and shown in the metadata when AutoTriage has produced one.",
+    ],
+  },
+  {
     version: "3.12.0",
     date: "2026-10-01",
     notes: [
-      "Case metadata shows Stellar Cyber's AI case summary when the deployment exposes one (read from the case summary resource; shown only if a prose summary is present).",
+      "Case metadata shows Stellar Cyber's AI case summary when the deployment exposes one (shown only if a prose summary is present).",
     ],
   },
   {

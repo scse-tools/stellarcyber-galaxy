@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
 import { ttpLabel, ttpUrl, type Ttp } from "@/lib/mitre";
 import { InvestigationTtpAnalysis } from "@/components/investigation-ttp-analysis";
+import { MarkdownLite } from "@/components/markdown-lite";
 import type { CaseDetail } from "@/lib/types";
 
 // Fields surfaced as labelled metadata cards, in this order, when present.
@@ -108,10 +109,12 @@ export function InvestigationCaseMeta({
 
       {aiSummary ? (
         <div className="mt-3 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
-          <p className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
+          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
             <Sparkles size={11} /> AI summary · Stellar Cyber
           </p>
-          <p className="whitespace-pre-wrap text-xs leading-relaxed text-sc-text">{aiSummary}</p>
+          <div className="text-xs">
+            <MarkdownLite text={aiSummary} />
+          </div>
         </div>
       ) : null}
 

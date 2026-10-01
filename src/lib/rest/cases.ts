@@ -91,50 +91,33 @@ export async function fetchCaseDetail(row: InstanceRow, caseId: string): Promise
   return isRecord(body) ? (body as CaseDetail) : null;
 }
 
-/** The case summary resource (structured; on some deployments also carries an AI narrative). */
-export async function fetchCaseSummary(row: InstanceRow, caseId: string): Promise<Record<string, unknown> | null> {
+const AI_CASE_PATH = "/connect/api/v1/ai/cases/detail";
+
+/** Coerces the `aiSummary` section into prose text (it may be a string or an object with one). */
+function coerceAiSummary(value: unknown): string | null {
+  if (typeof value === "string") return value.trim() || null;
+  if (isRecord(value)) {
+    for (const key of ["summary", "text", "content", "narrative", "markdown", "body", "message"]) {
+      const inner = value[key];
+      if (typeof inner === "string" && inner.trim()) return inner.trim();
+    }
+  }
+  return null;
+}
+
+/**
+ * Stellar Cyber's AI (AutoTriage) case summary, from `ai/cases/detail`. Returns the prose summary
+ * when the deployment's AutoTriage service produced one, or null (the section errors out otherwise).
+ */
+export async function fetchAiSummary(row: InstanceRow, caseId: string): Promise<string | null> {
   try {
-    const body = await getJson(row, `${CASES_PATH}/${encodeURIComponent(caseId)}/summary`);
-    if (isRecord(body) && isRecord(body.data)) return body.data;
-    return isRecord(body) ? body : null;
+    const body = await getJson(row, `${AI_CASE_PATH}?id=${encodeURIComponent(caseId)}`);
+    const data = isRecord(body) && isRecord(body.data) ? body.data : isRecord(body) ? body : null;
+    if (!data) return null;
+    return coerceAiSummary(data.aiSummary ?? data.ai_summary);
   } catch {
     return null;
   }
-}
-
-// Field names that would hold a GPT/AI-written case summary, when the deployment exposes one.
-const AI_SUMMARY_KEY =
-  /(?:ai|gpt|genai|copilot|llm)[\w ]{0,20}(?:summary|insight|narrativ|investigat|analysis|assessment)|(?:summary|insight|narrativ)[\w ]{0,20}(?:ai|gpt)/i;
-
-function scanAiSummary(value: unknown, key: string): string | null {
-  if (typeof value === "string") {
-    return AI_SUMMARY_KEY.test(key) && value.trim().length >= 60 ? value.trim() : null;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = scanAiSummary(item, key);
-      if (found) return found;
-    }
-    return null;
-  }
-  if (isRecord(value)) {
-    for (const [k, v] of Object.entries(value)) {
-      const found = scanAiSummary(v, k);
-      if (found) return found;
-    }
-    return null;
-  }
-  return null;
-}
-
-/** Finds a prose AI summary across the given objects, or null if none is exposed. */
-export function extractAiSummary(...objects: (Record<string, unknown> | null)[]): string | null {
-  for (const object of objects) {
-    if (!object) continue;
-    const found = scanAiSummary(object, "");
-    if (found) return found;
-  }
-  return null;
 }
 
 /**
