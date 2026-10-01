@@ -87,15 +87,17 @@ export function GalaxyHeader({
           </div>
           <p className="mt-1.5 text-xs text-sc-faint">
             {instanceCount} instance{instanceCount === 1 ? "" : "s"} · {onlineCount} reachable
-            {viewMode === "studio"
-              ? " · Connector Studio"
+            {viewMode === "investigation"
+              ? " · Investigation Workspace"
+              : viewMode === "studio"
+              ? " · Onboarding Studio"
               : viewMode === "health"
                 ? ` · ${healthTotals.sensorsDisconnected} sensor${healthTotals.sensorsDisconnected === 1 ? "" : "s"} down · ${healthTotals.connectorsIssues} connector issue${healthTotals.connectorsIssues === 1 ? "" : "s"}`
                 : ` · ${total.toLocaleString()} open case${total === 1 ? "" : "s"} in window`}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {viewMode === "studio" ? null : (
+          {viewMode === "studio" || viewMode === "investigation" ? null : (
             <div
               role="group"
               aria-label="Layout"
@@ -164,7 +166,7 @@ export function GalaxyHeader({
         </div>
       </div>
 
-      {viewMode === "studio" ? null : (
+      {viewMode === "studio" || viewMode === "investigation" ? null : (
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-3">
         {viewMode === "health" ? (
           <p className="text-[11px] text-sc-faint">

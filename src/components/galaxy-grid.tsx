@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GalaxyHeader } from "@/components/galaxy-header";
 import { SideNav } from "@/components/side-nav";
 import { OnboardingStudio } from "@/components/onboarding-studio";
+import { InvestigationWorkspace } from "@/components/investigation-workspace";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
@@ -211,6 +212,8 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         <p className="text-sm text-sc-faint">Loading constellation…</p>
       ) : viewMode === "studio" ? (
         <OnboardingStudio instances={instances} isAdmin={isAdmin} />
+      ) : viewMode === "investigation" ? (
+        <InvestigationWorkspace instances={instances} isAdmin={isAdmin} />
       ) : instances.length === 0 ? (
         <EmptyState onAdd={openAdd} />
       ) : layout === "table" ? (

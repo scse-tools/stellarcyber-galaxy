@@ -62,7 +62,7 @@ function storedViewMode(): ViewMode {
   if (typeof window === "undefined") return "cases";
   try {
     const value = window.localStorage.getItem(VIEW_MODE_KEY);
-    return value === "health" || value === "studio" ? value : "cases";
+    return value === "health" || value === "studio" || value === "investigation" ? value : "cases";
   } catch {
     return "cases";
   }

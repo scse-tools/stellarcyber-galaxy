@@ -117,7 +117,7 @@ export interface SensorMetrics {
 export const EMPTY_COUNTS: SeverityCounts = { critical: 0, high: 0, medium: 0, low: 0 };
 
 /** One MSSP tenant/customer visible to an instance's API key. */
-export type ViewMode = "cases" | "health" | "studio";
+export type ViewMode = "cases" | "health" | "studio" | "investigation";
 
 export type LayoutMode = "grid" | "table";
 
@@ -133,6 +133,42 @@ export interface HealthTotals {
 export interface Tenant {
   id: string;
   name: string;
+}
+
+/** One case as shown in the Investigation Workspace's left-hand band. */
+export interface CaseSummary {
+  id: string;
+  ticketId: string;
+  name: string;
+  score: number;
+  severity: string;
+  status: string;
+  /** Number of alerts attached to the case. */
+  size: number;
+  assignee: string;
+  /** Epoch milliseconds; 0 when the console did not supply a timestamp. */
+  createdAt: number;
+  modifiedAt: number;
+  tenantName: string;
+}
+
+/** Full case record; shape varies by deployment, so it's an open map. */
+export type CaseDetail = Record<string, unknown>;
+
+/** An alert flattened from its Elasticsearch `_source`, with the doc `_id` kept. */
+export type CaseAlert = { _id: string } & Record<string, unknown>;
+
+/** Stellar Cyber's AutoTriage AI summary for a case (from ai/cases/detail). */
+export interface AiSummary {
+  verdict: string | null;
+  verdictReasoning: string | null;
+  /** The concise prose summary (Markdown). */
+  summary: string | null;
+  /** Richer sections, shown on demand. */
+  recommendations: string | null;
+  timeline: string | null;
+  hypothesis: string | null;
+  keyEntities: string | null;
 }
 
 /** Raised when a poll finds more critical/high cases on an instance than the previous poll. */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
-import { Activity, Cable, LayoutGrid, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Activity, Cable, LayoutGrid, Microscope, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ViewMode } from "@/lib/types";
 
@@ -18,6 +18,7 @@ const ITEMS: NavItem[] = [
   { id: "cases", label: "Cases", Icon: LayoutGrid },
   { id: "health", label: "Deployment health", Icon: Activity },
   { id: "studio", label: "Onboarding Studio", Icon: Cable },
+  { id: "investigation", label: "Investigation Workspace", Icon: Microscope },
 ];
 
 interface SideNavProps {

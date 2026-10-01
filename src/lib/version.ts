@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.1.8";
+export const APP_VERSION = "3.14.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,215 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.14.1",
+    date: "2026-10-01",
+    notes: ["The AI case summary section is now collapsible (click its header to collapse/expand)."],
+  },
+  {
+    version: "3.14.0",
+    date: "2026-10-01",
+    notes: [
+      "AI case summary: a \"Full AI analysis\" expander surfaces the richer sections on demand (timeline, hypothesis, key entities & relations, recommendations).",
+      "Added Google Threat Intelligence (GTI) as a premium threat-intel source (IPs, domains, URLs, hashes) — uses the VirusTotal v3 API with your GTI key and surfaces GTI's verdict/severity/threat score.",
+    ],
+  },
+  {
+    version: "3.13.1",
+    date: "2026-10-01",
+    notes: [
+      "Fixed the Stellar AI case summary: it's read from aiSummary.ai_case_triage (concise summary, verdict and verdict reasoning) and shown with a verdict badge. Cases where AutoTriage produced a summary now display it.",
+    ],
+  },
+  {
+    version: "3.13.0",
+    date: "2026-10-01",
+    notes: [
+      "MITRE ATT&CK TTP chips now filter the alert table like observables: selecting TTPs filters to their alerts and highlights the observables in those alerts. The attack.mitre.org link moved to the chip's edge so the chip body toggles the filter.",
+      "Observables panel redesigned as a clean per-type table instead of chip blocks.",
+      "\"Identify threat actor\" indicates when an analysis already exists for the case and offers to run again.",
+    ],
+  },
+  {
+    version: "3.12.1",
+    date: "2026-10-01",
+    notes: [
+      "AI case summary is now read from Stellar Cyber's ai/cases/detail endpoint (the aiSummary section) and shown in the metadata when AutoTriage has produced one.",
+    ],
+  },
+  {
+    version: "3.12.0",
+    date: "2026-10-01",
+    notes: [
+      "Case metadata shows Stellar Cyber's AI case summary when the deployment exposes one (shown only if a prose summary is present).",
+    ],
+  },
+  {
+    version: "3.11.1",
+    date: "2026-10-01",
+    notes: [
+      "Case metadata now has an \"Open in Stellar\" link that opens the case directly in the Stellar Cyber console (https://<server>/cases/case-detail/<case_id>) in a new tab.",
+    ],
+  },
+  {
+    version: "3.11.0",
+    date: "2026-10-01",
+    notes: [
+      "Threat-actor analysis output is now rendered as formatted Markdown (headings, lists, emphasis) for easier reading.",
+      "Each analysis is saved to the case as an \"AI analysis\" evidence item, so it persists and can be viewed again in the Evidence tab.",
+    ],
+  },
+  {
+    version: "3.10.1",
+    date: "2026-10-01",
+    notes: [
+      "LLM prompt context is now case metadata, MITRE TTPs and pooled observables only (raw alert JSON removed) — small enough to fit comfortably in any model's context window.",
+    ],
+  },
+  {
+    version: "3.10.0",
+    date: "2026-10-01",
+    notes: [
+      "Case metadata now shows the MITRE ATT&CK TTPs pooled from the case's alerts (from each alert's xdr_event), linked to attack.mitre.org.",
+      "An \"Identify threat actor\" button sends the observed TTPs to the LLM to surface patterns and likely threat actors (enabled only when an LLM is configured).",
+      "Ad-hoc prompts now include the full case context — case facts, MITRE TTPs and the raw alert data (within a size budget).",
+      "Added a Refresh button beside the time picker to reload cases, the open case and insignia without losing your selection.",
+      "Evidence screenshots can be added by drag & drop, not just the file picker.",
+    ],
+  },
+  {
+    version: "3.9.0",
+    date: "2026-10-01",
+    notes: [
+      "Investigate tab now has an \"Ask the analyst\" prompt box: free-form questions to the selected LLM, silently wrapped with a cybersecurity-analyst investigation role (Cmd/Ctrl+Enter to send).",
+      "Reputation observables now come from any field containing \"reputation\", excluding \"reputation_source\" fields (which name the source, not the verdict).",
+    ],
+  },
+  {
+    version: "3.8.0",
+    date: "2026-10-01",
+    notes: [
+      "MAC addresses are now their own observable category and no longer misread as public IPs (48-bit MAC vs 128-bit IPv6).",
+      "New observable categories: registry keys, geolocations, and reputations; values like \"unknown\" are now ignored.",
+      "Each alert row has a detail icon that opens an aesthetically laid-out panel: headline properties, a searchable field list, and pretty-printed raw JSON with copy.",
+    ],
+  },
+  {
+    version: "3.7.0",
+    date: "2026-10-01",
+    notes: [
+      "Added free-key premium sources: AlienVault OTX, ThreatFox, URLhaus and MalwareBazaar (abuse.ch).",
+      "Observables now cross-filter the alert table: selecting observables filters the table to alerts containing any of them (additive), and selecting an alert highlights its observables in the panel.",
+    ],
+  },
+  {
+    version: "3.6.0",
+    date: "2026-10-01",
+    notes: [
+      "Observable extraction is now field-name gated: IPs come only from ip-style fields, usernames from user fields, hashes from md5/sha/hash fields, URLs from url/uri fields, domains from domain/fqdn fields, and so on — cutting the noise from values buried in free-text fields.",
+      "Added keyless OSINT sources: Shodan InternetDB (open ports & CVEs), Tor/Onionoo (relay/exit check), and urlscan.io (recent scans).",
+    ],
+  },
+  {
+    version: "3.5.4",
+    date: "2026-10-01",
+    notes: [
+      "Sources tab now lists the actual enrichment sources (keyless/premium/custom) with live status and the observable types each covers — matching what runs and what's in settings; removed the placeholder sources that weren't wired up.",
+      "Threat-intel requests now send a browser User-Agent and follow redirects, with longer timeouts for RDAP and crt.sh, to improve reachability.",
+    ],
+  },
+  {
+    version: "3.5.3",
+    date: "2026-09-30",
+    notes: [
+      "DNS source now falls back to the host's system resolver when DNS-over-HTTPS is unreachable, so it still works in restricted-egress environments.",
+    ],
+  },
+  {
+    version: "3.5.2",
+    date: "2026-09-30",
+    notes: [
+      "Investigation results now show, per observable, every source checked with a status (finding / clean / info / no data / error) and the detail behind it, plus a coverage line and the AI assessment.",
+      "Added a Test button per threat-intel source so you can check reachability and see the exact failure.",
+    ],
+  },
+  {
+    version: "3.5.1",
+    date: "2026-09-30",
+    notes: [
+      "Added a Test button per LLM provider in settings — makes a tiny live call and shows success or the real error (e.g. connection refused, DNS, blocked host) instead of a bare \"fetch failed\".",
+      "Investigation run errors now surface the underlying network cause too.",
+      "Seeded Ollama default model is now llama3.2.",
+    ],
+  },
+  {
+    version: "3.5.0",
+    date: "2026-09-30",
+    notes: [
+      "Added a keyless local Ollama LLM provider, seeded as the default so investigations work out of the box (with Ollama running locally).",
+      "Cloud providers (Claude, ChatGPT, Gemini) and custom OpenAI-compatible endpoints can still be added; only cloud providers require an API key.",
+    ],
+  },
+  {
+    version: "3.4.0",
+    date: "2026-09-30",
+    notes: [
+      "Threat-intel enrichment now runs keyless by default: IPWHOIS, RDAP, DNS-over-HTTPS and crt.sh query automatically with no API key.",
+      "Premium sources (VirusTotal, AbuseIPDB, GreyNoise, Shodan) stay optional — add an API key to activate them.",
+      "You can now add your own custom premium sources (URL template + optional auth header/key) that apply to the observable types you choose.",
+      "Settings group sources into Keyless, Premium and Custom.",
+    ],
+  },
+  {
+    version: "3.3.0",
+    date: "2026-09-30",
+    notes: [
+      "Investigation Workspace: observables can now be selected and sent to an AI agent for threat-intel investigation.",
+      "Hybrid enrichment — live source lookups (VirusTotal, AbuseIPDB, GreyNoise, Shodan) where an API key is configured, plus LLM synthesis with an overall verdict, summary and recommendation.",
+      "Choose the LLM provider: Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google) or a custom OpenAI-compatible endpoint; keys are stored encrypted.",
+      "Investigations are retained as artifacts; add evidence as notes, links and screenshots attached to the case's session.",
+      "Investigated cases show a shield insignia in the cases band and can be filtered (all / investigated / not).",
+    ],
+  },
+  {
+    version: "3.2.4",
+    date: "2026-09-30",
+    notes: [
+      "Observables now split IP addresses into Public and Private groups (RFC1918, plus loopback and link-local).",
+    ],
+  },
+  {
+    version: "3.2.3",
+    date: "2026-09-30",
+    notes: [
+      "Fixed the Investigation Workspace time filter: case timestamps are epoch milliseconds, which were being parsed as dates and dropped — no cases showed. Timestamps are now normalised to epoch ms server-side.",
+      "Raised the cases fetch limit to 500 so wider time windows have more to filter.",
+    ],
+  },
+  {
+    version: "3.2.2",
+    date: "2026-09-30",
+    notes: [
+      "Investigation Workspace: cases list is sorted by score (highest first) with a title search box.",
+      "Added a time picker that filters cases by creation time, matching the main case board.",
+      "New Observables section pools IPs, domains, hostnames, usernames, emails, URLs, file names and hashes from all of a case's alerts.",
+      "Alert fidelity is now shown as a rounded integer.",
+    ],
+  },
+  {
+    version: "3.2.1",
+    date: "2026-09-30",
+    notes: [
+      "Investigation Workspace: pick a server chip to load its cases in a left-hand band (score, title, alert count, status).",
+      "Selecting a case shows its metadata and a table of alerts with show/hide, drag-to-reorder, sortable, and persistent columns.",
+      "Added a Threat Intel panel listing the major OSINT sources (source configuration comes next).",
+    ],
+  },
+  {
+    version: "3.2.0",
+    date: "2026-09-30",
+    notes: ["Added an Investigation Workspace main-menu item (scaffold — being built out)."],
+  },
   {
     version: "3.1.8",
     date: "2026-09-29",
