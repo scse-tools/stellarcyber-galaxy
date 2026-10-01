@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.10.0";
+export const APP_VERSION = "3.10.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,13 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.10.1",
+    date: "2026-10-01",
+    notes: [
+      "LLM prompt context is now case metadata, MITRE TTPs and pooled observables only (raw alert JSON removed) — small enough to fit comfortably in any model's context window.",
+    ],
+  },
   {
     version: "3.10.0",
     date: "2026-10-01",

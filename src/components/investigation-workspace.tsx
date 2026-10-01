@@ -141,7 +141,10 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
 
   // MITRE ATT&CK TTPs pooled from the case's alerts, and the full context handed to the LLM prompt.
   const ttps = useMemo(() => extractTtps(alerts), [alerts]);
-  const promptContext = useMemo(() => buildCaseContext(detail, alerts, ttps), [detail, alerts, ttps]);
+  const promptContext = useMemo(
+    () => buildCaseContext(detail, alerts.length, ttps, index.groups),
+    [detail, alerts.length, ttps, index.groups],
+  );
 
   // Selected observables filter the alert table to the union of alerts containing any of them.
   const filterIds = useMemo(() => {
