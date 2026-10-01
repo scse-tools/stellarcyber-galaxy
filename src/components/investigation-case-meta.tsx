@@ -8,7 +8,7 @@ import { SEVERITY_META, toSeverity } from "@/lib/severity";
 import { ttpKey, ttpLabel, ttpUrl, type Ttp } from "@/lib/mitre";
 import { InvestigationTtpAnalysis } from "@/components/investigation-ttp-analysis";
 import { MarkdownLite } from "@/components/markdown-lite";
-import type { CaseDetail } from "@/lib/types";
+import type { AiSummary, CaseDetail } from "@/lib/types";
 
 // Fields surfaced as labelled metadata cards, in this order, when present.
 const META_FIELDS: { key: string; label: string }[] = [
@@ -23,6 +23,15 @@ const META_FIELDS: { key: string; label: string }[] = [
   { key: "created_by_name", label: "Created by" },
   { key: "tags", label: "Tags" },
 ];
+
+/** Colour for an AI verdict badge (false-positive/benign = good, true-positive/malicious = bad). */
+function verdictClass(verdict: string): string {
+  const v = verdict.toLowerCase();
+  if (v.includes("false positive") || v.includes("benign")) return "bg-[var(--severity-success)] text-white";
+  if (v.includes("true positive") || v.includes("malic")) return "bg-critical text-white";
+  if (v.includes("suspic") || v.includes("escalat")) return "bg-high text-white";
+  return "bg-sc-active text-sc-muted";
+}
 
 function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
@@ -51,7 +60,7 @@ export function InvestigationCaseMeta({
   caseId: string | null;
   caseName: string | null;
   consoleUrl: string | null;
-  aiSummary: string | null;
+  aiSummary: AiSummary | null;
   selectedTtps: Set<string>;
   onToggleTtp: (key: string) => void;
 }) {
@@ -113,12 +122,27 @@ export function InvestigationCaseMeta({
 
       {aiSummary ? (
         <div className="mt-3 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
-          <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
-            <Sparkles size={11} /> AI summary · Stellar Cyber
-          </p>
-          <div className="text-xs">
-            <MarkdownLite text={aiSummary} />
+          <div className="mb-1 flex items-center gap-2">
+            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
+              <Sparkles size={11} /> AI summary · Stellar Cyber
+            </p>
+            {aiSummary.verdict ? (
+              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", verdictClass(aiSummary.verdict))}>
+                {aiSummary.verdict}
+              </span>
+            ) : null}
           </div>
+          {aiSummary.verdictReasoning ? (
+            <p className="mb-2 text-xs leading-relaxed text-sc-muted">
+              <span className="font-semibold text-sc-text">Verdict reasoning: </span>
+              {aiSummary.verdictReasoning}
+            </p>
+          ) : null}
+          {aiSummary.summary ? (
+            <div className="text-xs">
+              <MarkdownLite text={aiSummary.summary} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 

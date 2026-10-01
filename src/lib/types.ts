@@ -158,6 +158,15 @@ export type CaseDetail = Record<string, unknown>;
 /** An alert flattened from its Elasticsearch `_source`, with the doc `_id` kept. */
 export type CaseAlert = { _id: string } & Record<string, unknown>;
 
+/** Stellar Cyber's AutoTriage AI summary for a case (from ai/cases/detail). */
+export interface AiSummary {
+  verdict: string | null;
+  verdictReasoning: string | null;
+  /** The concise prose summary (Markdown). */
+  summary: string | null;
+  recommendations: string | null;
+}
+
 /** Raised when a poll finds more critical/high cases on an instance than the previous poll. */
 export interface AlertNotification {
   id: string;

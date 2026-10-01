@@ -1,6 +1,6 @@
 import { proxiedFetch, restUrl } from "@/lib/http";
 import { forgetRestAccessToken, getRestAccessToken } from "@/lib/rest/access-token";
-import type { CaseAlert, CaseDetail, CaseSummary, InstanceRow } from "@/lib/types";
+import type { AiSummary, CaseAlert, CaseDetail, CaseSummary, InstanceRow } from "@/lib/types";
 
 const CASES_PATH = "/connect/api/v1/cases";
 const REQUEST_TIMEOUT_MS = Number(process.env.GALAXY_REST_TIMEOUT_MS ?? 15_000);
@@ -93,28 +93,30 @@ export async function fetchCaseDetail(row: InstanceRow, caseId: string): Promise
 
 const AI_CASE_PATH = "/connect/api/v1/ai/cases/detail";
 
-/** Coerces the `aiSummary` section into prose text (it may be a string or an object with one). */
-function coerceAiSummary(value: unknown): string | null {
-  if (typeof value === "string") return value.trim() || null;
-  if (isRecord(value)) {
-    for (const key of ["summary", "text", "content", "narrative", "markdown", "body", "message"]) {
-      const inner = value[key];
-      if (typeof inner === "string" && inner.trim()) return inner.trim();
-    }
-  }
-  return null;
-}
+const strOrNull = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() ? value.trim() : null;
 
 /**
- * Stellar Cyber's AI (AutoTriage) case summary, from `ai/cases/detail`. Returns the prose summary
- * when the deployment's AutoTriage service produced one, or null (the section errors out otherwise).
+ * Stellar Cyber's AI (AutoTriage) case summary, from `ai/cases/detail`. The prose lives at
+ * `aiSummary.ai_case_triage` (summary.concise_summary, verdict, verdict_reasoning). Returns null
+ * when AutoTriage has not produced a summary (the section is absent or errored).
  */
-export async function fetchAiSummary(row: InstanceRow, caseId: string): Promise<string | null> {
+export async function fetchAiSummary(row: InstanceRow, caseId: string): Promise<AiSummary | null> {
   try {
     const body = await getJson(row, `${AI_CASE_PATH}?id=${encodeURIComponent(caseId)}`);
     const data = isRecord(body) && isRecord(body.data) ? body.data : isRecord(body) ? body : null;
-    if (!data) return null;
-    return coerceAiSummary(data.aiSummary ?? data.ai_summary);
+    const ai = data && isRecord(data.aiSummary) ? data.aiSummary : null;
+    if (!ai) return null;
+
+    const triage = isRecord(ai.ai_case_triage) ? ai.ai_case_triage : {};
+    const summaryObj = isRecord(triage.summary) ? triage.summary : {};
+    const summary = strOrNull(summaryObj.concise_summary) ?? strOrNull(summaryObj.summary);
+    const verdict = strOrNull(triage.verdict);
+    const verdictReasoning = strOrNull(triage.verdict_reasoning);
+    const recommendations = strOrNull(summaryObj.recommendations);
+
+    if (!summary && !verdict && !verdictReasoning) return null;
+    return { verdict, verdictReasoning, summary, recommendations };
   } catch {
     return null;
   }

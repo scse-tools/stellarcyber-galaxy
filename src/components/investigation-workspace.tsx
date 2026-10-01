@@ -15,7 +15,7 @@ import { buildObservableIndex, type ObservableKind } from "@/lib/observables";
 import { buildTtpIndex } from "@/lib/mitre";
 import { buildCaseContext } from "@/lib/investigation/context";
 import type { Observable } from "@/lib/investigation/types";
-import type { CaseAlert, CaseDetail, CaseSummary, InstanceSummary } from "@/lib/types";
+import type { AiSummary, CaseAlert, CaseDetail, CaseSummary, InstanceSummary } from "@/lib/types";
 
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -35,7 +35,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   const [caseId, setCaseId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [alerts, setAlerts] = useState<CaseAlert[]>([]);
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
   const [caseLoading, setCaseLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -73,7 +73,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
     const base = `/api/instances/${instanceId}/cases/${encodeURIComponent(caseId)}`;
     try {
       const [d, a] = await Promise.all([
-        getJson<{ detail: CaseDetail; aiSummary?: string | null }>(base),
+        getJson<{ detail: CaseDetail; aiSummary?: AiSummary | null }>(base),
         getJson<{ alerts: CaseAlert[] }>(`${base}/alerts`),
       ]);
       setDetail(d.detail);
