@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ChevronRight, ExternalLink, Sparkles } from "lucide-react";
 import { cellText } from "@/lib/table-export";
 import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
@@ -121,17 +121,19 @@ export function InvestigationCaseMeta({
       {summary ? <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-sc-muted">{summary}</p> : null}
 
       {aiSummary ? (
-        <div className="mt-3 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
-          <div className="mb-1 flex items-center gap-2">
-            <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
+        <details open className="group mt-3 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
+          <summary className="flex cursor-pointer list-none items-center gap-2">
+            <ChevronRight size={12} className="shrink-0 text-sc-faint transition-transform group-open:rotate-90" />
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
               <Sparkles size={11} /> AI summary · Stellar Cyber
-            </p>
+            </span>
             {aiSummary.verdict ? (
               <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", verdictClass(aiSummary.verdict))}>
                 {aiSummary.verdict}
               </span>
             ) : null}
-          </div>
+          </summary>
+          <div className="mt-2">
           {aiSummary.verdictReasoning ? (
             <p className="mb-2 text-xs leading-relaxed text-sc-muted">
               <span className="font-semibold text-sc-text">Verdict reasoning: </span>
@@ -154,7 +156,8 @@ export function InvestigationCaseMeta({
               </div>
             </details>
           ) : null}
-        </div>
+          </div>
+        </details>
       ) : null}
 
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
