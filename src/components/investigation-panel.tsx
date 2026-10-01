@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Play, Settings, ShieldQuestion } from "lucide-react";
 import { InvestigationRunView } from "@/components/investigation-run-view";
+import { InvestigationPromptBox } from "@/components/investigation-prompt-box";
 import { InvestigationEvidence } from "@/components/investigation-evidence";
 import { ThreatIntelSources } from "@/components/investigation-threat-intel";
 import { InvestigationSettingsModal } from "@/components/investigation-settings-modal";
@@ -188,6 +189,8 @@ export function InvestigationPanel({ instanceId, caseId, caseName, selected, isA
                 ) : null}
               </>
             )}
+
+            <InvestigationPromptBox providerId={providerId} />
           </div>
         ) : tab === "evidence" ? (
           <InvestigationEvidence evidence={evidence} busy={evidenceBusy} onAdd={addEvidence} onDelete={removeEvidence} />

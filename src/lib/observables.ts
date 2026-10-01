@@ -122,7 +122,8 @@ const FILE_KEY = /(file|filename|process|image|attachment|object_name)/;
 const MAC_KEY = /mac(_?addr(ess)?)?|hwaddr|ether(net)?_?addr/;
 const REGISTRY_KEY = /registry|reg_?key|reg_?path|reg_?value/;
 const GEO_KEY = /(geo|geoip|country|city|region|continent|(^|[_.])location([_.]|$))/;
-const REPUTATION_KEY = /(reputation|(^|[_.])rep([_.]|$)|rep_score|rep_level)/;
+// Reputation fields all contain "reputation"; *reputation_source* fields name the source, not the value.
+const REPUTATION_KEY = /reputation/;
 
 // Values that carry no signal — ignored across every category.
 const IGNORE_VALUES = new Set(["", "-", "n/a", "na", "none", "null", "nil", "unknown", "undefined", "0.0.0.0", "::"]);
@@ -219,7 +220,7 @@ function classify(key: string, raw: string, sink: Sink): void {
   if (GEO_KEY.test(key) && /[a-z]/i.test(value) && value.length <= 64 && !/^\d/.test(value)) {
     sink("geo", value);
   }
-  if (REPUTATION_KEY.test(key) && value.length <= 64) {
+  if (REPUTATION_KEY.test(key) && !key.includes("reputation_source") && value.length <= 64) {
     sink("reputation", value);
   }
 }

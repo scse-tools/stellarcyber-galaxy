@@ -94,6 +94,13 @@ describe("extractObservables", () => {
     expect(groupFor(alerts, "username")).toBeUndefined();
   });
 
+  it("includes reputation values but not reputation_source fields", () => {
+    const alerts: CaseAlert[] = [
+      { _id: "a1", ip_reputation: "malicious", ip_reputation_source: "VendorX" },
+    ];
+    expect(values(alerts, "reputation")).toEqual(["malicious"]);
+  });
+
   it("splits IPs into public and private using RFC1918 rules", () => {
     const alerts: CaseAlert[] = [
       { _id: "a1", ips: ["10.1.2.3", "172.16.5.5", "172.32.5.5", "192.168.1.1", "127.0.0.1", "8.8.4.4", "1.2.3.4"] },

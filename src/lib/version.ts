@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.8.0";
+export const APP_VERSION = "3.9.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.9.0",
+    date: "2026-10-01",
+    notes: [
+      "Investigate tab now has an \"Ask the analyst\" prompt box: free-form questions to the selected LLM, silently wrapped with a cybersecurity-analyst investigation role (Cmd/Ctrl+Enter to send).",
+      "Reputation observables now come from any field containing \"reputation\", excluding \"reputation_source\" fields (which name the source, not the verdict).",
+    ],
+  },
   {
     version: "3.8.0",
     date: "2026-10-01",
