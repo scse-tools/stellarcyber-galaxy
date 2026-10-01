@@ -41,6 +41,8 @@ export interface TiSource {
   kinds: ObservableKind[];
   enabled: boolean;
   hasKey: boolean;
+  /** Built-in sources: link to the source's site. */
+  homepage?: string | null;
   /** Custom sources only: the request template and auth header. */
   urlTemplate?: string | null;
   authHeader?: string | null;

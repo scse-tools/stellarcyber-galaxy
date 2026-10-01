@@ -1,88 +1,97 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ExternalLink } from "lucide-react";
+import type { ObservableKind } from "@/lib/observables";
+import type { TiSource } from "@/lib/investigation/types";
 
-interface Source {
-  name: string;
-  detail: string;
-  url: string;
-}
+const KIND_LABEL: Record<ObservableKind, string> = {
+  ip_public: "public IP",
+  ip_private: "private IP",
+  domain: "domain",
+  hostname: "hostname",
+  url: "URL",
+  hash: "hash",
+  email: "email",
+  username: "username",
+  filename: "file",
+};
 
-interface Group {
-  label: string;
-  sources: Source[];
-}
-
-// The major OSINT sources analysts pivot to first. Per-indicator deep links and custom
-// sources come in the next step (source configuration).
-const GROUPS: Group[] = [
-  {
-    label: "Reputation & enrichment",
-    sources: [
-      { name: "VirusTotal", detail: "Files, URLs, IPs, domains", url: "https://www.virustotal.com" },
-      { name: "AbuseIPDB", detail: "IP abuse reports", url: "https://www.abuseipdb.com" },
-      { name: "GreyNoise", detail: "Internet scan/benign noise", url: "https://viz.greynoise.io" },
-      { name: "Cisco Talos", detail: "IP & domain reputation", url: "https://talosintelligence.com" },
-      { name: "Spamhaus", detail: "IP/domain block lists", url: "https://check.spamhaus.org" },
-    ],
-  },
-  {
-    label: "Infrastructure & exposure",
-    sources: [
-      { name: "Shodan", detail: "Exposed hosts & services", url: "https://www.shodan.io" },
-      { name: "Censys", detail: "Internet asset search", url: "https://search.censys.io" },
-      { name: "IPinfo", detail: "Geo, ASN, hosting", url: "https://ipinfo.io" },
-    ],
-  },
-  {
-    label: "Malware & IOC feeds",
-    sources: [
-      { name: "AlienVault OTX", detail: "Community threat pulses", url: "https://otx.alienvault.com" },
-      { name: "URLhaus", detail: "Malicious URLs (abuse.ch)", url: "https://urlhaus.abuse.ch" },
-      { name: "ThreatFox", detail: "IOC sharing (abuse.ch)", url: "https://threatfox.abuse.ch" },
-      { name: "MalwareBazaar", detail: "Malware samples (abuse.ch)", url: "https://bazaar.abuse.ch" },
-    ],
-  },
-  {
-    label: "Adversary knowledge",
-    sources: [{ name: "MITRE ATT&CK", detail: "Techniques & tactics", url: "https://attack.mitre.org" }],
-  },
+const TIERS: { tier: TiSource["tier"]; label: string }[] = [
+  { tier: "keyless", label: "Keyless — query automatically" },
+  { tier: "premium", label: "Premium — needs an API key" },
+  { tier: "custom", label: "Custom sources" },
 ];
 
-/** The major OSINT sources list, rendered inside the investigation panel's "Sources" tab. */
+function statusBadge(source: TiSource): { text: string; cls: string } {
+  if (source.tier === "premium" && !source.hasKey) return { text: "needs key", cls: "bg-high/20 text-high" };
+  if (!source.enabled) return { text: "disabled", cls: "bg-sc-active text-sc-faint" };
+  return { text: source.hasKey ? "active · key" : "active", cls: "bg-[var(--severity-success)]/20 text-[var(--severity-success)]" };
+}
+
+/**
+ * The actual threat-intel sources used for enrichment (fetched live), grouped by tier. Matches
+ * exactly what runs during an investigation and what's configurable in settings.
+ */
 export function ThreatIntelSources() {
+  const [sources, setSources] = useState<TiSource[]>([]);
+
+  useEffect(() => {
+    void fetch("/api/settings/ti-sources")
+      .then((r) => r.json())
+      .then((b) => setSources(b.sources ?? []))
+      .catch(() => setSources([]));
+  }, []);
+
   return (
     <div className="flex min-h-0 flex-col">
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
-        {GROUPS.map((group) => (
-          <div key={group.label}>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-sc-faint">
-              {group.label}
-            </p>
-            <ul className="space-y-1">
-              {group.sources.map((source) => (
-                <li key={source.name}>
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center justify-between gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-sc-active"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-xs font-medium text-sc-text">{source.name}</span>
-                      <span className="block truncate text-[10px] text-sc-faint">{source.detail}</span>
-                    </span>
-                    <ExternalLink size={12} className="shrink-0 text-sc-faint group-hover:text-sc-link" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        {TIERS.map(({ tier, label }) => {
+          const group = sources.filter((s) => s.tier === tier);
+          if (group.length === 0) return null;
+          return (
+            <div key={tier}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-sc-faint">{label}</p>
+              <ul className="space-y-1">
+                {group.map((source) => {
+                  const badge = statusBadge(source);
+                  return (
+                    <li
+                      key={source.key}
+                      className="flex items-start justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-sc-active"
+                    >
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-1.5">
+                          <span className="truncate text-xs font-medium text-sc-text">{source.name}</span>
+                          <span className={`shrink-0 rounded px-1 text-[9px] font-semibold ${badge.cls}`}>{badge.text}</span>
+                        </span>
+                        <span className="block truncate text-[10px] text-sc-faint">
+                          {source.kinds.map((k) => KIND_LABEL[k] ?? k).join(", ")}
+                        </span>
+                      </span>
+                      {source.homepage ? (
+                        <a
+                          href={source.homepage}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 text-sc-faint hover:text-sc-link"
+                          aria-label={`Open ${source.name}`}
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+        {sources.length === 0 ? <p className="px-1 text-[11px] text-sc-faint">No sources configured.</p> : null}
       </div>
 
       <p className="mt-2 border-t border-sc-border-soft px-1 pt-2 text-[10px] leading-relaxed text-sc-faint">
-        Configure API keys under the settings gear to query these sources live during an investigation.
+        Keyless sources run automatically. Add API keys or custom sources under the settings gear.
       </p>
     </div>
   );

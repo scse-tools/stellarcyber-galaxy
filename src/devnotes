@@ -4,3 +4,11 @@ need to remove from config
 conf
     "log_type": "sentinelone",
     "aella_tenantid": "63faa34eb3904d93bfd39f79e4617eb8",
+
+
+cd /Users/scottbianco/CC_vibe/stellarcyber_galaxy
+export PATH="$HOME/.nvm/versions/node/v24.20.0/bin:$PATH"
+set -a; . ./.env; set +a
+export NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
+npm run build
+node server.mjs

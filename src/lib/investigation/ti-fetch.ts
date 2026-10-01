@@ -3,6 +3,9 @@ import { proxiedFetch } from "@/lib/http";
 import type { ObservableKind } from "@/lib/observables";
 
 const TIMEOUT_MS = Number(process.env.GALAXY_TI_TIMEOUT_MS ?? 15_000);
+// A browser-like UA: crt.sh and some RDAP servers reject the default Node/undici agent.
+const USER_AGENT =
+  "Mozilla/5.0 (compatible; StellarCyberGalaxy/1.0; +https://stellarcyber.ai) threat-intel-enrichment";
 
 export type Verdict = "malicious" | "suspicious" | "benign" | "info" | "unknown";
 
@@ -12,8 +15,13 @@ export interface SourceResult {
   raw: unknown;
 }
 
-async function getJson(url: string, headers: Record<string, string>, method = "GET"): Promise<unknown> {
-  const response = await proxiedFetch(url, { method, headers, signal: AbortSignal.timeout(TIMEOUT_MS) });
+async function getJson(url: string, headers: Record<string, string>, method = "GET", timeoutMs = TIMEOUT_MS): Promise<unknown> {
+  const response = await proxiedFetch(url, {
+    method,
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json", ...headers },
+    redirect: "follow",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   const text = await response.text();
   let body: unknown = null;
   try {
@@ -47,7 +55,7 @@ async function ipwhois(_kind: ObservableKind, value: string): Promise<SourceResu
 /** RDAP — registration data for IPs and domains, no key. */
 async function rdap(kind: ObservableKind, value: string): Promise<SourceResult> {
   const type = kind === "domain" ? "domain" : "ip";
-  const body = rec(await getJson(`https://rdap.org/${type}/${encodeURIComponent(value)}`, { Accept: "application/rdap+json" }));
+  const body = rec(await getJson(`https://rdap.org/${type}/${encodeURIComponent(value)}`, { Accept: "application/rdap+json" }, "GET", 25_000));
   const name = String(body.name || body.handle || body.ldhName || "?");
   const registrar = Array.isArray(body.entities)
     ? (body.entities as unknown[]).map((e) => rec(e)).find((e) => Array.isArray(e.roles) && (e.roles as string[]).includes("registrar"))
@@ -85,7 +93,8 @@ async function dns(_kind: ObservableKind, value: string): Promise<SourceResult> 
 
 /** crt.sh — certificate transparency logs for a domain, no key. */
 async function crtsh(_kind: ObservableKind, value: string): Promise<SourceResult> {
-  const body = await getJson(`https://crt.sh/?q=${encodeURIComponent(value)}&output=json`, {});
+  // crt.sh is frequently slow; give it a longer budget.
+  const body = await getJson(`https://crt.sh/?q=${encodeURIComponent(value)}&output=json`, {}, "GET", 30_000);
   const rows = Array.isArray(body) ? body : [];
   const issuers = [...new Set(rows.slice(0, 50).map((r) => String(rec(r).issuer_name ?? "")))].filter(Boolean);
   return {

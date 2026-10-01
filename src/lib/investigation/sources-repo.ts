@@ -51,6 +51,7 @@ export function listSources(): TiSource[] {
       // Keyless sources are on by default; premium ones are off until a key is added.
       enabled: row ? row.enabled === 1 : def.tier === "keyless",
       hasKey: Boolean(row?.api_key_enc),
+      homepage: def.homepage,
       updatedAt: row?.updated_at ?? null,
     };
   });
