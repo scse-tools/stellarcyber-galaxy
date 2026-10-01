@@ -24,6 +24,7 @@ export function InvestigationTtpAnalysis({ ttps, instanceId, caseId, caseName, o
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
 
   // Find a usable provider so the button only enables when an LLM is actually configured.
   useEffect(() => {
@@ -36,6 +37,19 @@ export function InvestigationTtpAnalysis({ ttps, instanceId, caseId, caseName, o
       })
       .catch(() => setProviderId(""));
   }, []);
+
+  // Has a threat-actor analysis already been run (and saved) for this case?
+  useEffect(() => {
+    setHasRun(false);
+    if (!caseId) return;
+    void fetch(`/api/instances/${instanceId}/cases/${encodeURIComponent(caseId)}/investigation`)
+      .then((r) => r.json())
+      .then((b) => {
+        const evidence = b.investigation?.evidence ?? [];
+        setHasRun(evidence.some((e: { type?: string }) => e.type === "analysis"));
+      })
+      .catch(() => setHasRun(false));
+  }, [instanceId, caseId]);
 
   const analyze = async () => {
     if (!providerId || ttps.length === 0) return;
@@ -73,6 +87,7 @@ export function InvestigationTtpAnalysis({ ttps, instanceId, caseId, caseName, o
         );
         if (save.ok) {
           setSaved(true);
+          setHasRun(true);
           onSaved?.();
         }
       }
@@ -92,10 +107,14 @@ export function InvestigationTtpAnalysis({ ttps, instanceId, caseId, caseName, o
         onClick={() => void analyze()}
         disabled={disabled}
         title={providerId ? "Identify patterns / threat actors from these TTPs" : "Configure an LLM provider to enable"}
-        className="inline-flex items-center gap-1 rounded-md border border-sc-border bg-sc-surface/70 px-2 py-0.5 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-text disabled:opacity-40"
+        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40 ${
+          hasRun
+            ? "border-sc-border-soft bg-sc-active/50 text-sc-muted hover:text-sc-text"
+            : "border-sc-border bg-sc-surface/70 text-sc-muted hover:bg-sc-active hover:text-sc-text"
+        }`}
       >
-        <Sparkles size={11} className="text-sc-accent" />
-        Identify threat actor
+        {hasRun ? <Check size={11} className="text-[var(--severity-success)]" /> : <Sparkles size={11} className="text-sc-accent" />}
+        {hasRun ? "Identify threat actor · run again" : "Identify threat actor"}
       </button>
 
       <Modal open={open} title="Threat actor / pattern analysis" onClose={() => setOpen(false)} className="max-w-2xl">

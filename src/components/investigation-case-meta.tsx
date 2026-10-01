@@ -5,7 +5,7 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import { cellText } from "@/lib/table-export";
 import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
-import { ttpLabel, ttpUrl, type Ttp } from "@/lib/mitre";
+import { ttpKey, ttpLabel, ttpUrl, type Ttp } from "@/lib/mitre";
 import { InvestigationTtpAnalysis } from "@/components/investigation-ttp-analysis";
 import { MarkdownLite } from "@/components/markdown-lite";
 import type { CaseDetail } from "@/lib/types";
@@ -42,6 +42,8 @@ export function InvestigationCaseMeta({
   caseName,
   consoleUrl,
   aiSummary,
+  selectedTtps,
+  onToggleTtp,
 }: {
   detail: CaseDetail;
   ttps: Ttp[];
@@ -50,6 +52,8 @@ export function InvestigationCaseMeta({
   caseName: string | null;
   consoleUrl: string | null;
   aiSummary: string | null;
+  selectedTtps: Set<string>;
+  onToggleTtp: (key: string) => void;
 }) {
   const name = cellText(detail.name) || cellText(detail.ticket_id) || cellText(detail._id);
   const score = Number(detail.score) || 0;
@@ -139,19 +143,42 @@ export function InvestigationCaseMeta({
           </div>
           <div className="flex flex-wrap gap-1">
             {ttps.map((ttp) => {
+              const key = ttpKey(ttp);
               const url = ttpUrl(ttp);
               const label = ttpLabel(ttp);
-              const cls = cn(
-                "inline-flex items-center rounded px-1.5 py-0.5 text-[10px]",
-                ttp.kind === "technique" ? "bg-sc-primary/15 text-sc-text" : "bg-sc-active text-sc-muted",
-              );
-              return url ? (
-                <a key={`${ttp.kind}:${ttp.id}:${ttp.name}`} href={url} target="_blank" rel="noopener noreferrer" className={cn(cls, "hover:underline")} title={label}>
-                  {label}
-                </a>
-              ) : (
-                <span key={`${ttp.kind}:${ttp.id}:${ttp.name}`} className={cls} title={label}>
-                  {label}
+              const selected = selectedTtps.has(key);
+              return (
+                <span
+                  key={key}
+                  className={cn(
+                    "inline-flex items-center overflow-hidden rounded border text-[10px]",
+                    selected
+                      ? "border-sc-primary bg-sc-primary/15 text-sc-text"
+                      : ttp.kind === "technique"
+                        ? "border-sc-border-soft bg-sc-active text-sc-text"
+                        : "border-sc-border-soft bg-sc-active/60 text-sc-muted",
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onToggleTtp(key)}
+                    aria-pressed={selected}
+                    className="px-1.5 py-0.5 hover:text-sc-text"
+                    title={`${label} · click to filter alerts`}
+                  >
+                    {label}
+                  </button>
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="border-l border-sc-border-soft px-1 py-0.5 text-sc-faint hover:text-sc-link"
+                      title="Open in MITRE ATT&CK"
+                    >
+                      <ExternalLink size={9} />
+                    </a>
+                  ) : null}
                 </span>
               );
             })}

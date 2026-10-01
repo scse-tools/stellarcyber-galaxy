@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { DEFAULT_SELECTION, describeRange, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
 import { buildObservableIndex, type ObservableKind } from "@/lib/observables";
-import { extractTtps } from "@/lib/mitre";
+import { buildTtpIndex } from "@/lib/mitre";
 import { buildCaseContext } from "@/lib/investigation/context";
 import type { Observable } from "@/lib/investigation/types";
 import type { CaseAlert, CaseDetail, CaseSummary, InstanceSummary } from "@/lib/types";
@@ -39,6 +39,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   const [caseLoading, setCaseLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedTtps, setSelectedTtps] = useState<Set<string>>(new Set());
   const [activeAlertId, setActiveAlertId] = useState<string | null>(null);
 
   const refreshInvestigated = useCallback(async () => {
@@ -98,6 +99,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   // Selecting a case loads its metadata and alerts, and clears the observable/alert selection.
   useEffect(() => {
     setSelected(new Set());
+    setSelectedTtps(new Set());
     setActiveAlertId(null);
     setDetail(null);
     setAiSummary(null);
@@ -143,26 +145,41 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   // Index linking observables <-> alerts, for cross-filtering and highlighting.
   const index = useMemo(() => buildObservableIndex(alerts), [alerts]);
 
-  // MITRE ATT&CK TTPs pooled from the case's alerts, and the full context handed to the LLM prompt.
-  const ttps = useMemo(() => extractTtps(alerts), [alerts]);
+  // MITRE ATT&CK TTPs pooled from the case's alerts (with alert mapping for filtering).
+  const ttpIndex = useMemo(() => buildTtpIndex(alerts), [alerts]);
+  const ttps = ttpIndex.ttps;
   const promptContext = useMemo(
     () => buildCaseContext(detail, alerts.length, ttps, index.groups),
     [detail, alerts.length, ttps, index.groups],
   );
 
-  // Selected observables filter the alert table to the union of alerts containing any of them.
+  const toggleTtp = useCallback((key: string) => {
+    setSelectedTtps((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  // Selected observables and TTPs both filter the alert table (additive union of matching alerts).
   const filterIds = useMemo(() => {
-    if (selected.size === 0) return null;
+    if (selected.size === 0 && selectedTtps.size === 0) return null;
     const ids = new Set<string>();
     for (const key of selected) for (const id of index.byObservable.get(key) ?? []) ids.add(id);
+    for (const key of selectedTtps) for (const id of ttpIndex.byTtp.get(key) ?? []) ids.add(id);
     return ids;
-  }, [selected, index]);
+  }, [selected, selectedTtps, index, ttpIndex]);
 
-  // Clicking an alert highlights the observables found in that alert.
-  const highlighted = useMemo(
-    () => (activeAlertId ? (index.byAlert.get(activeAlertId) ?? new Set<string>()) : new Set<string>()),
-    [activeAlertId, index],
-  );
+  // Highlight observables from the clicked alert and from any TTP-filtered alerts.
+  const highlighted = useMemo(() => {
+    const set = new Set<string>();
+    if (activeAlertId) for (const key of index.byAlert.get(activeAlertId) ?? []) set.add(key);
+    for (const ttp of selectedTtps)
+      for (const aid of ttpIndex.byTtp.get(ttp) ?? [])
+        for (const key of index.byAlert.get(aid) ?? []) set.add(key);
+    return set;
+  }, [activeAlertId, selectedTtps, index, ttpIndex]);
 
   const toggleAlert = useCallback((id: string) => setActiveAlertId((prev) => (prev === id ? null : id)), []);
 
@@ -248,6 +265,8 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
                   caseName={selectedCaseName}
                   consoleUrl={consoleUrl}
                   aiSummary={aiSummary}
+                  selectedTtps={selectedTtps}
+                  onToggleTtp={toggleTtp}
                 />
               ) : (
                 <div className="rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-6 text-center text-xs text-sc-faint">

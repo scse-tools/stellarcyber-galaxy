@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.12.1";
+export const APP_VERSION = "3.13.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,15 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.13.0",
+    date: "2026-10-01",
+    notes: [
+      "MITRE ATT&CK TTP chips now filter the alert table like observables: selecting TTPs filters to their alerts and highlights the observables in those alerts. The attack.mitre.org link moved to the chip's edge so the chip body toggles the filter.",
+      "Observables panel redesigned as a clean per-type table instead of chip blocks.",
+      "\"Identify threat actor\" indicates when an analysis already exists for the case and offers to run again.",
+    ],
+  },
   {
     version: "3.12.1",
     date: "2026-10-01",

@@ -1,3 +1,4 @@
+import { alertId } from "@/lib/observables";
 import type { CaseAlert } from "@/lib/types";
 
 export interface Ttp {
@@ -48,24 +49,56 @@ function collect(value: unknown, kind: Ttp["kind"], map: Map<string, Ttp>): void
   add(map, kind, id, name || text);
 }
 
-/**
- * Pools MITRE ATT&CK tactics and techniques across a case's alerts, reading them from each alert's
- * `xdr_event` section (tactic/technique, singular or plural).
- */
-export function extractTtps(alerts: CaseAlert[]): Ttp[] {
+/** Stable selection/index key for a TTP. */
+export const ttpKey = (ttp: Ttp): string => `${ttp.kind}:${(ttp.id || ttp.name).toUpperCase()}`;
+
+/** The distinct TTPs found in one alert's xdr_event. */
+function ttpsForAlert(alert: CaseAlert): Ttp[] {
+  const xdr = rec(alert.xdr_event);
+  if (!xdr) return [];
   const map = new Map<string, Ttp>();
-  for (const alert of alerts) {
-    const xdr = rec(alert.xdr_event);
-    if (!xdr) continue;
-    collect(xdr.tactic, "tactic", map);
-    collect(xdr.tactics, "tactic", map);
-    collect(xdr.technique, "technique", map);
-    collect(xdr.techniques, "technique", map);
-  }
-  return [...map.values()].sort((a, b) => {
+  collect(xdr.tactic, "tactic", map);
+  collect(xdr.tactics, "tactic", map);
+  collect(xdr.technique, "technique", map);
+  collect(xdr.techniques, "technique", map);
+  return [...map.values()];
+}
+
+export interface TtpIndex {
+  ttps: Ttp[];
+  /** ttpKey -> ids of the alerts carrying that TTP. */
+  byTtp: Map<string, Set<string>>;
+}
+
+/**
+ * Pools MITRE ATT&CK tactics/techniques across a case's alerts and records which alerts carry each
+ * one, so the TTP chips can filter the alert table the way observables do.
+ */
+export function buildTtpIndex(alerts: CaseAlert[]): TtpIndex {
+  const global = new Map<string, Ttp>();
+  const byTtp = new Map<string, Set<string>>();
+  alerts.forEach((alert, i) => {
+    const id = alertId(alert, i);
+    for (const ttp of ttpsForAlert(alert)) {
+      const key = ttpKey(ttp);
+      const existing = global.get(key);
+      if (!existing || (!existing.name && ttp.name) || (!existing.id && ttp.id)) {
+        global.set(key, { id: ttp.id, name: ttp.name || existing?.name || "", kind: ttp.kind });
+      }
+      if (!byTtp.has(key)) byTtp.set(key, new Set());
+      byTtp.get(key)!.add(id);
+    }
+  });
+  const ttps = [...global.values()].sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === "tactic" ? -1 : 1; // tactics first
     return (a.id || a.name).localeCompare(b.id || b.name);
   });
+  return { ttps, byTtp };
+}
+
+/** Pools MITRE ATT&CK TTPs across a case's alerts (list only). */
+export function extractTtps(alerts: CaseAlert[]): Ttp[] {
+  return buildTtpIndex(alerts).ttps;
 }
 
 /** Display label for a TTP: "T1059 Command and Scripting" / just the id / just the name. */
