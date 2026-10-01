@@ -171,6 +171,11 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
     [selected],
   );
 
+  const consoleUrl = useMemo(
+    () => instances.find((i) => i.id === instanceId)?.consoleUrl ?? null,
+    [instances, instanceId],
+  );
+
   const selectedCaseName = useMemo(
     () => cases.find((c) => c.id === caseId)?.name ?? null,
     [cases, caseId],
@@ -237,6 +242,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
                   instanceId={instanceId ?? ""}
                   caseId={caseId}
                   caseName={selectedCaseName}
+                  consoleUrl={consoleUrl}
                 />
               ) : (
                 <div className="rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-6 text-center text-xs text-sc-faint">

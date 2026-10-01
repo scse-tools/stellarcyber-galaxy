@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ExternalLink } from "lucide-react";
 import { cellText } from "@/lib/table-export";
 import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
@@ -38,17 +39,30 @@ export function InvestigationCaseMeta({
   instanceId,
   caseId,
   caseName,
+  consoleUrl,
 }: {
   detail: CaseDetail;
   ttps: Ttp[];
   instanceId: string;
   caseId: string | null;
   caseName: string | null;
+  consoleUrl: string | null;
 }) {
   const name = cellText(detail.name) || cellText(detail.ticket_id) || cellText(detail._id);
   const score = Number(detail.score) || 0;
   const severity = toSeverity(detail.severity) ?? (score >= 75 ? "critical" : score >= 50 ? "high" : score >= 25 ? "medium" : "low");
   const summary = cellText(detail.description) || cellText(detail.summary);
+
+  // Deep link to the case in the Stellar Cyber console.
+  const id = caseId || cellText(detail._id);
+  let stellarUrl: string | null = null;
+  if (consoleUrl && id) {
+    try {
+      stellarUrl = `${new URL(consoleUrl).origin}/cases/case-detail/${encodeURIComponent(id)}`;
+    } catch {
+      stellarUrl = null;
+    }
+  }
 
   return (
     <section className="rounded-xl border border-sc-border-soft bg-sc-surface/50 p-4">
@@ -61,9 +75,23 @@ export function InvestigationCaseMeta({
           {Math.round(score)}
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-sc-text" title={name}>
-            {name}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-sc-text" title={name}>
+              {name}
+            </h3>
+            {stellarUrl ? (
+              <a
+                href={stellarUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open case in Stellar Cyber"
+                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-sc-border px-1.5 py-0.5 text-[10px] font-medium text-sc-muted transition-colors hover:bg-sc-active hover:text-sc-link"
+              >
+                Open in Stellar
+                <ExternalLink size={11} />
+              </a>
+            ) : null}
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge tone="severity" token={SEVERITY_META[severity].token}>
               {SEVERITY_META[severity].label}
