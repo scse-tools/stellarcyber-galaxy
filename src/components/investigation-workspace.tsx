@@ -231,7 +231,13 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
           {caseId ? (
             <>
               {detail ? (
-                <InvestigationCaseMeta detail={detail} ttps={ttps} />
+                <InvestigationCaseMeta
+                  detail={detail}
+                  ttps={ttps}
+                  instanceId={instanceId ?? ""}
+                  caseId={caseId}
+                  caseName={selectedCaseName}
+                />
               ) : (
                 <div className="rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-6 text-center text-xs text-sc-faint">
                   {caseLoading ? "Loading case…" : "Case metadata unavailable."}

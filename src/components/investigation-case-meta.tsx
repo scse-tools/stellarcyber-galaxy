@@ -32,7 +32,19 @@ function formatValue(key: string, value: unknown): string {
   return cellText(value);
 }
 
-export function InvestigationCaseMeta({ detail, ttps }: { detail: CaseDetail; ttps: Ttp[] }) {
+export function InvestigationCaseMeta({
+  detail,
+  ttps,
+  instanceId,
+  caseId,
+  caseName,
+}: {
+  detail: CaseDetail;
+  ttps: Ttp[];
+  instanceId: string;
+  caseId: string | null;
+  caseName: string | null;
+}) {
   const name = cellText(detail.name) || cellText(detail.ticket_id) || cellText(detail._id);
   const score = Number(detail.score) || 0;
   const severity = toSeverity(detail.severity) ?? (score >= 75 ? "critical" : score >= 50 ? "high" : score >= 25 ? "medium" : "low");
@@ -81,7 +93,7 @@ export function InvestigationCaseMeta({ detail, ttps }: { detail: CaseDetail; tt
             <p className="text-[10px] font-medium uppercase tracking-wide text-sc-faint">
               MITRE ATT&amp;CK <span className="text-sc-faint">· {ttps.length}</span>
             </p>
-            <InvestigationTtpAnalysis ttps={ttps} />
+            <InvestigationTtpAnalysis ttps={ttps} instanceId={instanceId} caseId={caseId} caseName={caseName} />
           </div>
           <div className="flex flex-wrap gap-1">
             {ttps.map((ttp) => {

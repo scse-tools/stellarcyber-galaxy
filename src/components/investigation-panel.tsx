@@ -124,7 +124,11 @@ export function InvestigationPanel({ instanceId, caseId, caseName, selected, pro
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+              // Pick up analyses/evidence saved from elsewhere (e.g. the TTP analysis button).
+              if (id === "evidence") void loadInvestigation();
+            }}
             className={cn(
               "flex-1 px-2 py-1.5 font-medium capitalize transition-colors",
               tab === id ? "border-b-2 border-sc-primary text-sc-text" : "text-sc-faint hover:text-sc-text",

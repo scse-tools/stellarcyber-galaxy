@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ id: string; caseId: string }> };
 
-const TYPES: EvidenceType[] = ["note", "link", "screenshot"];
+const TYPES: EvidenceType[] = ["note", "link", "screenshot", "analysis"];
 const MAX_CONTENT_BYTES = 8 * 1024 * 1024; // ~8MB, covers a screenshot data URL
 
 export async function POST(request: Request, { params }: Context) {
@@ -23,8 +23,8 @@ export async function POST(request: Request, { params }: Context) {
     if (!body?.type || !TYPES.includes(body.type)) {
       return NextResponse.json({ error: "type must be note, link or screenshot." }, { status: 400 });
     }
-    if (body.type === "note" && !body.content?.trim()) {
-      return NextResponse.json({ error: "A note needs some text." }, { status: 400 });
+    if ((body.type === "note" || body.type === "analysis") && !body.content?.trim()) {
+      return NextResponse.json({ error: "This evidence needs some text." }, { status: 400 });
     }
     if (body.type === "link" && !body.url?.trim()) {
       return NextResponse.json({ error: "A link needs a URL." }, { status: 400 });

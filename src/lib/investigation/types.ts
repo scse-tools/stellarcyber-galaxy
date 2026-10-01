@@ -96,7 +96,7 @@ export interface InvestigationRun {
   findings: Finding[];
 }
 
-export type EvidenceType = "note" | "link" | "screenshot";
+export type EvidenceType = "note" | "link" | "screenshot" | "analysis";
 
 export interface Evidence {
   id: string;
