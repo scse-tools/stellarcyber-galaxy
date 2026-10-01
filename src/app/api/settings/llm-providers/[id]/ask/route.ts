@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: Context) {
     const guard = await requireUser(request);
     if (isGuardFailure(guard)) return guard;
     const { id } = await params;
-    const body = (await request.json().catch(() => null)) as { prompt?: string } | null;
+    const body = (await request.json().catch(() => null)) as { prompt?: string; context?: string } | null;
     if (!body?.prompt?.trim()) return NextResponse.json({ error: "A prompt is required." }, { status: 400 });
 
     const provider = getProvider(id);
@@ -33,8 +33,13 @@ export async function POST(request: Request, { params }: Context) {
       return NextResponse.json({ error: "The selected provider has no API key configured." }, { status: 400 });
     }
 
+    // Give the model the case context (alert data + MITRE TTPs) ahead of the analyst's question.
+    const prompt = body.context?.trim()
+      ? `Case context for this investigation:\n${body.context}\n\n---\nAnalyst question: ${body.prompt}`
+      : body.prompt;
+
     try {
-      const text = await runLlm(provider, apiKey, { system: SYSTEM, prompt: body.prompt });
+      const text = await runLlm(provider, apiKey, { system: SYSTEM, prompt });
       return NextResponse.json({ text });
     } catch (thrown) {
       return NextResponse.json({ error: describeLlmError(thrown) }, { status: 502 });

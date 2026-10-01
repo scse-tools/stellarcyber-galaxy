@@ -15,6 +15,7 @@ export function InvestigationEvidence({ evidence, busy, onAdd, onDelete }: Props
   const [note, setNote] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
+  const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const addNote = async () => {
@@ -29,9 +30,17 @@ export function InvestigationEvidence({ evidence, busy, onAdd, onDelete }: Props
     setLinkLabel("");
   };
   const addScreenshot = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = () => void onAdd("screenshot", { content: String(reader.result) });
     reader.readAsDataURL(file);
+  };
+
+  const onDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setDragging(false);
+    const file = Array.from(event.dataTransfer.files).find((f) => f.type.startsWith("image/"));
+    if (file) addScreenshot(file);
   };
 
   return (
@@ -93,11 +102,21 @@ export function InvestigationEvidence({ evidence, busy, onAdd, onDelete }: Props
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded border border-sc-border px-2 py-1 text-[11px] text-sc-muted hover:bg-sc-active hover:text-sc-text disabled:opacity-40"
+            className={`flex w-full items-center justify-center gap-1.5 rounded border border-dashed px-2 py-2 text-[11px] transition-colors disabled:opacity-40 ${
+              dragging
+                ? "border-sc-primary bg-sc-primary/10 text-sc-text"
+                : "border-sc-border text-sc-muted hover:bg-sc-active hover:text-sc-text"
+            }`}
           >
             <ImagePlus size={13} />
-            Attach screenshot
+            {dragging ? "Drop image to attach" : "Attach screenshot — click or drag & drop"}
           </button>
         </div>
       </div>

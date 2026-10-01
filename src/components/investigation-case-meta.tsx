@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { cellText } from "@/lib/table-export";
 import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
+import { ttpLabel, ttpUrl, type Ttp } from "@/lib/mitre";
+import { InvestigationTtpAnalysis } from "@/components/investigation-ttp-analysis";
 import type { CaseDetail } from "@/lib/types";
 
 // Fields surfaced as labelled metadata cards, in this order, when present.
@@ -30,7 +32,7 @@ function formatValue(key: string, value: unknown): string {
   return cellText(value);
 }
 
-export function InvestigationCaseMeta({ detail }: { detail: CaseDetail }) {
+export function InvestigationCaseMeta({ detail, ttps }: { detail: CaseDetail; ttps: Ttp[] }) {
   const name = cellText(detail.name) || cellText(detail.ticket_id) || cellText(detail._id);
   const score = Number(detail.score) || 0;
   const severity = toSeverity(detail.severity) ?? (score >= 75 ? "critical" : score >= 50 ? "high" : score >= 25 ? "medium" : "low");
@@ -72,6 +74,36 @@ export function InvestigationCaseMeta({ detail }: { detail: CaseDetail }) {
           </div>
         ))}
       </dl>
+
+      {ttps.length ? (
+        <div className="mt-4 border-t border-sc-border-soft pt-3">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-sc-faint">
+              MITRE ATT&amp;CK <span className="text-sc-faint">· {ttps.length}</span>
+            </p>
+            <InvestigationTtpAnalysis ttps={ttps} />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {ttps.map((ttp) => {
+              const url = ttpUrl(ttp);
+              const label = ttpLabel(ttp);
+              const cls = cn(
+                "inline-flex items-center rounded px-1.5 py-0.5 text-[10px]",
+                ttp.kind === "technique" ? "bg-sc-primary/15 text-sc-text" : "bg-sc-active text-sc-muted",
+              );
+              return url ? (
+                <a key={`${ttp.kind}:${ttp.id}:${ttp.name}`} href={url} target="_blank" rel="noopener noreferrer" className={cn(cls, "hover:underline")} title={label}>
+                  {label}
+                </a>
+              ) : (
+                <span key={`${ttp.kind}:${ttp.id}:${ttp.name}`} className={cls} title={label}>
+                  {label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

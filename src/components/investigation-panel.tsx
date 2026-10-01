@@ -17,11 +17,13 @@ interface Props {
   caseId: string | null;
   caseName: string | null;
   selected: Observable[];
+  /** Case context (alert data + MITRE TTPs) handed to the ad-hoc prompt. */
+  promptContext: string;
   isAdmin: boolean;
   onInvestigated: () => void;
 }
 
-export function InvestigationPanel({ instanceId, caseId, caseName, selected, isAdmin, onInvestigated }: Props) {
+export function InvestigationPanel({ instanceId, caseId, caseName, selected, promptContext, isAdmin, onInvestigated }: Props) {
   const [tab, setTab] = useState<Tab>("investigate");
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const [providerId, setProviderId] = useState<string>("");
@@ -190,7 +192,7 @@ export function InvestigationPanel({ instanceId, caseId, caseName, selected, isA
               </>
             )}
 
-            <InvestigationPromptBox providerId={providerId} />
+            <InvestigationPromptBox providerId={providerId} context={promptContext} />
           </div>
         ) : tab === "evidence" ? (
           <InvestigationEvidence evidence={evidence} busy={evidenceBusy} onAdd={addEvidence} onDelete={removeEvidence} />

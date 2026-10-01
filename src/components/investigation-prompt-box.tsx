@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 /** Free-form prompt against the selected LLM, wrapped server-side with a cybersecurity-analyst role. */
-export function InvestigationPromptBox({ providerId }: { providerId: string }) {
+export function InvestigationPromptBox({ providerId, context }: { providerId: string; context?: string }) {
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export function InvestigationPromptBox({ providerId }: { providerId: string }) {
       const response = await fetch(`/api/settings/llm-providers/${providerId}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, context }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Request failed.");

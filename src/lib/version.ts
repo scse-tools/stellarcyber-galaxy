@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.9.0";
+export const APP_VERSION = "3.10.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,17 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.10.0",
+    date: "2026-10-01",
+    notes: [
+      "Case metadata now shows the MITRE ATT&CK TTPs pooled from the case's alerts (from each alert's xdr_event), linked to attack.mitre.org.",
+      "An \"Identify threat actor\" button sends the observed TTPs to the LLM to surface patterns and likely threat actors (enabled only when an LLM is configured).",
+      "Ad-hoc prompts now include the full case context — case facts, MITRE TTPs and the raw alert data (within a size budget).",
+      "Added a Refresh button beside the time picker to reload cases, the open case and insignia without losing your selection.",
+      "Evidence screenshots can be added by drag & drop, not just the file picker.",
+    ],
+  },
   {
     version: "3.9.0",
     date: "2026-10-01",
