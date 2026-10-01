@@ -90,12 +90,17 @@ const URL_RE = /\bhttps?:\/\/[^\s"'<>]+/gi;
 const HASH = /\b(?:[A-Fa-f0-9]{64}|[A-Fa-f0-9]{40}|[A-Fa-f0-9]{32})\b/g;
 const DOMAIN = /\b(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24}\b/g;
 
+// Each observable type is only pulled from fields whose NAME matches its category — e.g. an IP must
+// come from a field like srcip/dst_ip/remote_ip, a username from a *user* field, a hash from an
+// md5/sha*/hash field, and so on. This keeps embedded values in free-text fields out of the pool.
+const IP_KEY = /(^|[_.])[a-z0-9]*ip(v4|v6|addr)?s?([_.]|$)/;
+const EMAIL_KEY = /(e?mail|sender|recipient|rcpt|mailbox)/;
+const URL_KEY = /(url|uri|referer|referrer)/;
+const DOMAIN_KEY = /(domain|fqdn|dns[_.]?(name|query|rrname)|(^|[_.])sld([_.]|$)|(^|[_.])tld([_.]|$))/;
+const HOST_KEY = /(hostname|host[_.]?name|(^|[_.])host([_.]|$)|_host$|computer|netbios|dev_name|device_name|machine|node[_.]?name)/;
 const USER_KEY = /(user|account|logon|login|samaccount|principal)/;
-const HOST_KEY = /(host|hostname|computer|device|dev_name|machine|netbios|node_name)/;
-const DOMAIN_KEY = /(domain|fqdn|dns|tld|sld)/;
+const HASH_KEY = /((^|[_.])(md5|sha1|sha256|sha512|imphash|checksum|hash)([_.]|$)|md5|sha[0-9])/;
 const FILE_KEY = /(file|filename|process|image|attachment|object_name)/;
-const HASH_KEY = /(hash|md5|sha1|sha256|sha512|imphash|checksum)/;
-const URL_KEY = /(url|uri|referer|referrer|location)/;
 
 // File extensions used both to spot file names and to stop file.ext being read as a domain.
 const FILE_EXTS =
@@ -110,15 +115,6 @@ const isIp = (value: string) => {
 
 const looksLikeDomain = (value: string) =>
   /^[A-Za-z0-9.-]+$/.test(value) && value.includes(".") && !FILE_EXTS.test(value) && !isIp(value);
-
-/** Pull the host out of a URL without throwing on the odd malformed value. */
-function urlHost(url: string): string | null {
-  try {
-    return new URL(url).hostname || null;
-  } catch {
-    return null;
-  }
-}
 
 type Sink = (kind: AccumKind, value: string) => void;
 
@@ -141,48 +137,45 @@ function matches(regex: RegExp, text: string): string[] {
   return text.match(regex) ?? [];
 }
 
-/** Classify one (key, value) leaf, feeding any observables it yields to the sink. */
+/**
+ * Classify one (key, value) leaf. An observable is only emitted when the field NAME matches its
+ * category AND the value passes that category's validation — so values are drawn from the right
+ * fields (ip-style names for IPs, user-style for usernames, md5/sha/hash for hashes, url/uri for URLs, etc.).
+ */
 function classify(key: string, raw: string, sink: Sink): void {
   const value = raw.trim();
   if (!value) return;
 
-  // Value-pattern matches work regardless of the field name (catches embedded IOCs in free text).
-  for (const email of matches(EMAIL, value)) {
-    sink("email", email.toLowerCase());
-    const domain = email.split("@")[1];
-    if (domain) sink("domain", domain.toLowerCase());
+  if (IP_KEY.test(key)) {
+    for (const ip of matches(IPV4, value)) sink("ip", ip);
+    for (const ip of matches(IPV6, value)) sink("ip", ip);
   }
-  for (const url of matches(URL_RE, value)) {
-    sink("url", url);
-    const host = urlHost(url);
-    if (host && !isIp(host)) sink("domain", host.toLowerCase());
+  if (EMAIL_KEY.test(key)) {
+    for (const email of matches(EMAIL, value)) sink("email", email.toLowerCase());
   }
-  for (const hash of matches(HASH, value)) sink("hash", hash.toLowerCase());
-  for (const ip of matches(IPV4, value)) sink("ip", ip);
-  for (const ip of matches(IPV6, value)) sink("ip", ip);
-
-  // Standalone, single-token values (skip long free text and anything already an email/url).
-  const singleToken = value.length <= 100 && !/\s/.test(value) && !value.includes("@") && !value.includes("/");
-  if (singleToken) {
-    for (const domain of matches(DOMAIN, value)) {
-      if (looksLikeDomain(domain)) sink("domain", domain.toLowerCase());
-    }
+  if (URL_KEY.test(key)) {
+    const urls = matches(URL_RE, value);
+    if (urls.length) for (const url of urls) sink("url", url);
+    else if (value.includes("://") || value.startsWith("/")) sink("url", value);
   }
-
-  // Key-based hints for observables that have no reliable value signature.
+  if (DOMAIN_KEY.test(key)) {
+    const lower = value.toLowerCase();
+    if (looksLikeDomain(lower)) sink("domain", lower);
+    else for (const domain of matches(DOMAIN, value)) if (looksLikeDomain(domain)) sink("domain", domain.toLowerCase());
+  }
+  if (HOST_KEY.test(key) && !/\s/.test(value) && !isIp(value) && value.length <= 255 && /[a-z]/i.test(value)) {
+    sink("hostname", value.toLowerCase());
+  }
   if (USER_KEY.test(key) && !value.includes("@") && value.length <= 64 && !/^\d+$/.test(value)) {
     sink("username", value);
   }
-  if (HOST_KEY.test(key) && singleToken && !isIp(value)) {
-    sink("hostname", value.toLowerCase());
-    if (looksLikeDomain(value)) sink("domain", value.toLowerCase());
+  if (HASH_KEY.test(key)) {
+    for (const hash of matches(HASH, value)) sink("hash", hash.toLowerCase());
   }
-  if (DOMAIN_KEY.test(key) && singleToken && looksLikeDomain(value)) sink("domain", value.toLowerCase());
-  if (URL_KEY.test(key) && value.includes("/") && !/\s/.test(value)) sink("url", value);
-  if (HASH_KEY.test(key) && /^[A-Fa-f0-9]{8,128}$/.test(value)) sink("hash", value.toLowerCase());
   if (FILE_KEY.test(key)) {
-    const found = matches(FILENAME, value)[0];
-    if (found) sink("filename", found.trim());
+    const found = matches(FILENAME, value);
+    if (found.length) for (const file of found) sink("filename", file.trim());
+    else if (/[\\/]/.test(value)) sink("filename", value.trim());
   }
 }
 

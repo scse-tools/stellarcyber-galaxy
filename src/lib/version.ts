@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.5.4";
+export const APP_VERSION = "3.6.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.6.0",
+    date: "2026-10-01",
+    notes: [
+      "Observable extraction is now field-name gated: IPs come only from ip-style fields, usernames from user fields, hashes from md5/sha/hash fields, URLs from url/uri fields, domains from domain/fqdn fields, and so on — cutting the noise from values buried in free-text fields.",
+      "Added keyless OSINT sources: Shodan InternetDB (open ports & CVEs), Tor/Onionoo (relay/exit check), and urlscan.io (recent scans).",
+    ],
+  },
   {
     version: "3.5.4",
     date: "2026-10-01",

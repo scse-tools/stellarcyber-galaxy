@@ -104,6 +104,48 @@ async function crtsh(_kind: ObservableKind, value: string): Promise<SourceResult
   };
 }
 
+/** Shodan InternetDB — open ports, CVEs and hostnames for an IP, no key. */
+async function internetdb(_kind: ObservableKind, value: string): Promise<SourceResult> {
+  try {
+    const body = rec(await getJson(`https://internetdb.shodan.io/${encodeURIComponent(value)}`, {}));
+    const ports = Array.isArray(body.ports) ? body.ports : [];
+    const vulns = Array.isArray(body.vulns) ? body.vulns : [];
+    const hostnames = Array.isArray(body.hostnames) ? body.hostnames : [];
+    return {
+      verdict: vulns.length ? "suspicious" : "info",
+      summary: `${ports.length} open port${ports.length === 1 ? "" : "s"}${vulns.length ? `, ${vulns.length} known CVEs` : ""}${hostnames.length ? ` · ${hostnames.slice(0, 2).join(", ")}` : ""}`,
+      raw: body,
+    };
+  } catch (error) {
+    if (error instanceof Error && /HTTP 404/.test(error.message)) {
+      return { verdict: "benign", summary: "No exposed services or CVEs found", raw: null };
+    }
+    throw error;
+  }
+}
+
+/** Tor network (Onionoo) — is the IP a known Tor relay/exit, no key. */
+async function onionoo(_kind: ObservableKind, value: string): Promise<SourceResult> {
+  const body = rec(await getJson(`https://onionoo.torproject.org/details?search=${encodeURIComponent(value)}&fields=nickname,exit_probability`, {}));
+  const relays = Array.isArray(body.relays) ? body.relays : [];
+  if (!relays.length) return { verdict: "info", summary: "Not a known Tor relay/exit", raw: body };
+  const isExit = relays.some((relay) => Number(rec(relay).exit_probability) > 0);
+  return { verdict: "suspicious", summary: `Known Tor ${isExit ? "exit node" : "relay"} (${relays.length} match${relays.length === 1 ? "" : "es"})`, raw: relays.slice(0, 5) };
+}
+
+/** urlscan.io — recent public scans referencing a domain/IP/URL, no key. */
+async function urlscan(kind: ObservableKind, value: string): Promise<SourceResult> {
+  const q = kind === "domain" ? `domain:${value}` : kind === "ip_public" ? `ip:${value}` : `page.url:"${value}"`;
+  const body = rec(await getJson(`https://urlscan.io/api/v1/search/?q=${encodeURIComponent(q)}`, {}));
+  const results = Array.isArray(body.results) ? body.results : [];
+  const total = Number(body.total ?? results.length);
+  return {
+    verdict: "info",
+    summary: total ? `${total} recent urlscan.io scan${total === 1 ? "" : "s"}` : "No recent scans",
+    raw: results.slice(0, 3),
+  };
+}
+
 /* ------------------------------- premium sources ------------------------------- */
 
 async function virustotal(kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
@@ -149,7 +191,7 @@ async function shodan(_kind: ObservableKind, value: string, apiKey: string): Pro
 type KeylessFetcher = (kind: ObservableKind, value: string) => Promise<SourceResult>;
 type KeyedFetcher = (kind: ObservableKind, value: string, apiKey: string) => Promise<SourceResult>;
 
-const KEYLESS: Record<string, KeylessFetcher> = { ipwhois, rdap, dns, crtsh };
+const KEYLESS: Record<string, KeylessFetcher> = { ipwhois, rdap, dns, crtsh, internetdb, onionoo, urlscan };
 const KEYED: Record<string, KeyedFetcher> = { virustotal, abuseipdb, greynoise, shodan };
 
 /** A user-defined source: an HTTP template with `{value}` and an optional auth header for the key. */

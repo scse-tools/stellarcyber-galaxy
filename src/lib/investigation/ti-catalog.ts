@@ -46,6 +46,27 @@ export const SOURCE_CATALOG: SourceDef[] = [
     homepage: "https://crt.sh",
   },
   {
+    key: "internetdb",
+    name: "Shodan InternetDB",
+    kinds: ["ip_public"],
+    tier: "keyless",
+    homepage: "https://internetdb.shodan.io",
+  },
+  {
+    key: "onionoo",
+    name: "Tor (Onionoo)",
+    kinds: ["ip_public"],
+    tier: "keyless",
+    homepage: "https://metrics.torproject.org/onionoo.html",
+  },
+  {
+    key: "urlscan",
+    name: "urlscan.io",
+    kinds: ["domain", "ip_public", "url"],
+    tier: "keyless",
+    homepage: "https://urlscan.io",
+  },
+  {
     key: "virustotal",
     name: "VirusTotal",
     kinds: ["ip_public", "domain", "url", "hash"],

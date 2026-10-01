@@ -8,7 +8,7 @@ const values = (alerts: CaseAlert[], kind: ObservableKind) =>
   groupFor(alerts, kind)?.observables.map((o) => o.value) ?? [];
 
 describe("extractObservables", () => {
-  it("pulls the major observable types from alert fields", () => {
+  it("pulls each observable type from a matching field name", () => {
     const alerts: CaseAlert[] = [
       {
         _id: "a1",
@@ -16,9 +16,10 @@ describe("extractObservables", () => {
         remote_ip: "8.8.8.8",
         hostname: "WIN-DC01",
         srcuser: "jdoe",
-        file_hash: "44d88612fea8a8f36de82e1278abb02f",
+        file_md5: "44d88612fea8a8f36de82e1278abb02f",
         url: "http://evil.example.com/payload.bin",
-        msg: "user admin@corp.example logged in from 10.0.0.5",
+        sender_email: "admin@corp.example",
+        dest_domain: "bad.example.org",
       },
     ];
 
@@ -26,11 +27,20 @@ describe("extractObservables", () => {
     expect(values(alerts, "ip_public")).toEqual(["8.8.8.8"]);
     expect(values(alerts, "hostname")).toContain("win-dc01");
     expect(values(alerts, "username")).toContain("jdoe");
-    expect(values(alerts, "email")).toContain("admin@corp.example");
     expect(values(alerts, "hash")).toContain("44d88612fea8a8f36de82e1278abb02f");
     expect(values(alerts, "url")).toContain("http://evil.example.com/payload.bin");
-    // Domains come from the URL host and the email domain.
-    expect(values(alerts, "domain")).toEqual(expect.arrayContaining(["evil.example.com", "corp.example"]));
+    expect(values(alerts, "email")).toContain("admin@corp.example");
+    expect(values(alerts, "domain")).toContain("bad.example.org");
+  });
+
+  it("ignores observable-shaped values in non-matching fields", () => {
+    const alerts: CaseAlert[] = [
+      { _id: "a1", msg: "user admin@corp.example logged in from 8.8.8.8 via http://x.example.com" },
+    ];
+    // No ip/user/email/url field name, so nothing is pulled from the free text.
+    expect(groupFor(alerts, "ip_public")).toBeUndefined();
+    expect(groupFor(alerts, "email")).toBeUndefined();
+    expect(groupFor(alerts, "url")).toBeUndefined();
   });
 
   it("counts how many alerts each value appears in and sorts by that count", () => {
