@@ -164,7 +164,11 @@ export interface AiSummary {
   verdictReasoning: string | null;
   /** The concise prose summary (Markdown). */
   summary: string | null;
+  /** Richer sections, shown on demand. */
   recommendations: string | null;
+  timeline: string | null;
+  hypothesis: string | null;
+  keyEntities: string | null;
 }
 
 /** Raised when a poll finds more critical/high cases on an instance than the previous poll. */

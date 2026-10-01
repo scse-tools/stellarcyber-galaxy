@@ -143,6 +143,17 @@ export function InvestigationCaseMeta({
               <MarkdownLite text={aiSummary.summary} />
             </div>
           ) : null}
+          {aiSummary.timeline || aiSummary.hypothesis || aiSummary.keyEntities || aiSummary.recommendations ? (
+            <details className="mt-2 border-t border-sc-border-soft pt-2">
+              <summary className="cursor-pointer text-[11px] font-medium text-sc-link">Full AI analysis</summary>
+              <div className="mt-2 space-y-3">
+                <AiSection title="Timeline" text={aiSummary.timeline} />
+                <AiSection title="Hypothesis" text={aiSummary.hypothesis} />
+                <AiSection title="Key entities & relations" text={aiSummary.keyEntities} />
+                <AiSection title="Recommendations" text={aiSummary.recommendations} />
+              </div>
+            </details>
+          ) : null}
         </div>
       ) : null}
 
@@ -210,6 +221,18 @@ export function InvestigationCaseMeta({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function AiSection({ title, text }: { title: string; text: string | null }) {
+  if (!text) return null;
+  return (
+    <div>
+      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-sc-faint">{title}</p>
+      <div className="text-xs">
+        <MarkdownLite text={text} />
+      </div>
+    </div>
   );
 }
 

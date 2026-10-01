@@ -114,9 +114,12 @@ export async function fetchAiSummary(row: InstanceRow, caseId: string): Promise<
     const verdict = strOrNull(triage.verdict);
     const verdictReasoning = strOrNull(triage.verdict_reasoning);
     const recommendations = strOrNull(summaryObj.recommendations);
+    const timeline = strOrNull(summaryObj.timeline);
+    const hypothesis = strOrNull(summaryObj.hypothesis);
+    const keyEntities = strOrNull(summaryObj.key_entities_and_relations);
 
     if (!summary && !verdict && !verdictReasoning) return null;
-    return { verdict, verdictReasoning, summary, recommendations };
+    return { verdict, verdictReasoning, summary, recommendations, timeline, hypothesis, keyEntities };
   } catch {
     return null;
   }

@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.13.1";
+export const APP_VERSION = "3.14.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.14.0",
+    date: "2026-10-01",
+    notes: [
+      "AI case summary: a \"Full AI analysis\" expander surfaces the richer sections on demand (timeline, hypothesis, key entities & relations, recommendations).",
+      "Added Google Threat Intelligence (GTI) as a premium threat-intel source (IPs, domains, URLs, hashes) — uses the VirusTotal v3 API with your GTI key and surfaces GTI's verdict/severity/threat score.",
+    ],
+  },
   {
     version: "3.13.1",
     date: "2026-10-01",

@@ -155,23 +155,51 @@ async function urlscan(kind: ObservableKind, value: string): Promise<SourceResul
 
 /* ------------------------------- premium sources ------------------------------- */
 
+// VirusTotal v3 object path per observable kind (shared by VirusTotal and Google Threat Intelligence).
+function vtPath(kind: ObservableKind, value: string): string {
+  if (kind === "ip_public") return `ip_addresses/${encodeURIComponent(value)}`;
+  if (kind === "domain") return `domains/${encodeURIComponent(value)}`;
+  if (kind === "hash") return `files/${encodeURIComponent(value)}`;
+  return `urls/${Buffer.from(value).toString("base64url")}`;
+}
+
 async function virustotal(kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
-  const base = "https://www.virustotal.com/api/v3";
-  const path =
-    kind === "ip_public"
-      ? `ip_addresses/${encodeURIComponent(value)}`
-      : kind === "domain"
-        ? `domains/${encodeURIComponent(value)}`
-        : kind === "hash"
-          ? `files/${encodeURIComponent(value)}`
-          : `urls/${Buffer.from(value).toString("base64url")}`;
-  const body = getData(await getJson(`${base}/${path}`, { "x-apikey": apiKey }));
+  const body = getData(await getJson(`https://www.virustotal.com/api/v3/${vtPath(kind, value)}`, { "x-apikey": apiKey }));
   const stats = rec(rec(body.attributes).last_analysis_stats);
   const malicious = Number(stats.malicious ?? 0);
   const suspicious = Number(stats.suspicious ?? 0);
   const harmless = Number(stats.harmless ?? 0);
   const verdict: Verdict = malicious > 0 ? "malicious" : suspicious > 0 ? "suspicious" : harmless > 0 ? "benign" : "unknown";
   return { verdict, summary: `${malicious} malicious / ${suspicious} suspicious / ${harmless} harmless`, raw: body.attributes ?? body };
+}
+
+/** Google Threat Intelligence — the VirusTotal v3 API plus GTI's own assessment (verdict/score). */
+async function gti(kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
+  const attr = rec(getData(await getJson(`https://www.virustotal.com/api/v3/${vtPath(kind, value)}`, { "x-apikey": apiKey })).attributes);
+  const assessment = rec(attr.gti_assessment);
+  const stats = rec(attr.last_analysis_stats);
+  const malicious = Number(stats.malicious ?? 0);
+  const suspicious = Number(stats.suspicious ?? 0);
+
+  // GTI verdict/severity/threat-score may be scalars or { value } wrappers.
+  const unwrap = (v: unknown): string => (typeof v === "string" || typeof v === "number" ? String(v) : String(rec(v).value ?? ""));
+  const gtiVerdict = unwrap(assessment.verdict).replace(/^VERDICT_/, "");
+  const threatScore = unwrap(assessment.threat_score);
+  const severity = unwrap(assessment.severity).replace(/^SEVERITY_/, "");
+
+  let verdict: Verdict;
+  const upper = gtiVerdict.toUpperCase();
+  if (upper.includes("MALICIOUS")) verdict = "malicious";
+  else if (upper.includes("SUSPICIOUS")) verdict = "suspicious";
+  else if (upper.includes("BENIGN") || upper.includes("CLEAN")) verdict = "benign";
+  else verdict = malicious > 0 ? "malicious" : suspicious > 0 ? "suspicious" : Number(stats.harmless ?? 0) > 0 ? "benign" : "unknown";
+
+  const parts: string[] = [];
+  if (gtiVerdict) parts.push(gtiVerdict.toLowerCase());
+  if (severity) parts.push(`severity ${severity.toLowerCase()}`);
+  if (threatScore) parts.push(`threat score ${threatScore}`);
+  parts.push(`${malicious} malicious detections`);
+  return { verdict, summary: parts.join(" · "), raw: Object.keys(assessment).length ? { gti_assessment: assessment, last_analysis_stats: stats } : attr };
 }
 
 async function abuseipdb(_kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
@@ -284,7 +312,7 @@ type KeylessFetcher = (kind: ObservableKind, value: string) => Promise<SourceRes
 type KeyedFetcher = (kind: ObservableKind, value: string, apiKey: string) => Promise<SourceResult>;
 
 const KEYLESS: Record<string, KeylessFetcher> = { ipwhois, rdap, dns, crtsh, internetdb, onionoo, urlscan };
-const KEYED: Record<string, KeyedFetcher> = { virustotal, abuseipdb, greynoise, shodan, otx, threatfox, urlhaus, malwarebazaar };
+const KEYED: Record<string, KeyedFetcher> = { virustotal, gti, abuseipdb, greynoise, shodan, otx, threatfox, urlhaus, malwarebazaar };
 
 /** A user-defined source: an HTTP template with `{value}` and an optional auth header for the key. */
 export interface CustomSourceConfig {

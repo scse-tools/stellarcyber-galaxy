@@ -75,6 +75,14 @@ export const SOURCE_CATALOG: SourceDef[] = [
     keyUrl: "https://www.virustotal.com/gui/my-apikey",
   },
   {
+    key: "gti",
+    name: "Google Threat Intelligence (GTI)",
+    kinds: ["ip_public", "domain", "url", "hash"],
+    tier: "premium",
+    homepage: "https://gtidocs.virustotal.com",
+    keyUrl: "https://www.virustotal.com/gui/my-apikey",
+  },
+  {
     key: "abuseipdb",
     name: "AbuseIPDB",
     kinds: ["ip_public"],
