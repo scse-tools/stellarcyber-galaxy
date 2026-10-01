@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, PanelRightOpen } from "lucide-react";
 import { allAlertColumns, columnLabel, compareAlerts, displayAlertCell } from "@/lib/investigation-columns";
 import { useAlertColumns } from "@/lib/use-alert-columns";
 import { InvestigationColumnMenu } from "@/components/investigation-column-menu";
+import { InvestigationAlertDetail } from "@/components/investigation-alert-detail";
 import { alertId } from "@/lib/observables";
 import { cn } from "@/lib/utils";
 import type { CaseAlert } from "@/lib/types";
@@ -25,6 +26,7 @@ export function InvestigationAlertsTable({ alerts, loading, error, filterIds, ac
   const allColumns = useMemo(() => allAlertColumns(alerts), [alerts]);
   const { order, visibleColumns, isVisible, toggle, move, reset } = useAlertColumns(allColumns);
   const [sort, setSort] = useState<{ column: string; dir: "asc" | "desc" } | null>(null);
+  const [detail, setDetail] = useState<CaseAlert | null>(null);
 
   const rows = useMemo(() => {
     const withId = alerts.map((alert, index) => ({ alert, id: alertId(alert, index) }));
@@ -98,6 +100,7 @@ export function InvestigationAlertsTable({ alerts, loading, error, filterIds, ac
                     </th>
                   );
                 })}
+                <th className="w-8 border-b border-sc-border-soft px-2 py-2" aria-label="Details" />
               </tr>
             </thead>
             <tbody>
@@ -126,6 +129,20 @@ export function InvestigationAlertsTable({ alerts, loading, error, filterIds, ac
                         </td>
                       );
                     })}
+                    <td className="border-b border-sc-border-soft/60 px-1.5 py-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetail(alert);
+                        }}
+                        aria-label="Open alert detail"
+                        title="Alert detail"
+                        className="rounded p-1 text-sc-faint hover:bg-sc-active hover:text-sc-text"
+                      >
+                        <PanelRightOpen size={14} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -133,6 +150,8 @@ export function InvestigationAlertsTable({ alerts, loading, error, filterIds, ac
           </table>
         </div>
       )}
+
+      <InvestigationAlertDetail alert={detail} onClose={() => setDetail(null)} />
     </section>
   );
 }

@@ -3,13 +3,17 @@ import type { CaseAlert } from "@/lib/types";
 export type ObservableKind =
   | "ip_public"
   | "ip_private"
+  | "mac"
   | "domain"
   | "hostname"
   | "username"
   | "email"
   | "url"
   | "filename"
-  | "hash";
+  | "hash"
+  | "registry"
+  | "geo"
+  | "reputation";
 
 /** Internal accumulation kind: IPs are pooled together, then split into public/private on output. */
 type AccumKind = Exclude<ObservableKind, "ip_public" | "ip_private"> | "ip";
@@ -29,6 +33,7 @@ export interface ObservableGroup {
 const GROUP_LABELS: Record<ObservableKind, string> = {
   ip_public: "Public IP addresses",
   ip_private: "Private IP addresses",
+  mac: "MAC addresses",
   domain: "Domains",
   hostname: "Hostnames",
   username: "Usernames",
@@ -36,12 +41,16 @@ const GROUP_LABELS: Record<ObservableKind, string> = {
   url: "URLs",
   filename: "File names",
   hash: "File hashes",
+  registry: "Registry keys",
+  geo: "Geolocations",
+  reputation: "Reputations",
 };
 
 // Output group order (IPs first, public before private).
 const KIND_ORDER: ObservableKind[] = [
   "ip_public",
   "ip_private",
+  "mac",
   "domain",
   "hostname",
   "username",
@@ -49,11 +58,15 @@ const KIND_ORDER: ObservableKind[] = [
   "url",
   "filename",
   "hash",
+  "registry",
+  "geo",
+  "reputation",
 ];
 
 // Accumulation order used while walking alerts (IPs pooled under a single "ip" bucket).
 const ACCUM_ORDER: AccumKind[] = [
   "ip",
+  "mac",
   "domain",
   "hostname",
   "username",
@@ -61,6 +74,9 @@ const ACCUM_ORDER: AccumKind[] = [
   "url",
   "filename",
   "hash",
+  "registry",
+  "geo",
+  "reputation",
 ];
 
 /** True for RFC1918 space plus loopback and link-local — the "internal" addresses. */
@@ -85,6 +101,8 @@ export function isPrivateIp(ip: string): boolean {
 
 const IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
 const IPV6 = /\b(?:[A-Fa-f0-9]{1,4}:){2,7}[A-Fa-f0-9]{1,4}\b/g;
+// 48-bit MAC (00:1A:2B:3C:4D:5E, dash, or Cisco dotted). Distinguished from IPv6 by its 2-hex octets.
+const MAC = /\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b|\b(?:[0-9A-Fa-f]{4}\.){2}[0-9A-Fa-f]{4}\b/g;
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 const URL_RE = /\bhttps?:\/\/[^\s"'<>]+/gi;
 const HASH = /\b(?:[A-Fa-f0-9]{64}|[A-Fa-f0-9]{40}|[A-Fa-f0-9]{32})\b/g;
@@ -101,6 +119,13 @@ const HOST_KEY = /(hostname|host[_.]?name|(^|[_.])host([_.]|$)|_host$|computer|n
 const USER_KEY = /(user|account|logon|login|samaccount|principal)/;
 const HASH_KEY = /((^|[_.])(md5|sha1|sha256|sha512|imphash|checksum|hash)([_.]|$)|md5|sha[0-9])/;
 const FILE_KEY = /(file|filename|process|image|attachment|object_name)/;
+const MAC_KEY = /mac(_?addr(ess)?)?|hwaddr|ether(net)?_?addr/;
+const REGISTRY_KEY = /registry|reg_?key|reg_?path|reg_?value/;
+const GEO_KEY = /(geo|geoip|country|city|region|continent|(^|[_.])location([_.]|$))/;
+const REPUTATION_KEY = /(reputation|(^|[_.])rep([_.]|$)|rep_score|rep_level)/;
+
+// Values that carry no signal — ignored across every category.
+const IGNORE_VALUES = new Set(["", "-", "n/a", "na", "none", "null", "nil", "unknown", "undefined", "0.0.0.0", "::"]);
 
 // File extensions used both to spot file names and to stop file.ext being read as a domain.
 const FILE_EXTS =
@@ -111,6 +136,11 @@ const isIp = (value: string) => {
   IPV4.lastIndex = 0;
   IPV6.lastIndex = 0;
   return IPV4.test(value) || IPV6.test(value);
+};
+
+const isMac = (value: string) => {
+  MAC.lastIndex = 0;
+  return MAC.test(value);
 };
 
 const looksLikeDomain = (value: string) =>
@@ -144,11 +174,16 @@ function matches(regex: RegExp, text: string): string[] {
  */
 function classify(key: string, raw: string, sink: Sink): void {
   const value = raw.trim();
-  if (!value) return;
+  if (!value || IGNORE_VALUES.has(value.toLowerCase())) return;
 
+  // MAC addresses first (they look like IPv6 to the naive eye) — pulled from mac-style fields.
+  if (MAC_KEY.test(key)) {
+    for (const mac of matches(MAC, value)) sink("mac", mac.toLowerCase());
+  }
   if (IP_KEY.test(key)) {
     for (const ip of matches(IPV4, value)) sink("ip", ip);
-    for (const ip of matches(IPV6, value)) sink("ip", ip);
+    // Exclude 48-bit MACs, which the IPv6 pattern would otherwise match.
+    for (const ip of matches(IPV6, value)) if (!isMac(ip)) sink("ip", ip);
   }
   if (EMAIL_KEY.test(key)) {
     for (const email of matches(EMAIL, value)) sink("email", email.toLowerCase());
@@ -176,6 +211,16 @@ function classify(key: string, raw: string, sink: Sink): void {
     const found = matches(FILENAME, value);
     if (found.length) for (const file of found) sink("filename", file.trim());
     else if (/[\\/]/.test(value)) sink("filename", value.trim());
+  }
+  if (REGISTRY_KEY.test(key) && (/^hk(ey_)?(lm|cu|cr|u|cc)/i.test(value) || value.includes("\\"))) {
+    sink("registry", value);
+  }
+  // Geolocation components: textual places only (skip bare lat/long numbers).
+  if (GEO_KEY.test(key) && /[a-z]/i.test(value) && value.length <= 64 && !/^\d/.test(value)) {
+    sink("geo", value);
+  }
+  if (REPUTATION_KEY.test(key) && value.length <= 64) {
+    sink("reputation", value);
   }
 }
 
@@ -207,6 +252,7 @@ export function buildObservableIndex(alerts: CaseAlert[]): ObservableIndex {
   const counts: Record<ObservableKind, Map<string, number>> = {
     ip_public: new Map(),
     ip_private: new Map(),
+    mac: new Map(),
     domain: new Map(),
     hostname: new Map(),
     username: new Map(),
@@ -214,6 +260,9 @@ export function buildObservableIndex(alerts: CaseAlert[]): ObservableIndex {
     url: new Map(),
     filename: new Map(),
     hash: new Map(),
+    registry: new Map(),
+    geo: new Map(),
+    reputation: new Map(),
   };
   const byObservable = new Map<string, Set<string>>();
   const byAlert = new Map<string, Set<string>>();
@@ -223,6 +272,7 @@ export function buildObservableIndex(alerts: CaseAlert[]): ObservableIndex {
     // Collect this alert's distinct observables first, so each value counts once per alert.
     const perAlert: Record<AccumKind, Set<string>> = {
       ip: new Set(),
+      mac: new Set(),
       domain: new Set(),
       hostname: new Set(),
       username: new Set(),
@@ -230,6 +280,9 @@ export function buildObservableIndex(alerts: CaseAlert[]): ObservableIndex {
       url: new Set(),
       filename: new Set(),
       hash: new Set(),
+      registry: new Set(),
+      geo: new Set(),
+      reputation: new Set(),
     };
     const sink: Sink = (kind, value) => perAlert[kind].add(value);
     for (const [key, value] of Object.entries(alert)) walk(key, value, (k, v) => classify(k, v, sink));

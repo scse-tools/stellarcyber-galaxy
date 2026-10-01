@@ -3,10 +3,14 @@
 import { useState } from "react";
 import {
   AtSign,
+  Cpu,
   Fingerprint,
   FileText,
+  Gauge,
   Globe,
+  KeyRound,
   Link2,
+  MapPin,
   Network,
   Router,
   Server,
@@ -18,6 +22,7 @@ import type { ObservableGroup, ObservableKind } from "@/lib/observables";
 const ICONS: Record<ObservableKind, LucideIcon> = {
   ip_public: Network,
   ip_private: Router,
+  mac: Cpu,
   domain: Globe,
   hostname: Server,
   username: User,
@@ -25,6 +30,9 @@ const ICONS: Record<ObservableKind, LucideIcon> = {
   url: Link2,
   filename: FileText,
   hash: Fingerprint,
+  registry: KeyRound,
+  geo: MapPin,
+  reputation: Gauge,
 };
 
 const INITIAL_LIMIT = 12;

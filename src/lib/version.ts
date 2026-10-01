@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.7.0";
+export const APP_VERSION = "3.8.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,15 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.8.0",
+    date: "2026-10-01",
+    notes: [
+      "MAC addresses are now their own observable category and no longer misread as public IPs (48-bit MAC vs 128-bit IPv6).",
+      "New observable categories: registry keys, geolocations, and reputations; values like \"unknown\" are now ignored.",
+      "Each alert row has a detail icon that opens an aesthetically laid-out panel: headline properties, a searchable field list, and pretty-printed raw JSON with copy.",
+    ],
+  },
   {
     version: "3.7.0",
     date: "2026-10-01",

@@ -8,6 +8,7 @@ import type { TiSource } from "@/lib/investigation/types";
 const KIND_LABEL: Record<ObservableKind, string> = {
   ip_public: "public IP",
   ip_private: "private IP",
+  mac: "MAC",
   domain: "domain",
   hostname: "hostname",
   url: "URL",
@@ -15,6 +16,9 @@ const KIND_LABEL: Record<ObservableKind, string> = {
   email: "email",
   username: "username",
   filename: "file",
+  registry: "registry",
+  geo: "geo",
+  reputation: "reputation",
 };
 
 const TIERS: { tier: TiSource["tier"]; label: string }[] = [

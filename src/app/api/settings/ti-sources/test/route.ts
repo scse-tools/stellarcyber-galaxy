@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 const SAMPLE: Record<ObservableKind, string> = {
   ip_public: "8.8.8.8",
   ip_private: "10.0.0.1",
+  mac: "00:1a:2b:3c:4d:5e",
   domain: "example.com",
   hostname: "example.com",
   url: "http://example.com/",
@@ -20,6 +21,9 @@ const SAMPLE: Record<ObservableKind, string> = {
   email: "test@example.com",
   username: "administrator",
   filename: "sample.exe",
+  registry: "HKLM\\Software\\Example",
+  geo: "United States",
+  reputation: "malicious",
 };
 
 export async function POST(request: Request) {

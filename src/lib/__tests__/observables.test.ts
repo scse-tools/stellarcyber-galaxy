@@ -68,6 +68,32 @@ describe("extractObservables", () => {
     expect(values(alerts, "ip_public")).toContain("9.9.9.9");
   });
 
+  it("treats MAC addresses as their own category, not IPs", () => {
+    const alerts: CaseAlert[] = [{ _id: "a1", srcmac: "00:1A:2B:3C:4D:5E", dstip: "8.8.8.8" }];
+    expect(values(alerts, "mac")).toEqual(["00:1a:2b:3c:4d:5e"]);
+    expect(values(alerts, "ip_public")).toEqual(["8.8.8.8"]);
+    // The MAC must not leak into either IP bucket.
+    expect(groupFor(alerts, "ip_private")).toBeUndefined();
+  });
+
+  it("extracts registry keys, geolocations and reputations, ignoring unknowns", () => {
+    const alerts: CaseAlert[] = [
+      {
+        _id: "a1",
+        registry_key: "HKLM\\Software\\Microsoft\\Run",
+        geo_country: "United States",
+        geo_city: "unknown",
+        ip_reputation: "malicious",
+        srcuser: "unknown",
+      },
+    ];
+    expect(values(alerts, "registry")).toContain("HKLM\\Software\\Microsoft\\Run");
+    expect(values(alerts, "geo")).toEqual(["United States"]);
+    expect(values(alerts, "reputation")).toContain("malicious");
+    // "unknown" values are ignored everywhere.
+    expect(groupFor(alerts, "username")).toBeUndefined();
+  });
+
   it("splits IPs into public and private using RFC1918 rules", () => {
     const alerts: CaseAlert[] = [
       { _id: "a1", ips: ["10.1.2.3", "172.16.5.5", "172.32.5.5", "192.168.1.1", "127.0.0.1", "8.8.4.4", "1.2.3.4"] },
