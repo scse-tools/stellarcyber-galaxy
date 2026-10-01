@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   AtSign,
   Fingerprint,
@@ -13,8 +13,7 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
-import { extractObservables, type ObservableKind } from "@/lib/observables";
-import type { CaseAlert } from "@/lib/types";
+import type { ObservableGroup, ObservableKind } from "@/lib/observables";
 
 const ICONS: Record<ObservableKind, LucideIcon> = {
   ip_public: Network,
@@ -34,28 +33,29 @@ const INITIAL_LIMIT = 12;
 export const obsKey = (kind: ObservableKind, value: string) => `${kind}::${value}`;
 
 interface Props {
-  alerts: CaseAlert[];
+  groups: ObservableGroup[];
+  alertCount: number;
   selected: Set<string>;
+  /** Observable keys to highlight (those belonging to the currently selected alert). */
+  highlighted: Set<string>;
   onToggle: (kind: ObservableKind, value: string) => void;
   onToggleGroup: (kind: ObservableKind, values: string[], select: boolean) => void;
 }
 
-/** Pooled observables from every alert in the case, each selectable for investigation. */
-export function InvestigationObservables({ alerts, selected, onToggle, onToggleGroup }: Props) {
-  const groups = useMemo(() => extractObservables(alerts), [alerts]);
-
-  if (alerts.length === 0 || groups.length === 0) return null;
+/** Pooled observables from every alert in the case; each filters the alert table and can be investigated. */
+export function InvestigationObservables({ groups, alertCount, selected, highlighted, onToggle, onToggleGroup }: Props) {
+  if (alertCount === 0 || groups.length === 0) return null;
 
   return (
     <section className="rounded-xl border border-sc-border-soft bg-sc-surface/50 p-4">
       <div className="mb-3 flex items-center gap-2">
         <Fingerprint size={14} className="text-sc-accent" />
         <h3 className="text-[11px] font-medium uppercase tracking-wide text-sc-faint">
-          Observables <span className="text-sc-faint">· pooled from {alerts.length} alerts</span>
+          Observables <span className="text-sc-faint">· pooled from {alertCount} alerts</span>
         </h3>
         {selected.size > 0 ? (
           <span className="rounded-full bg-sc-primary px-2 py-0.5 text-[10px] font-medium text-white">
-            {selected.size} selected
+            {selected.size} selected · filtering alerts
           </span>
         ) : null}
       </div>
@@ -68,6 +68,7 @@ export function InvestigationObservables({ alerts, selected, onToggle, onToggleG
             label={group.label}
             observables={group.observables}
             selected={selected}
+            highlighted={highlighted}
             onToggle={onToggle}
             onToggleGroup={onToggleGroup}
           />
@@ -83,6 +84,7 @@ function ObservableGroupBlock({
   label,
   observables,
   selected,
+  highlighted,
   onToggle,
   onToggleGroup,
 }: {
@@ -91,6 +93,7 @@ function ObservableGroupBlock({
   label: string;
   observables: { value: string; count: number }[];
   selected: Set<string>;
+  highlighted: Set<string>;
   onToggle: (kind: ObservableKind, value: string) => void;
   onToggleGroup: (kind: ObservableKind, values: string[], select: boolean) => void;
 }) {
@@ -116,7 +119,9 @@ function ObservableGroupBlock({
       </div>
       <ul className="flex flex-wrap gap-1">
         {shown.map((o) => {
-          const isSelected = selected.has(obsKey(kind, o.value));
+          const key = obsKey(kind, o.value);
+          const isSelected = selected.has(key);
+          const isHighlighted = highlighted.has(key);
           return (
             <li key={o.value}>
               <button
@@ -126,7 +131,9 @@ function ObservableGroupBlock({
                 className={`inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] transition-colors ${
                   isSelected
                     ? "border-sc-primary bg-sc-primary/15 text-sc-text"
-                    : "border-sc-border-soft bg-sc-surface text-sc-text hover:border-sc-border"
+                    : isHighlighted
+                      ? "border-sc-accent bg-sc-accent/15 text-sc-text ring-1 ring-sc-accent"
+                      : "border-sc-border-soft bg-sc-surface text-sc-text hover:border-sc-border"
                 }`}
                 title={`${o.value} · in ${o.count} alert${o.count === 1 ? "" : "s"}`}
               >

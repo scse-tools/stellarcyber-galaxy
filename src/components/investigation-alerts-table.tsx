@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { allAlertColumns, columnLabel, compareAlerts, displayAlertCell } from "@/lib/investigation-columns";
 import { useAlertColumns } from "@/lib/use-alert-columns";
 import { InvestigationColumnMenu } from "@/components/investigation-column-menu";
+import { alertId } from "@/lib/observables";
 import { cn } from "@/lib/utils";
 import type { CaseAlert } from "@/lib/types";
 
@@ -12,19 +13,26 @@ interface Props {
   alerts: CaseAlert[];
   loading: boolean;
   error: string | null;
+  /** When non-null, only alerts whose id is in this set are shown (observable filter). */
+  filterIds: Set<string> | null;
+  activeAlertId: string | null;
+  onSelectAlert: (id: string) => void;
 }
 
 /** Alerts for the selected case, with show/hide, reorderable, sortable, persistent columns. */
-export function InvestigationAlertsTable({ alerts, loading, error }: Props) {
+export function InvestigationAlertsTable({ alerts, loading, error, filterIds, activeAlertId, onSelectAlert }: Props) {
+  // Columns are computed from the full alert set so they stay stable while filtering.
   const allColumns = useMemo(() => allAlertColumns(alerts), [alerts]);
   const { order, visibleColumns, isVisible, toggle, move, reset } = useAlertColumns(allColumns);
   const [sort, setSort] = useState<{ column: string; dir: "asc" | "desc" } | null>(null);
 
   const rows = useMemo(() => {
-    if (!sort) return alerts;
+    const withId = alerts.map((alert, index) => ({ alert, id: alertId(alert, index) }));
+    const filtered = filterIds ? withId.filter((row) => filterIds.has(row.id)) : withId;
+    if (!sort) return filtered;
     const factor = sort.dir === "asc" ? 1 : -1;
-    return [...alerts].sort((a, b) => factor * compareAlerts(sort.column, a, b));
-  }, [alerts, sort]);
+    return [...filtered].sort((a, b) => factor * compareAlerts(sort.column, a.alert, b.alert));
+  }, [alerts, filterIds, sort]);
 
   const onSort = (column: string) =>
     setSort((current) =>
@@ -39,7 +47,11 @@ export function InvestigationAlertsTable({ alerts, loading, error }: Props) {
     <section className="flex min-h-0 flex-col rounded-xl border border-sc-border-soft bg-sc-surface/50">
       <div className="flex items-center justify-between border-b border-sc-border-soft px-3 py-2">
         <span className="text-[11px] font-medium uppercase tracking-wide text-sc-faint">
-          Alerts <span className="text-sc-faint">· {alerts.length}</span>
+          Alerts{" "}
+          <span className="text-sc-faint">
+            · {filterIds ? `${rows.length} of ${alerts.length}` : alerts.length}
+            {filterIds ? " (filtered)" : ""}
+          </span>
         </span>
         <InvestigationColumnMenu
           order={order}
@@ -89,22 +101,34 @@ export function InvestigationAlertsTable({ alerts, loading, error }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((alert, index) => (
-                <tr key={alert._id || index} className={cn(index % 2 ? "bg-sc-surface/40" : undefined, "hover:bg-sc-active/50")}>
-                  {visibleColumns.map((column) => {
-                    const text = displayAlertCell(column, alert[column]);
-                    return (
-                      <td
-                        key={column}
-                        className="max-w-[22rem] truncate border-b border-sc-border-soft/60 px-2.5 py-1.5 text-sc-text"
-                        title={text}
-                      >
-                        {text}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {rows.map(({ alert, id }, index) => {
+                const active = id === activeAlertId;
+                return (
+                  <tr
+                    key={id || index}
+                    onClick={() => onSelectAlert(id)}
+                    aria-selected={active}
+                    className={cn(
+                      "cursor-pointer",
+                      active ? "bg-sc-primary/15" : index % 2 ? "bg-sc-surface/40" : undefined,
+                      "hover:bg-sc-active/50",
+                    )}
+                  >
+                    {visibleColumns.map((column) => {
+                      const text = displayAlertCell(column, alert[column]);
+                      return (
+                        <td
+                          key={column}
+                          className="max-w-[22rem] truncate border-b border-sc-border-soft/60 px-2.5 py-1.5 text-sc-text"
+                          title={text}
+                        >
+                          {text}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

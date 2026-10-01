@@ -12,3 +12,7 @@ set -a; . ./.env; set +a
 export NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 npm run build
 node server.mjs
+
+
+npm run build && node server.mjs
+

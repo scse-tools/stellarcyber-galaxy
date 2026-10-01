@@ -15,24 +15,31 @@ export interface SourceResult {
   raw: unknown;
 }
 
-async function getJson(url: string, headers: Record<string, string>, method = "GET", timeoutMs = TIMEOUT_MS): Promise<unknown> {
+async function getJson(
+  url: string,
+  headers: Record<string, string>,
+  method = "GET",
+  timeoutMs = TIMEOUT_MS,
+  body?: string,
+): Promise<unknown> {
   const response = await proxiedFetch(url, {
     method,
     headers: { "User-Agent": USER_AGENT, Accept: "application/json", ...headers },
     redirect: "follow",
+    body,
     signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await response.text();
-  let body: unknown = null;
+  let parsed: unknown = null;
   try {
-    body = text ? JSON.parse(text) : null;
+    parsed = text ? JSON.parse(text) : null;
   } catch {
-    body = text;
+    parsed = text;
   }
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}${typeof body === "string" ? `: ${body.slice(0, 120)}` : ""}`);
+    throw new Error(`HTTP ${response.status}${typeof parsed === "string" ? `: ${parsed.slice(0, 120)}` : ""}`);
   }
-  return body;
+  return parsed;
 }
 
 const rec = (value: unknown): Record<string, unknown> => (typeof value === "object" && value ? (value as Record<string, unknown>) : {});
@@ -188,11 +195,96 @@ async function shodan(_kind: ObservableKind, value: string, apiKey: string): Pro
   return { verdict: "info", summary: `${ports.length} open port${ports.length === 1 ? "" : "s"}${body.org ? ` · ${String(body.org)}` : ""}${ports.length ? ` · ${ports.slice(0, 8).join(", ")}` : ""}`, raw: body };
 }
 
+/** AlienVault OTX — community threat pulses for an indicator (free API key). */
+async function otx(kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
+  const seg =
+    kind === "ip_public"
+      ? `IPv4/${encodeURIComponent(value)}`
+      : kind === "domain"
+        ? `domain/${encodeURIComponent(value)}`
+        : kind === "hostname"
+          ? `hostname/${encodeURIComponent(value)}`
+          : kind === "hash"
+            ? `file/${encodeURIComponent(value)}`
+            : `url/${encodeURIComponent(value)}`;
+  const body = rec(await getJson(`https://otx.alienvault.com/api/v1/indicators/${seg}/general`, { "X-OTX-API-KEY": apiKey }));
+  const pulse = rec(body.pulse_info);
+  const pulses = Array.isArray(pulse.pulses) ? pulse.pulses : [];
+  const count = Number(pulse.count ?? pulses.length);
+  const first = pulses[0] ? String(rec(pulses[0]).name ?? "") : "";
+  return {
+    verdict: count > 0 ? "suspicious" : "benign",
+    summary: count ? `${count} threat pulse${count === 1 ? "" : "s"}${first ? ` · ${first}` : ""}` : "No threat pulses",
+    raw: pulse,
+  };
+}
+
+/** abuse.ch ThreatFox — IOC matches (free Auth-Key). */
+async function threatfox(_kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
+  const body = rec(
+    await getJson(
+      "https://threatfox-api.abuse.ch/api/v1/",
+      { "Auth-Key": apiKey, "Content-Type": "application/json" },
+      "POST",
+      TIMEOUT_MS,
+      JSON.stringify({ query: "search_ioc", search_term: value }),
+    ),
+  );
+  const data = Array.isArray(body.data) ? body.data : [];
+  if (body.query_status !== "ok" || data.length === 0) return { verdict: "benign", summary: "No ThreatFox IOC matches", raw: body };
+  const first = rec(data[0]);
+  return {
+    verdict: "malicious",
+    summary: `${data.length} IOC match${data.length === 1 ? "" : "es"}${first.malware_printable ? ` · ${String(first.malware_printable)}` : ""}`,
+    raw: data.slice(0, 5),
+  };
+}
+
+/** abuse.ch URLhaus — malicious URL/host listings (free Auth-Key). */
+async function urlhaus(kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
+  const isUrl = kind === "url";
+  const form = isUrl ? `url=${encodeURIComponent(value)}` : `host=${encodeURIComponent(value)}`;
+  const body = rec(
+    await getJson(
+      `https://urlhaus-api.abuse.ch/v1/${isUrl ? "url" : "host"}/`,
+      { "Auth-Key": apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+      "POST",
+      TIMEOUT_MS,
+      form,
+    ),
+  );
+  if (body.query_status !== "ok") return { verdict: "benign", summary: "Not listed on URLhaus", raw: body };
+  const urls = Array.isArray(body.urls) ? body.urls : [];
+  const count = isUrl ? 1 : urls.length;
+  return { verdict: "malicious", summary: `Listed on URLhaus${count ? ` · ${count} URL${count === 1 ? "" : "s"}` : ""}`, raw: body };
+}
+
+/** abuse.ch MalwareBazaar — known malware sample lookup by hash (free Auth-Key). */
+async function malwarebazaar(_kind: ObservableKind, value: string, apiKey: string): Promise<SourceResult> {
+  const body = rec(
+    await getJson(
+      "https://mb-api.abuse.ch/api/v1/",
+      { "Auth-Key": apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+      "POST",
+      TIMEOUT_MS,
+      `query=get_info&hash=${encodeURIComponent(value)}`,
+    ),
+  );
+  if (body.query_status !== "ok") return { verdict: "benign", summary: "Not found in MalwareBazaar", raw: body };
+  const data = Array.isArray(body.data) ? body.data : [];
+  const first = rec(data[0]);
+  return {
+    verdict: "malicious",
+    summary: `Known sample${first.signature ? ` · ${String(first.signature)}` : ""}${first.file_type ? ` (${String(first.file_type)})` : ""}`,
+    raw: data.slice(0, 3),
+  };
+}
+
 type KeylessFetcher = (kind: ObservableKind, value: string) => Promise<SourceResult>;
 type KeyedFetcher = (kind: ObservableKind, value: string, apiKey: string) => Promise<SourceResult>;
 
 const KEYLESS: Record<string, KeylessFetcher> = { ipwhois, rdap, dns, crtsh, internetdb, onionoo, urlscan };
-const KEYED: Record<string, KeyedFetcher> = { virustotal, abuseipdb, greynoise, shodan };
+const KEYED: Record<string, KeyedFetcher> = { virustotal, abuseipdb, greynoise, shodan, otx, threatfox, urlhaus, malwarebazaar };
 
 /** A user-defined source: an HTTP template with `{value}` and an optional auth header for the key. */
 export interface CustomSourceConfig {

@@ -98,6 +98,38 @@ export const SOURCE_CATALOG: SourceDef[] = [
     homepage: "https://www.shodan.io",
     keyUrl: "https://account.shodan.io",
   },
+  {
+    key: "otx",
+    name: "AlienVault OTX",
+    kinds: ["ip_public", "domain", "hostname", "url", "hash"],
+    tier: "premium",
+    homepage: "https://otx.alienvault.com",
+    keyUrl: "https://otx.alienvault.com/api",
+  },
+  {
+    key: "threatfox",
+    name: "ThreatFox (abuse.ch)",
+    kinds: ["ip_public", "domain", "url", "hash"],
+    tier: "premium",
+    homepage: "https://threatfox.abuse.ch",
+    keyUrl: "https://auth.abuse.ch/",
+  },
+  {
+    key: "urlhaus",
+    name: "URLhaus (abuse.ch)",
+    kinds: ["domain", "ip_public", "url"],
+    tier: "premium",
+    homepage: "https://urlhaus.abuse.ch",
+    keyUrl: "https://auth.abuse.ch/",
+  },
+  {
+    key: "malwarebazaar",
+    name: "MalwareBazaar (abuse.ch)",
+    kinds: ["hash"],
+    tier: "premium",
+    homepage: "https://bazaar.abuse.ch",
+    keyUrl: "https://auth.abuse.ch/",
+  },
 ];
 
 export function findSource(key: string): SourceDef | undefined {

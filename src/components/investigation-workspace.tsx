@@ -10,7 +10,7 @@ import { InvestigationPanel } from "@/components/investigation-panel";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { DEFAULT_SELECTION, describeRange, resolveTimeRange, type TimeRangeSelection } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
-import type { ObservableKind } from "@/lib/observables";
+import { buildObservableIndex, type ObservableKind } from "@/lib/observables";
 import type { Observable } from "@/lib/investigation/types";
 import type { CaseAlert, CaseDetail, CaseSummary, InstanceSummary } from "@/lib/types";
 
@@ -35,6 +35,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   const [caseLoading, setCaseLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [activeAlertId, setActiveAlertId] = useState<string | null>(null);
 
   const refreshInvestigated = useCallback(async () => {
     if (!instanceId) return;
@@ -74,6 +75,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
     setDetail(null);
     setAlerts([]);
     setSelected(new Set());
+    setActiveAlertId(null);
     const base = `/api/instances/${instanceId}/cases/${encodeURIComponent(caseId)}`;
     Promise.all([
       getJson<{ detail: CaseDetail }>(base).then((b) => !cancelled && setDetail(b.detail)),
@@ -113,6 +115,25 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
       return next;
     });
   }, []);
+
+  // Index linking observables <-> alerts, for cross-filtering and highlighting.
+  const index = useMemo(() => buildObservableIndex(alerts), [alerts]);
+
+  // Selected observables filter the alert table to the union of alerts containing any of them.
+  const filterIds = useMemo(() => {
+    if (selected.size === 0) return null;
+    const ids = new Set<string>();
+    for (const key of selected) for (const id of index.byObservable.get(key) ?? []) ids.add(id);
+    return ids;
+  }, [selected, index]);
+
+  // Clicking an alert highlights the observables found in that alert.
+  const highlighted = useMemo(
+    () => (activeAlertId ? (index.byAlert.get(activeAlertId) ?? new Set<string>()) : new Set<string>()),
+    [activeAlertId, index],
+  );
+
+  const toggleAlert = useCallback((id: string) => setActiveAlertId((prev) => (prev === id ? null : id)), []);
 
   const selectedObservables = useMemo<Observable[]>(
     () =>
@@ -187,14 +208,23 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
               )}
               <div className="max-h-64 shrink-0 overflow-y-auto">
                 <InvestigationObservables
-                  alerts={alerts}
+                  groups={index.groups}
+                  alertCount={alerts.length}
                   selected={selected}
+                  highlighted={highlighted}
                   onToggle={toggleObservable}
                   onToggleGroup={toggleGroup}
                 />
               </div>
               <div className="min-h-0 flex-1">
-                <InvestigationAlertsTable alerts={alerts} loading={caseLoading} error={alertsError} />
+                <InvestigationAlertsTable
+                  alerts={alerts}
+                  loading={caseLoading}
+                  error={alertsError}
+                  filterIds={filterIds}
+                  activeAlertId={activeAlertId}
+                  onSelectAlert={toggleAlert}
+                />
               </div>
             </>
           ) : (

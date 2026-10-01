@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.6.0";
+export const APP_VERSION = "3.7.0";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,14 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.7.0",
+    date: "2026-10-01",
+    notes: [
+      "Added free-key premium sources: AlienVault OTX, ThreatFox, URLhaus and MalwareBazaar (abuse.ch).",
+      "Observables now cross-filter the alert table: selecting observables filters the table to alerts containing any of them (additive), and selecting an alert highlights its observables in the panel.",
+    ],
+  },
   {
     version: "3.6.0",
     date: "2026-10-01",

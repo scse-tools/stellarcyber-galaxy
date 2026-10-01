@@ -179,13 +179,34 @@ function classify(key: string, raw: string, sink: Sink): void {
   }
 }
 
+/** Stable selection/index key for one observable (matches the UI's obsKey). */
+export const observableKey = (kind: ObservableKind, value: string) => `${kind}::${value}`;
+
+/** The output ObservableKind for an accumulation kind + value (splits IPs into public/private). */
+function outputKind(accum: AccumKind, value: string): ObservableKind {
+  if (accum !== "ip") return accum;
+  return isPrivateIp(value) ? "ip_private" : "ip_public";
+}
+
+export interface ObservableIndex {
+  groups: ObservableGroup[];
+  /** observableKey -> ids of the alerts it appears in. */
+  byObservable: Map<string, Set<string>>;
+  /** alert id -> observableKeys found in that alert. */
+  byAlert: Map<string, Set<string>>;
+}
+
+/** An alert's identity for cross-filtering (its ES `_id`, or a positional fallback). */
+export const alertId = (alert: CaseAlert, index: number): string => alert._id || `idx:${index}`;
+
 /**
- * Pools observables (IPs, domains, hostnames, usernames, emails, URLs, file names, hashes) across
- * every alert in a case. Each value is counted by how many alerts it appears in.
+ * Pools observables across every alert and records which alerts each observable appears in (and
+ * vice-versa), so the observable panel and the alert table can cross-filter each other.
  */
-export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
-  const emptyCounts = (): Record<AccumKind, Map<string, number>> => ({
-    ip: new Map(),
+export function buildObservableIndex(alerts: CaseAlert[]): ObservableIndex {
+  const counts: Record<ObservableKind, Map<string, number>> = {
+    ip_public: new Map(),
+    ip_private: new Map(),
     domain: new Map(),
     hostname: new Map(),
     username: new Map(),
@@ -193,10 +214,12 @@ export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
     url: new Map(),
     filename: new Map(),
     hash: new Map(),
-  });
-  const counts = emptyCounts();
+  };
+  const byObservable = new Map<string, Set<string>>();
+  const byAlert = new Map<string, Set<string>>();
 
-  for (const alert of alerts) {
+  alerts.forEach((alert, index) => {
+    const id = alertId(alert, index);
     // Collect this alert's distinct observables first, so each value counts once per alert.
     const perAlert: Record<AccumKind, Set<string>> = {
       ip: new Set(),
@@ -211,31 +234,32 @@ export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
     const sink: Sink = (kind, value) => perAlert[kind].add(value);
     for (const [key, value] of Object.entries(alert)) walk(key, value, (k, v) => classify(k, v, sink));
 
-    for (const kind of ACCUM_ORDER) {
-      for (const value of perAlert[kind]) counts[kind].set(value, (counts[kind].get(value) ?? 0) + 1);
+    const keysForAlert = new Set<string>();
+    for (const accum of ACCUM_ORDER) {
+      for (const value of perAlert[accum]) {
+        const kind = outputKind(accum, value);
+        counts[kind].set(value, (counts[kind].get(value) ?? 0) + 1);
+        const key = observableKey(kind, value);
+        keysForAlert.add(key);
+        if (!byObservable.has(key)) byObservable.set(key, new Set());
+        byObservable.get(key)!.add(id);
+      }
     }
-  }
+    byAlert.set(id, keysForAlert);
+  });
 
-  const toObservables = (map: Map<string, number>) =>
-    [...map.entries()]
-      .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-
-  // Split the pooled IPs into public/private; everything else maps straight through.
-  const groups = new Map<ObservableKind, ObservableGroup["observables"]>();
-  const publicIps = new Map<string, number>();
-  const privateIps = new Map<string, number>();
-  for (const [value, count] of counts.ip) (isPrivateIp(value) ? privateIps : publicIps).set(value, count);
-  groups.set("ip_public", toObservables(publicIps));
-  groups.set("ip_private", toObservables(privateIps));
-  for (const kind of ACCUM_ORDER) {
-    if (kind === "ip") continue;
-    groups.set(kind, toObservables(counts[kind]));
-  }
-
-  return KIND_ORDER.map((kind) => ({
+  const groups = KIND_ORDER.map((kind) => ({
     kind,
     label: GROUP_LABELS[kind],
-    observables: groups.get(kind) ?? [],
+    observables: [...counts[kind].entries()]
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)),
   })).filter((group) => group.observables.length > 0);
+
+  return { groups, byObservable, byAlert };
+}
+
+/** Pools observables across every alert (groups only). */
+export function extractObservables(alerts: CaseAlert[]): ObservableGroup[] {
+  return buildObservableIndex(alerts).groups;
 }
