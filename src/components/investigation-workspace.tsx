@@ -35,6 +35,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   const [caseId, setCaseId] = useState<string | null>(null);
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [alerts, setAlerts] = useState<CaseAlert[]>([]);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [caseLoading, setCaseLoading] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -71,10 +72,11 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
     const base = `/api/instances/${instanceId}/cases/${encodeURIComponent(caseId)}`;
     try {
       const [d, a] = await Promise.all([
-        getJson<{ detail: CaseDetail }>(base),
+        getJson<{ detail: CaseDetail; aiSummary?: string | null }>(base),
         getJson<{ alerts: CaseAlert[] }>(`${base}/alerts`),
       ]);
       setDetail(d.detail);
+      setAiSummary(d.aiSummary ?? null);
       setAlerts(a.alerts);
     } catch (error) {
       setAlertsError(error instanceof Error ? error.message : "Load failed.");
@@ -87,6 +89,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
   useEffect(() => {
     setCaseId(null);
     setDetail(null);
+    setAiSummary(null);
     setAlerts([]);
     void refreshInvestigated();
     void loadCases();
@@ -97,6 +100,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
     setSelected(new Set());
     setActiveAlertId(null);
     setDetail(null);
+    setAiSummary(null);
     setAlerts([]);
     void loadCase();
   }, [loadCase]);
@@ -243,6 +247,7 @@ export function InvestigationWorkspace({ instances, isAdmin }: { instances: Inst
                   caseId={caseId}
                   caseName={selectedCaseName}
                   consoleUrl={consoleUrl}
+                  aiSummary={aiSummary}
                 />
               ) : (
                 <div className="rounded-xl border border-sc-border-soft bg-sc-surface/50 px-4 py-6 text-center text-xs text-sc-faint">

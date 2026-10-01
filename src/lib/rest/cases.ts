@@ -91,6 +91,52 @@ export async function fetchCaseDetail(row: InstanceRow, caseId: string): Promise
   return isRecord(body) ? (body as CaseDetail) : null;
 }
 
+/** The case summary resource (structured; on some deployments also carries an AI narrative). */
+export async function fetchCaseSummary(row: InstanceRow, caseId: string): Promise<Record<string, unknown> | null> {
+  try {
+    const body = await getJson(row, `${CASES_PATH}/${encodeURIComponent(caseId)}/summary`);
+    if (isRecord(body) && isRecord(body.data)) return body.data;
+    return isRecord(body) ? body : null;
+  } catch {
+    return null;
+  }
+}
+
+// Field names that would hold a GPT/AI-written case summary, when the deployment exposes one.
+const AI_SUMMARY_KEY =
+  /(?:ai|gpt|genai|copilot|llm)[\w ]{0,20}(?:summary|insight|narrativ|investigat|analysis|assessment)|(?:summary|insight|narrativ)[\w ]{0,20}(?:ai|gpt)/i;
+
+function scanAiSummary(value: unknown, key: string): string | null {
+  if (typeof value === "string") {
+    return AI_SUMMARY_KEY.test(key) && value.trim().length >= 60 ? value.trim() : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = scanAiSummary(item, key);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (isRecord(value)) {
+    for (const [k, v] of Object.entries(value)) {
+      const found = scanAiSummary(v, k);
+      if (found) return found;
+    }
+    return null;
+  }
+  return null;
+}
+
+/** Finds a prose AI summary across the given objects, or null if none is exposed. */
+export function extractAiSummary(...objects: (Record<string, unknown> | null)[]): string | null {
+  for (const object of objects) {
+    if (!object) continue;
+    const found = scanAiSummary(object, "");
+    if (found) return found;
+  }
+  return null;
+}
+
 /**
  * Alerts for a case. The API returns Elasticsearch docs under `data.docs`; the
  * displayable fields live in each doc's `_source`, so we lift that up and keep `_id`.

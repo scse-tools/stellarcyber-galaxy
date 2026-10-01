@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 import { cellText } from "@/lib/table-export";
 import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
@@ -40,6 +40,7 @@ export function InvestigationCaseMeta({
   caseId,
   caseName,
   consoleUrl,
+  aiSummary,
 }: {
   detail: CaseDetail;
   ttps: Ttp[];
@@ -47,6 +48,7 @@ export function InvestigationCaseMeta({
   caseId: string | null;
   caseName: string | null;
   consoleUrl: string | null;
+  aiSummary: string | null;
 }) {
   const name = cellText(detail.name) || cellText(detail.ticket_id) || cellText(detail._id);
   const score = Number(detail.score) || 0;
@@ -103,6 +105,15 @@ export function InvestigationCaseMeta({
       </div>
 
       {summary ? <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-sc-muted">{summary}</p> : null}
+
+      {aiSummary ? (
+        <div className="mt-3 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
+          <p className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
+            <Sparkles size={11} /> AI summary · Stellar Cyber
+          </p>
+          <p className="whitespace-pre-wrap text-xs leading-relaxed text-sc-text">{aiSummary}</p>
+        </div>
+      ) : null}
 
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
         {META_FIELDS.filter((f) => f.key in detail).map((f) => (

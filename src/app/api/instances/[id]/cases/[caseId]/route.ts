@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInstanceRow } from "@/lib/instance-repo";
-import { fetchCaseDetail } from "@/lib/rest/cases";
+import { extractAiSummary, fetchCaseDetail, fetchCaseSummary } from "@/lib/rest/cases";
 import { errorResponse } from "@/lib/api-error";
 import { requireUser, isGuardFailure } from "@/lib/auth/session";
 
@@ -19,7 +19,9 @@ export async function GET(request: Request, { params }: Context) {
 
     const detail = await fetchCaseDetail(row, caseId);
     if (!detail) return NextResponse.json({ error: "Case not found." }, { status: 404 });
-    return NextResponse.json({ detail });
+    const summary = await fetchCaseSummary(row, caseId);
+    const aiSummary = extractAiSummary(detail, summary);
+    return NextResponse.json({ detail, aiSummary });
   } catch (error) {
     return errorResponse(error);
   }
