@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { SEVERITY_META, toSeverity } from "@/lib/severity";
 import { ttpKey, ttpLabel, ttpUrl, type Ttp } from "@/lib/mitre";
 import { InvestigationTtpAnalysis } from "@/components/investigation-ttp-analysis";
-import { MarkdownLite } from "@/components/markdown-lite";
+import { RichText } from "@/components/rich-text";
 import type { AiSummary, CaseDetail } from "@/lib/types";
 
 // Fields surfaced as labelled metadata cards, in this order, when present.
@@ -206,7 +206,7 @@ export function InvestigationCaseMeta({
             ) : null}
             {aiSummary.summary ? (
               <div className="text-xs">
-                <MarkdownLite text={aiSummary.summary} />
+                <RichText text={aiSummary.summary} />
               </div>
             ) : null}
             {aiSummary.timeline || aiSummary.hypothesis || aiSummary.keyEntities || aiSummary.recommendations ? (
@@ -233,7 +233,7 @@ function AiSection({ title, text }: { title: string; text: string | null }) {
     <div>
       <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-sc-faint">{title}</p>
       <div className="text-xs">
-        <MarkdownLite text={text} />
+        <RichText text={text} />
       </div>
     </div>
   );

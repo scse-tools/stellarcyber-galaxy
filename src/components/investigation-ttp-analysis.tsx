@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { MarkdownLite } from "@/components/markdown-lite";
+import { RichText } from "@/components/rich-text";
 import { ttpLabel, type Ttp } from "@/lib/mitre";
 import { providerNeedsKey, type LlmProvider } from "@/lib/investigation/types";
 
@@ -126,7 +126,7 @@ export function InvestigationTtpAnalysis({ ttps, instanceId, caseId, caseName, o
           <p className="rounded border border-critical/40 bg-critical/10 px-3 py-2 text-sm text-critical">{error}</p>
         ) : answer ? (
           <div className="space-y-3">
-            <MarkdownLite text={answer} />
+            <RichText text={answer} />
             <p className="flex items-center gap-1.5 border-t border-sc-border-soft pt-2 text-[11px] text-sc-faint">
               {saved ? (
                 <>

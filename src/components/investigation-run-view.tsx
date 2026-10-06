@@ -1,6 +1,7 @@
 "use client";
 
 import { sourceName } from "@/lib/investigation/ti-catalog";
+import { RichText } from "@/components/rich-text";
 import type { Finding, InvestigationRun } from "@/lib/investigation/types";
 
 type Status = { label: string; cls: string };
@@ -63,14 +64,18 @@ export function InvestigationRunView({ run }: { run: InvestigationRun }) {
       {run.summary ? (
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-sc-faint">Summary</p>
-          <p className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-sc-text">{run.summary}</p>
+          <div className="mt-0.5 text-xs">
+            <RichText text={run.summary} />
+          </div>
         </div>
       ) : null}
 
       {run.recommendation ? (
         <div className="rounded-lg border border-sc-border-soft bg-sc-surface px-2.5 py-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-sc-accent">Recommendation</p>
-          <p className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-sc-text">{run.recommendation}</p>
+          <div className="mt-0.5 text-xs">
+            <RichText text={run.recommendation} />
+          </div>
         </div>
       ) : null}
 
@@ -107,13 +112,24 @@ function ObservableCard({ findings }: { findings: Finding[] }) {
         <ul className="mt-1.5 space-y-1">
           {sources.map((finding) => {
             const status = statusOf(finding);
+            const hasRaw = finding.raw !== null && finding.raw !== undefined;
             return (
-              <li key={finding.id} className="flex items-start gap-1.5 text-[11px]">
-                <span className="mt-0.5 w-24 shrink-0 truncate text-sc-muted" title={sourceName(finding.source)}>
-                  {sourceName(finding.source)}
-                </span>
-                <span className={`mt-0.5 shrink-0 rounded px-1 text-[9px] font-semibold ${status.cls}`}>{status.label}</span>
-                <span className="min-w-0 flex-1 break-words text-sc-muted">{finding.summary}</span>
+              <li key={finding.id} className="text-[11px]">
+                <div className="flex items-start gap-1.5">
+                  <span className="mt-0.5 w-24 shrink-0 truncate text-sc-muted" title={sourceName(finding.source)}>
+                    {sourceName(finding.source)}
+                  </span>
+                  <span className={`mt-0.5 shrink-0 rounded px-1 text-[9px] font-semibold ${status.cls}`}>{status.label}</span>
+                  <span className="min-w-0 flex-1 break-words text-sc-muted">{finding.summary}</span>
+                </div>
+                {hasRaw ? (
+                  <details className="ml-[6.75rem] mt-0.5">
+                    <summary className="cursor-pointer text-[10px] text-sc-link hover:underline">Full response</summary>
+                    <pre className="mt-1 max-h-72 overflow-auto rounded border border-sc-border-soft bg-sc-active/40 p-2 font-mono text-[10px] leading-relaxed text-sc-text">
+                      {JSON.stringify(finding.raw, null, 2)}
+                    </pre>
+                  </details>
+                ) : null}
               </li>
             );
           })}

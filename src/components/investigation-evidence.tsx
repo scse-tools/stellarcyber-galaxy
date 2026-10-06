@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ImagePlus, Link2, Sparkles, StickyNote, Trash2 } from "lucide-react";
-import { MarkdownLite } from "@/components/markdown-lite";
+import { RichText } from "@/components/rich-text";
 import type { Evidence } from "@/lib/investigation/types";
 
 interface Props {
@@ -135,7 +135,7 @@ export function InvestigationEvidence({ evidence, busy, onAdd, onDelete }: Props
                       <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
                         <Sparkles size={11} /> AI analysis
                       </p>
-                      <MarkdownLite text={item.content ?? ""} />
+                      <RichText text={item.content ?? ""} />
                     </div>
                   ) : item.type === "note" ? (
                     <p className="whitespace-pre-wrap text-[11px] text-sc-text">{item.content}</p>

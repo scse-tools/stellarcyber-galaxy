@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
+import { RichText } from "@/components/rich-text";
 
 /** Free-form prompt against the selected LLM, wrapped server-side with a cybersecurity-analyst role. */
 export function InvestigationPromptBox({ providerId, context }: { providerId: string; context?: string }) {
@@ -57,8 +58,8 @@ export function InvestigationPromptBox({ providerId, context }: { providerId: st
       </button>
       {error ? <p className="text-[11px] text-critical">{error}</p> : null}
       {answer ? (
-        <div className="rounded border border-sc-border-soft bg-sc-active/40 px-2 py-1.5">
-          <p className="whitespace-pre-wrap text-xs leading-relaxed text-sc-text">{answer}</p>
+        <div className="rounded border border-sc-border-soft bg-sc-active/40 px-2 py-1.5 text-xs">
+          <RichText text={answer} />
         </div>
       ) : null}
     </div>
