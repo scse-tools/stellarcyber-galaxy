@@ -5,6 +5,7 @@ import { Bell, LayoutGrid, Plus, RefreshCw, Rows3, Settings2 } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { TimeRangePicker } from "@/components/time-range-picker";
 import { UserMenu } from "@/components/user-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ChangelogModal } from "@/components/changelog-modal";
 import { APP_VERSION } from "@/lib/version";
 import { SEVERITY_META } from "@/lib/severity";
@@ -132,6 +133,7 @@ export function GalaxyHeader({
             <RefreshCw size={15} className={refreshing ? "animate-spin" : undefined} />
             Refresh
           </Button>
+          <ThemeToggle />
           <Button
             onClick={onToggleNotifications}
             aria-label="Toggle notifications"
