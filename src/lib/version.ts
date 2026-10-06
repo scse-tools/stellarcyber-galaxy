@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.15.0";
+export const APP_VERSION = "3.15.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -11,11 +11,17 @@ export interface ChangelogEntry {
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.15.1",
+    date: "2026-10-06",
+    notes: [
+      "Both themes now match the Stellar Cyber console's actual palette (PrimeNG zinc scale): dark is a neutral near-black (#18181b surfaces, not navy) and light is the zinc light scale (#fafafa / #ffffff / #e4e4e7 / #18181b), read from the console's own theme preset.",
+    ],
+  },
+  {
     version: "3.15.0",
     date: "2026-10-06",
     notes: [
       "Added a light theme alongside the existing dark theme, with a header toggle; the app follows the OS setting until you choose, and remembers your choice (no flash on load).",
-      "Matched both themes to the Stellar Cyber console: dark already aligned to its tokens; light now uses the console's neutral-gray surfaces with shared severity colors.",
     ],
   },
   {
