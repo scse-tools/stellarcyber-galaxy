@@ -30,52 +30,43 @@
 }
 
 /*
- * Light theme — mirrors the Stellar Cyber console's light mode (white surfaces, dark text,
- * brand blue/orange). Severity hues are deepened so they stay legible on light backgrounds.
- * The same declarations apply for an explicit light choice and for OS-light with no explicit choice.
+ * Light theme — mirrors the Stellar Cyber console's light mode: a neutral-gray surface scale
+ * (page bg ~surface-50, white cards, #eaeaea borders, #212121 text) with the brand blue/orange.
+ * Severity hues are intentionally the same as dark mode, matching the console.
+ * Applied for an explicit light choice and for OS-light when no explicit choice is set.
  */
 :root[data-theme="light"],
 :root.theme-light {
-  --sc-bg: #f4f6fa;
+  --sc-bg: #fafafa;
   --sc-surface: #ffffff;
   --sc-surface-raised: #ffffff;
-  --sc-surface-active: #eaeff6;
-  --sc-border: #c6d2e3;
-  --sc-border-soft: #e2e8f1;
-  --sc-text: #16203a;
-  --sc-text-secondary: #46526e;
-  --sc-text-tertiary: #6d7893;
+  --sc-surface-active: #eef0f2;
+  --sc-border: #dadde3;
+  --sc-border-soft: #ebedf0;
+  --sc-text: #212121;
+  --sc-text-secondary: #5f6368;
+  --sc-text-tertiary: #80868b;
   --sc-link: #2f6fd0;
-  --sc-primary: #2f6fd0;
+  --sc-primary: #4378c1;
   --sc-accent: #e07c10;
   --sc-accent-deep: hsl(25 80% 44%);
-  --severity-critical: hsl(0 72% 50%);
-  --severity-high: hsl(24 88% 46%);
-  --severity-medium: hsl(42 95% 42%);
-  --severity-low: hsl(45 80% 48%);
-  --severity-success: hsl(142 66% 38%);
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --sc-bg: #f4f6fa;
+    --sc-bg: #fafafa;
     --sc-surface: #ffffff;
     --sc-surface-raised: #ffffff;
-    --sc-surface-active: #eaeff6;
-    --sc-border: #c6d2e3;
-    --sc-border-soft: #e2e8f1;
-    --sc-text: #16203a;
-    --sc-text-secondary: #46526e;
-    --sc-text-tertiary: #6d7893;
+    --sc-surface-active: #eef0f2;
+    --sc-border: #dadde3;
+    --sc-border-soft: #ebedf0;
+    --sc-text: #212121;
+    --sc-text-secondary: #5f6368;
+    --sc-text-tertiary: #80868b;
     --sc-link: #2f6fd0;
-    --sc-primary: #2f6fd0;
+    --sc-primary: #4378c1;
     --sc-accent: #e07c10;
     --sc-accent-deep: hsl(25 80% 44%);
-    --severity-critical: hsl(0 72% 50%);
-    --severity-high: hsl(24 88% 46%);
-    --severity-medium: hsl(42 95% 42%);
-    --severity-low: hsl(45 80% 48%);
-    --severity-success: hsl(142 66% 38%);
   }
 }
 

@@ -15,6 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-10-06",
     notes: [
       "Added a light theme alongside the existing dark theme, with a header toggle; the app follows the OS setting until you choose, and remembers your choice (no flash on load).",
+      "Matched both themes to the Stellar Cyber console: dark already aligned to its tokens; light now uses the console's neutral-gray surfaces with shared severity colors.",
     ],
   },
   {
