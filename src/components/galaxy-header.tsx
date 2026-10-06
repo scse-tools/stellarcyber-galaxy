@@ -38,6 +38,7 @@ interface GalaxyHeaderProps {
   onRefresh: () => void;
   onAdd: () => void;
   onOpenSettings: () => void;
+  onOpenDisclaimer: () => void;
 }
 
 export function GalaxyHeader({
@@ -58,6 +59,7 @@ export function GalaxyHeader({
   onRefresh,
   onAdd,
   onOpenSettings,
+  onOpenDisclaimer,
 }: GalaxyHeaderProps) {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const total = SEVERITIES.reduce((sum, severity) => sum + totals[severity], 0);
@@ -84,6 +86,17 @@ export function GalaxyHeader({
               className="self-end rounded font-mono text-[11px] text-sc-faint transition-colors hover:text-sc-link focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
             >
               v{APP_VERSION}
+            </button>
+            <span className="self-end text-[11px] text-sc-faint" aria-hidden>
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={onOpenDisclaimer}
+              title="Disclaimer & terms of use"
+              className="self-end rounded text-[11px] text-sc-faint transition-colors hover:text-sc-link focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
+            >
+              Disclaimer
             </button>
           </div>
           <p className="mt-1.5 text-xs text-sc-faint">

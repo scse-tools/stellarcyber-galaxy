@@ -8,6 +8,7 @@ import { InvestigationWorkspace } from "@/components/investigation-workspace";
 import { InstanceTile } from "@/components/instance-tile";
 import { InstanceFormModal } from "@/components/instance-form-modal";
 import { GlobalSettingsModal } from "@/components/global-settings-modal";
+import { DisclaimerModal } from "@/components/disclaimer-modal";
 import { InventoryModal, type InventoryTab } from "@/components/inventory-modal";
 import type { StatusFilter } from "@/lib/inventory-columns";
 import { InstancesTable } from "@/components/instances-table";
@@ -60,12 +61,42 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const [editing, setEditing] = useState<InstanceSummary | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  // First run requires acknowledgement; opening it from the header link does not.
+  const [disclaimerFirstRun, setDisclaimerFirstRun] = useState(false);
   const [inventory, setInventory] = useState<{
     instance: InstanceSummary;
     tab: InventoryTab;
     status?: StatusFilter;
   } | null>(null);
   const isAdmin = user.role === "admin";
+
+  // Show the disclaimer once per user on first run (tracked in localStorage), reopenable via the header link.
+  useEffect(() => {
+    try {
+      if (!window.localStorage.getItem(`galaxy.disclaimer.ack.${user.id}`)) {
+        setDisclaimerFirstRun(true);
+        setDisclaimerOpen(true);
+      }
+    } catch {
+      /* private browsing — skip */
+    }
+  }, [user.id]);
+
+  const acknowledgeDisclaimer = useCallback(() => {
+    try {
+      window.localStorage.setItem(`galaxy.disclaimer.ack.${user.id}`, new Date().toISOString());
+    } catch {
+      /* ignore */
+    }
+    setDisclaimerOpen(false);
+    setDisclaimerFirstRun(false);
+  }, [user.id]);
+
+  const openDisclaimer = useCallback(() => {
+    setDisclaimerFirstRun(false);
+    setDisclaimerOpen(true);
+  }, []);
 
   useEffect(() => {
     // Initialization: load instances, then in parallel pull each tile's stats and its tenant list.
@@ -193,6 +224,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         onRefresh={() => void refreshStats()}
         onAdd={openAdd}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenDisclaimer={openDisclaimer}
         user={user}
         notificationCount={notifications.length}
         notificationsOpen={notificationsOpen}
@@ -274,6 +306,13 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
         initialStatus={inventory?.status ?? null}
         tenantId={inventory ? (selectedTenant[inventory.instance.id] ?? null) : null}
         onClose={() => setInventory(null)}
+      />
+
+      <DisclaimerModal
+        open={disclaimerOpen}
+        requireAck={disclaimerFirstRun}
+        onAcknowledge={acknowledgeDisclaimer}
+        onClose={() => setDisclaimerOpen(false)}
       />
 
       {isAdmin ? (
