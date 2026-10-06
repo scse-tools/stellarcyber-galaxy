@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Pin, Settings, Table2 } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, ChevronDown, Loader2, Microscope, Pin, Settings, Table2 } from "lucide-react";
 import { SeverityRows } from "@/components/severity-bar";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SensorStatusBlock } from "@/components/sensor-status";
@@ -37,6 +37,8 @@ interface InstanceTileProps {
   /** The session-only tenant override in effect; `null` means "use the instance's default". */
   selectedTenant?: string | null;
   onSelectTenant?: (tenantId: string | null) => void;
+  /** Opens the Investigation Workspace pre-selected to this server. */
+  onInvestigate?: () => void;
 }
 
 export function InstanceTile({
@@ -54,6 +56,7 @@ export function InstanceTile({
   tenants,
   selectedTenant,
   onSelectTenant,
+  onInvestigate,
 }: InstanceTileProps) {
   const [expanded, setExpanded] = useState(false);
   const failed = stats?.status === "error";
@@ -192,7 +195,23 @@ export function InstanceTile({
                 Open cases
               </p>
             </div>
-            <TileLink href={consoleLink(instance.consoleUrl, "/cases")} label="Cases" />
+            <div className="flex items-center gap-1">
+              {onInvestigate ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onInvestigate();
+                  }}
+                  title="Open in Investigation Workspace"
+                  className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] font-medium text-sc-link transition-colors hover:bg-sc-active hover:text-sc-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sc-link"
+                >
+                  <Microscope size={11} />
+                  Investigate
+                </button>
+              ) : null}
+              <TileLink href={consoleLink(instance.consoleUrl, "/cases")} label="Cases" />
+            </div>
           </div>
 
           <SeverityRows

@@ -120,46 +120,6 @@ export function InvestigationCaseMeta({
 
       {summary ? <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-sc-muted">{summary}</p> : null}
 
-      {aiSummary ? (
-        <details open className="group mt-3 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
-          <summary className="flex cursor-pointer list-none items-center gap-2">
-            <ChevronRight size={12} className="shrink-0 text-sc-faint transition-transform group-open:rotate-90" />
-            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
-              <Sparkles size={11} /> AI summary · Stellar Cyber
-            </span>
-            {aiSummary.verdict ? (
-              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", verdictClass(aiSummary.verdict))}>
-                {aiSummary.verdict}
-              </span>
-            ) : null}
-          </summary>
-          <div className="mt-2">
-          {aiSummary.verdictReasoning ? (
-            <p className="mb-2 text-xs leading-relaxed text-sc-muted">
-              <span className="font-semibold text-sc-text">Verdict reasoning: </span>
-              {aiSummary.verdictReasoning}
-            </p>
-          ) : null}
-          {aiSummary.summary ? (
-            <div className="text-xs">
-              <MarkdownLite text={aiSummary.summary} />
-            </div>
-          ) : null}
-          {aiSummary.timeline || aiSummary.hypothesis || aiSummary.keyEntities || aiSummary.recommendations ? (
-            <details className="mt-2 border-t border-sc-border-soft pt-2">
-              <summary className="cursor-pointer text-[11px] font-medium text-sc-link">Full AI analysis</summary>
-              <div className="mt-2 space-y-3">
-                <AiSection title="Timeline" text={aiSummary.timeline} />
-                <AiSection title="Hypothesis" text={aiSummary.hypothesis} />
-                <AiSection title="Key entities & relations" text={aiSummary.keyEntities} />
-                <AiSection title="Recommendations" text={aiSummary.recommendations} />
-              </div>
-            </details>
-          ) : null}
-          </div>
-        </details>
-      ) : null}
-
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
         {META_FIELDS.filter((f) => f.key in detail).map((f) => (
           <div key={f.key} className="min-w-0">
@@ -222,6 +182,46 @@ export function InvestigationCaseMeta({
             })}
           </div>
         </div>
+      ) : null}
+
+      {aiSummary ? (
+        <details open className="group mt-4 rounded-lg border border-sc-border-soft bg-sc-active/40 px-3 py-2">
+          <summary className="flex cursor-pointer list-none items-center gap-2">
+            <ChevronRight size={12} className="shrink-0 text-sc-faint transition-transform group-open:rotate-90" />
+            <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-sc-accent">
+              <Sparkles size={11} /> AI summary · Stellar Cyber
+            </span>
+            {aiSummary.verdict ? (
+              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", verdictClass(aiSummary.verdict))}>
+                {aiSummary.verdict}
+              </span>
+            ) : null}
+          </summary>
+          <div className="mt-2">
+            {aiSummary.verdictReasoning ? (
+              <p className="mb-2 text-xs leading-relaxed text-sc-muted">
+                <span className="font-semibold text-sc-text">Verdict reasoning: </span>
+                {aiSummary.verdictReasoning}
+              </p>
+            ) : null}
+            {aiSummary.summary ? (
+              <div className="text-xs">
+                <MarkdownLite text={aiSummary.summary} />
+              </div>
+            ) : null}
+            {aiSummary.timeline || aiSummary.hypothesis || aiSummary.keyEntities || aiSummary.recommendations ? (
+              <details className="mt-2 border-t border-sc-border-soft pt-2">
+                <summary className="cursor-pointer text-[11px] font-medium text-sc-link">Full AI analysis</summary>
+                <div className="mt-2 space-y-3">
+                  <AiSection title="Timeline" text={aiSummary.timeline} />
+                  <AiSection title="Hypothesis" text={aiSummary.hypothesis} />
+                  <AiSection title="Key entities & relations" text={aiSummary.keyEntities} />
+                  <AiSection title="Recommendations" text={aiSummary.recommendations} />
+                </div>
+              </details>
+            ) : null}
+          </div>
+        </details>
       ) : null}
     </section>
   );

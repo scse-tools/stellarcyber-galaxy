@@ -24,9 +24,31 @@ async function getJson<T>(url: string): Promise<T> {
   return body as T;
 }
 
-export function InvestigationWorkspace({ instances, isAdmin }: { instances: InstanceSummary[]; isAdmin: boolean }) {
-  const [instanceId, setInstanceId] = useState<string | null>(instances[0]?.id ?? null);
-  const [range, setRange] = useState<TimeRangeSelection>(DEFAULT_SELECTION);
+export function InvestigationWorkspace({
+  instances,
+  isAdmin,
+  initialInstanceId,
+  initialRange,
+  onConsumeTarget,
+}: {
+  instances: InstanceSummary[];
+  isAdmin: boolean;
+  /** Pre-selected server when opened from a tile link. */
+  initialInstanceId?: string | null;
+  /** Initial time window, seeded from the cases page; independent thereafter. */
+  initialRange?: TimeRangeSelection | null;
+  onConsumeTarget?: () => void;
+}) {
+  const [instanceId, setInstanceId] = useState<string | null>(
+    () => initialInstanceId ?? instances[0]?.id ?? null,
+  );
+  const [range, setRange] = useState<TimeRangeSelection>(() => initialRange ?? DEFAULT_SELECTION);
+
+  // The pre-selected target / seeded range are consumed once on open; the workspace is independent after.
+  useEffect(() => {
+    onConsumeTarget?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState<string | null>(null);

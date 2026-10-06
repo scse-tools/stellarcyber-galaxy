@@ -142,6 +142,8 @@ interface GalaxyState {
   layout: LayoutMode;
   /** The instance whose tile is momentarily highlighted after a toast/notification click. */
   highlightedInstanceId: string | null;
+  /** Instance to pre-select when the Investigation Workspace opens from a tile link (consumed once). */
+  investigationTarget: string | null;
   /** Instance ids pinned to the top of the tile/table order; persisted across sessions. */
   pinnedIds: string[];
   setRange: (range: TimeRangeSelection) => Promise<void>;
@@ -152,6 +154,8 @@ interface GalaxyState {
   clearNotifications: () => void;
   setToastSeconds: (seconds: number) => void;
   setViewMode: (mode: ViewMode) => void;
+  openInvestigation: (instanceId: string) => void;
+  clearInvestigationTarget: () => void;
   setLayout: (layout: LayoutMode) => void;
   togglePin: (instanceId: string) => void;
   highlightInstance: (instanceId: string) => void;
@@ -176,6 +180,7 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   viewMode: storedViewMode(),
   layout: storedLayout(),
   highlightedInstanceId: null,
+  investigationTarget: null,
   pinnedIds: storedPinned(),
 
   async setRange(range) {
@@ -331,6 +336,21 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       }
     }
     set({ viewMode: mode });
+  },
+
+  openInvestigation(instanceId) {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(VIEW_MODE_KEY, "investigation");
+      } catch {
+        /* private browsing - still applies for this session */
+      }
+    }
+    set({ viewMode: "investigation", investigationTarget: instanceId });
+  },
+
+  clearInvestigationTarget() {
+    set({ investigationTarget: null });
   },
 
   setLayout(layout) {

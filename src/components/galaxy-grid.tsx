@@ -55,6 +55,9 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
   const togglePin = useGalaxyStore((state) => state.togglePin);
   const setRange = useGalaxyStore((state) => state.setRange);
   const setViewMode = useGalaxyStore((state) => state.setViewMode);
+  const openInvestigation = useGalaxyStore((state) => state.openInvestigation);
+  const investigationTarget = useGalaxyStore((state) => state.investigationTarget);
+  const clearInvestigationTarget = useGalaxyStore((state) => state.clearInvestigationTarget);
   const setLayout = useGalaxyStore((state) => state.setLayout);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -245,7 +248,13 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
       ) : viewMode === "studio" ? (
         <OnboardingStudio instances={instances} isAdmin={isAdmin} />
       ) : viewMode === "investigation" ? (
-        <InvestigationWorkspace instances={instances} isAdmin={isAdmin} />
+        <InvestigationWorkspace
+          instances={instances}
+          isAdmin={isAdmin}
+          initialInstanceId={investigationTarget}
+          initialRange={range}
+          onConsumeTarget={clearInvestigationTarget}
+        />
       ) : instances.length === 0 ? (
         <EmptyState onAdd={openAdd} />
       ) : layout === "table" ? (
@@ -284,6 +293,7 @@ export function GalaxyGrid({ user }: { user: SessionUser }) {
               selectedTenant={selectedTenant[instance.id] ?? null}
               onSelectTenant={(tenantId) => setSelectedTenant(instance.id, tenantId)}
               onOpenInventory={(target, tab, status) => setInventory({ instance: target, tab, status })}
+              onInvestigate={() => openInvestigation(instance.id)}
             />
           ))}
         </div>
