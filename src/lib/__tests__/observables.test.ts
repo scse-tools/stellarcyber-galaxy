@@ -76,6 +76,21 @@ describe("extractObservables", () => {
     expect(groupFor(alerts, "ip_private")).toBeUndefined();
   });
 
+  it("only accepts full or ::-compressed IPv6 (not loose colon-hex)", () => {
+    const alerts: CaseAlert[] = [
+      {
+        _id: "a1",
+        srcip: "2001:db8:85a3::8a2e:370:7334", // compressed, valid
+        dstip: "fe80:1:2:3:4:5:6:7", // full 8 groups, valid (link-local)
+        peer_ip: "1234:5678:9abc", // 3 groups, no "::", not 8 — not an IP
+      },
+    ];
+    const ips = [...values(alerts, "ip_public"), ...values(alerts, "ip_private")];
+    expect(ips).toContain("2001:db8:85a3::8a2e:370:7334");
+    expect(ips).toContain("fe80:1:2:3:4:5:6:7");
+    expect(ips).not.toContain("1234:5678:9abc");
+  });
+
   it("extracts registry keys, geolocations and reputations, ignoring unknowns", () => {
     const alerts: CaseAlert[] = [
       {

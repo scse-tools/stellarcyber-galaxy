@@ -99,8 +99,44 @@ export function isPrivateIp(ip: string): boolean {
   return false;
 }
 
-const IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g;
-const IPV6 = /\b(?:[A-Fa-f0-9]{1,4}:){2,7}[A-Fa-f0-9]{1,4}\b/g;
+// Whole-value IP validators (anchored). IPv6 must be the full 8-group form OR use "::" compression —
+// loose colon-hex strings (e.g. 3-group values, MACs) are intentionally NOT treated as IPv6.
+const IPV4_ANCHORED = /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$/;
+const IPV6_CORE = [
+  "(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}", // full 8 groups
+  "(?:[0-9A-Fa-f]{1,4}:){1,7}:", // trailing ::
+  "(?:[0-9A-Fa-f]{1,4}:){1,6}:[0-9A-Fa-f]{1,4}",
+  "(?:[0-9A-Fa-f]{1,4}:){1,5}(?::[0-9A-Fa-f]{1,4}){1,2}",
+  "(?:[0-9A-Fa-f]{1,4}:){1,4}(?::[0-9A-Fa-f]{1,4}){1,3}",
+  "(?:[0-9A-Fa-f]{1,4}:){1,3}(?::[0-9A-Fa-f]{1,4}){1,4}",
+  "(?:[0-9A-Fa-f]{1,4}:){1,2}(?::[0-9A-Fa-f]{1,4}){1,5}",
+  "[0-9A-Fa-f]{1,4}:(?::[0-9A-Fa-f]{1,4}){1,6}",
+  ":(?:(?::[0-9A-Fa-f]{1,4}){1,7}|:)", // leading ::
+  "(?:[0-9A-Fa-f]{1,4}:){1,4}:(?:(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)", // v4-mapped
+  "::(?:[fF]{4}(?::0{1,4})?:)?(?:(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)",
+].join("|");
+const IPV6_ANCHORED = new RegExp(`^(?:${IPV6_CORE})$`);
+
+/** Pulls valid IPv4/IPv6 addresses out of an ip-named field value (handles lists and :port). */
+function extractIps(value: string): string[] {
+  const out: string[] = [];
+  for (const raw of value.split(/[\s,;]+/)) {
+    const token = raw.trim();
+    if (!token) continue;
+    const bracket = token.match(/^\[([^\]]+)\](?::\d+)?$/); // [v6]:port
+    if (bracket) {
+      if (IPV6_ANCHORED.test(bracket[1])) out.push(bracket[1].toLowerCase());
+      continue;
+    }
+    const v4 = token.match(/^((?:\d{1,3}\.){3}\d{1,3})(?::\d+)?$/); // v4 with optional :port
+    if (v4 && IPV4_ANCHORED.test(v4[1])) {
+      out.push(v4[1]);
+      continue;
+    }
+    if (IPV6_ANCHORED.test(token)) out.push(token.toLowerCase());
+  }
+  return out;
+}
 // 48-bit MAC (00:1A:2B:3C:4D:5E, dash, or Cisco dotted). Distinguished from IPv6 by its 2-hex octets.
 const MAC = /\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b|\b(?:[0-9A-Fa-f]{4}\.){2}[0-9A-Fa-f]{4}\b/g;
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
@@ -134,14 +170,8 @@ const FILE_EXTS =
 const FILENAME = new RegExp(`\\b[\\w .()-]{1,120}${FILE_EXTS.source.slice(1)}`, "i");
 
 const isIp = (value: string) => {
-  IPV4.lastIndex = 0;
-  IPV6.lastIndex = 0;
-  return IPV4.test(value) || IPV6.test(value);
-};
-
-const isMac = (value: string) => {
-  MAC.lastIndex = 0;
-  return MAC.test(value);
+  const v = value.trim();
+  return IPV4_ANCHORED.test(v) || IPV6_ANCHORED.test(v);
 };
 
 const looksLikeDomain = (value: string) =>
@@ -182,9 +212,7 @@ function classify(key: string, raw: string, sink: Sink): void {
     for (const mac of matches(MAC, value)) sink("mac", mac.toLowerCase());
   }
   if (IP_KEY.test(key)) {
-    for (const ip of matches(IPV4, value)) sink("ip", ip);
-    // Exclude 48-bit MACs, which the IPv6 pattern would otherwise match.
-    for (const ip of matches(IPV6, value)) if (!isMac(ip)) sink("ip", ip);
+    for (const ip of extractIps(value)) sink("ip", ip);
   }
   if (EMAIL_KEY.test(key)) {
     for (const email of matches(EMAIL, value)) sink("email", email.toLowerCase());

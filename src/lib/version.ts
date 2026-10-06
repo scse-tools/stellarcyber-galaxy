@@ -1,6 +1,6 @@
 // APP_VERSION is bumped automatically on each commit by .githooks/pre-commit
 // (the patch/third digit increments). Edit CHANGELOG by hand to document a version.
-export const APP_VERSION = "3.17.0";
+export const APP_VERSION = "3.17.1";
 
 export interface ChangelogEntry {
   version: string;
@@ -10,6 +10,13 @@ export interface ChangelogEntry {
 
 /** Newest first. Each documented version lists what changed in it. */
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "3.17.1",
+    date: "2026-10-06",
+    notes: [
+      "IP observable extraction is now strict: a value is only an IPv6 address if it's the full 8-group form or uses \"::\" compression, so colon-hex values that merely look like IPv6 (and MACs) are no longer misclassified as IPs. IPv4 with :port and bracketed [IPv6]:port are handled.",
+    ],
+  },
   {
     version: "3.17.0",
     date: "2026-10-06",
